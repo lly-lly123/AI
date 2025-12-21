@@ -1,0 +1,22 @@
+{
+  "name": "pigeonai",
+  "version": "1.0.0",
+  "description": "智鸽系统 - 每只鸽子，皆是赛级",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "dev": "cd backend && nodemon server.js"
+  },
+  "keywords": [
+    "pigeon",
+    "racing",
+    "ai",
+    "management"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.x"
+  }
+}
+

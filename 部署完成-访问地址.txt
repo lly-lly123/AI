@@ -1,0 +1,43 @@
+🚀 智鸽系统部署指南
+==================
+
+✅ 所有代码和配置已准备就绪！
+
+📋 立即部署的3种方法：
+
+方法1：Vercel Web界面（最简单，推荐）
+---------------------------------------
+1. 访问：https://vercel.com
+2. 使用GitHub账号登录
+3. 点击 "Add New Project" > "Upload"
+4. 选择整个 "智鸽系统_副本" 文件夹
+5. 点击 "Deploy"
+6. 等待部署完成，获得访问地址
+
+方法2：命令行部署
+-----------------
+在终端运行：
+cd "/Users/macbookair/Desktop/智慧鸽系统备份文件/智鸽系统_副本"
+cd backend && npm install && cd ..
+npx vercel --prod
+
+方法3：使用部署脚本
+-------------------
+运行：
+./快速部署.sh
+
+🌐 部署后访问地址格式：
+-----------------------
+主站：https://pigeonai-xxxxx.vercel.app
+后台：https://pigeonai-xxxxx.vercel.app/admin.html
+API：https://pigeonai-xxxxx.vercel.app/api/health
+
+⚙️ 可选配置（云存储）：
+-----------------------
+如果需要使用Supabase云存储：
+1. 在Vercel项目设置中添加环境变量
+2. SUPABASE_URL = 您的Supabase URL
+3. SUPABASE_ANON_KEY = 您的Supabase Key
+
+✅ 系统已完全就绪，可以立即部署！
+

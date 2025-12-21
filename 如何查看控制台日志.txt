@@ -1,0 +1,43 @@
+📋 如何查看浏览器控制台日志并发送给AI助手
+
+方法1：复制文本（推荐）
+1. 按 F12 键打开开发者工具
+   - Mac: Cmd + Option + I
+   - Windows: Ctrl + Shift + I
+   
+2. 点击 "Console"（控制台）标签
+
+3. 清除旧日志（可选）
+   - 点击控制台左上角的 🚫 清除按钮
+   - 或按 Ctrl+L (Mac: Cmd+K)
+
+4. 刷新页面
+   - 按 F5 或 Ctrl+R (Mac: Cmd+R)
+
+5. 查找关键日志信息：
+   - 搜索 "showWelcomeGreeting" 或 "欢迎消息"
+   - 查看是否有红色错误信息
+   - 查找 "🔍" "✅" "❌" 等标记的日志
+
+6. 选中所有日志并复制
+   - 点击第一条日志
+   - 按住 Shift 键，点击最后一条日志
+   - 或按 Ctrl+A (Mac: Cmd+A) 全选
+   - 按 Ctrl+C (Mac: Cmd+C) 复制
+
+7. 粘贴到聊天窗口发送
+
+方法2：截图
+1. 打开开发者工具 Console 标签
+2. 清除日志并刷新页面
+3. 截图整个控制台区域
+4. 将图片发送给AI助手
+
+关键日志关键词：
+- showWelcomeGreeting
+- 欢迎消息
+- evoWelcomeBubble
+- Evo初始化
+- 错误/Error
+
+如果看到红色错误信息，请重点复制那部分！
