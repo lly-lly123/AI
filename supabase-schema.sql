@@ -200,3 +200,4 @@ CREATE POLICY "Allow anonymous insert" ON evo_settings FOR INSERT WITH CHECK (tr
 CREATE POLICY "Allow anonymous update" ON evo_settings FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous delete" ON evo_settings FOR DELETE USING (true);
 
+

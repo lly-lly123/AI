@@ -52,7 +52,13 @@ temp/
 *.bak
 *.backup
 *_backup
-*_副本
+
+# 压缩文件
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.gz
 
 # 敏感信息
 *.key
@@ -68,4 +74,5 @@ coverage/
 # 其他
 .cache/
 .temp/
+
 

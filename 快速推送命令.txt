@@ -1,0 +1,18 @@
+# 复制以下命令到终端执行：
+
+cd "/Users/macbookair/Desktop/智慧鸽系统备份文件/智鸽系统_副本"
+
+# 添加远程仓库
+git remote add origin https://github.com/Ily-lly123/PigeonAI.git
+
+# 添加所有文件
+git add .
+
+# 提交
+git commit -m "初始化项目：智鸽系统完整代码"
+
+# 推送（会提示输入用户名和token）
+git push -u origin main
+
+# 注意：密码要使用GitHub Personal Access Token
+# 获取地址：https://github.com/settings/tokens
