@@ -3,5 +3,8 @@
 
 const app = require('../backend/server');
 
-module.exports = app;
+// Vercel Serverless Function 格式
+module.exports = (req, res) => {
+  return app(req, res);
+};
 

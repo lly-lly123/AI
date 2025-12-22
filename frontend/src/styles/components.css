@@ -1,0 +1,265 @@
+/**
+ * 其他组件样式
+ * 包含标签、视图切换器等
+ */
+
+/* 标签系统 */
+.tag { 
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  transition: all var(--transition-fast);
+}
+
+.tag-alive { 
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #047857;
+}
+
+.tag-dead { 
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #b91c1c;
+}
+
+.tag-type { 
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1d4ed8;
+}
+
+/* 视图切换器 */
+.view-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100);
+  padding: 5px;
+  border-radius: var(--radius-md);
+}
+
+.view-switch-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.view-switch-btn:hover {
+  background: rgba(255,255,255,0.7);
+  color: var(--text-primary);
+}
+
+.view-switch-btn.active {
+  background: var(--bg-secondary);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+/* 区块标题 */
+.section-title { 
+  font-size: 16px;
+  font-weight: 700;
+  margin: 36px 0 18px;
+  padding: 14px 20px;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--bg-tertiary) 100%);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title:first-of-type { 
+  margin-top: 0;
+}
+
+
+
+
+
+
+ * 其他组件样式
+ * 包含标签、视图切换器等
+ */
+
+/* 标签系统 */
+.tag { 
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  transition: all var(--transition-fast);
+}
+
+.tag-alive { 
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #047857;
+}
+
+.tag-dead { 
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #b91c1c;
+}
+
+.tag-type { 
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1d4ed8;
+}
+
+/* 视图切换器 */
+.view-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100);
+  padding: 5px;
+  border-radius: var(--radius-md);
+}
+
+.view-switch-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.view-switch-btn:hover {
+  background: rgba(255,255,255,0.7);
+  color: var(--text-primary);
+}
+
+.view-switch-btn.active {
+  background: var(--bg-secondary);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+/* 区块标题 */
+.section-title { 
+  font-size: 16px;
+  font-weight: 700;
+  margin: 36px 0 18px;
+  padding: 14px 20px;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--bg-tertiary) 100%);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title:first-of-type { 
+  margin-top: 0;
+}
+
+
+
+
+
+
+ * 其他组件样式
+ * 包含标签、视图切换器等
+ */
+
+/* 标签系统 */
+.tag { 
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  transition: all var(--transition-fast);
+}
+
+.tag-alive { 
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #047857;
+}
+
+.tag-dead { 
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #b91c1c;
+}
+
+.tag-type { 
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1d4ed8;
+}
+
+/* 视图切换器 */
+.view-switcher {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100);
+  padding: 5px;
+  border-radius: var(--radius-md);
+}
+
+.view-switch-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.view-switch-btn:hover {
+  background: rgba(255,255,255,0.7);
+  color: var(--text-primary);
+}
+
+.view-switch-btn.active {
+  background: var(--bg-secondary);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+/* 区块标题 */
+.section-title { 
+  font-size: 16px;
+  font-weight: 700;
+  margin: 36px 0 18px;
+  padding: 14px 20px;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--bg-tertiary) 100%);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title:first-of-type { 
+  margin-top: 0;
+}
+
+
+
+
+
+

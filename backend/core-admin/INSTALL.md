@@ -65,12 +65,15 @@ npm start
    - 修改 `.env` 中的 `PORT` 值
 
 2. **AI调用失败**
-   - 检查 `.env` 中的 `ZHIPU_API_KEY` 是否正确
+   - 检查 `.env` 中的 `ZHIPU_API_KEY_ADMIN` 是否正确（中枢管家专用）
    - 检查网络连接
 
 3. **API监控不工作**
    - 检查主站API地址是否正确
    - 检查 `config.js` 中的 `mainSiteApis` 配置
+
+
+
 
 
 

@@ -118,6 +118,9 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       pointer-events: auto !important;
+      overflow-x: hidden;
+      overflow-y: auto;
+      width: 100%;
     }
     
     /* 滚动条美化 */
@@ -287,6 +290,9 @@
       padding: 28px; 
       min-height: calc(100vh - var(--header-height));
       background: var(--bg-primary);
+      overflow-x: hidden;
+      overflow-y: visible;
+      width: calc(100% - var(--sidebar-width));
     }
     .content-wrapper { 
       max-width: 1600px; 
@@ -1471,6 +1477,9 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+      width: 100%;
+      overflow-x: hidden;
+      overflow-y: visible;
     }
     
     /* 顶部今日概览 */
@@ -1719,6 +1728,8 @@
       grid-template-columns: 1fr 1.2fr 320px;
       gap: 20px;
       min-height: 600px;
+      width: 100%;
+      overflow-x: hidden;
     }
     
     /* 通用列样式 */
@@ -1728,7 +1739,9 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.06);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow: visible;
+      min-height: 400px;
+      max-height: none;
     }
     .home-column-header {
       display: flex;
@@ -1806,7 +1819,10 @@
     .home-news-list {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 12px;
+      min-height: 200px;
+      max-height: none;
     }
     .news-card {
       padding: 16px;
@@ -2048,7 +2064,10 @@
     .home-events-list {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 12px;
+      min-height: 200px;
+      max-height: none;
     }
     .event-card {
       padding: 16px;
@@ -2284,35 +2303,727 @@
     .alert-item-icon { font-size: 16px; }
     .alert-item-text { flex: 1; color: #4b5563; }
     
-    /* 响应式设计 */
-    @media (max-width: 1200px) {
+    /* ==========================================
+       📱 响应式设计 - 完整断点系统
+       ========================================== */
+    
+    /* 超大屏幕优化 (1400px+) */
+    @media (min-width: 1400px) {
+      .content-wrapper {
+        max-width: 1800px;
+      }
+      .home-content {
+        grid-template-columns: 1.2fr 1.4fr 360px;
+        gap: 24px;
+      }
+    }
+    
+    /* 大屏幕 (1200px - 1399px) */
+    @media (max-width: 1399px) and (min-width: 1200px) {
+      .home-content {
+        grid-template-columns: 1fr 1.1fr 300px;
+        gap: 18px;
+      }
+    }
+    
+    /* 中等屏幕 - 平板横屏 (992px - 1199px) */
+    @media (max-width: 1199px) and (min-width: 992px) {
       .home-content {
         grid-template-columns: 1fr 1fr;
+        gap: 18px;
       }
       .home-sidebar {
         grid-column: span 2;
-        flex-direction: row;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        padding: 16px;
       }
       .home-widget {
-        flex: 1;
-        min-width: 280px;
+        min-width: 0;
       }
-    }
-    @media (max-width: 900px) {
-      .home-overview {
-        flex-direction: column;
-        gap: 20px;
+      .home-overview-left {
+        gap: 24px;
+        margin-right: 24px;
       }
       .home-overview-stats {
-        flex-wrap: wrap;
-        justify-content: center;
+        gap: 16px;
       }
+      .home-stat-item {
+        padding: 10px 16px;
+      }
+    }
+    
+    /* 小屏幕 - 平板竖屏 (768px - 991px) */
+    @media (max-width: 991px) and (min-width: 768px) {
+      /* 侧边栏在中等屏幕保持显示，但可以缩小 */
+      .sidebar {
+        width: 220px;
+      }
+      .main-content {
+        margin-left: 220px;
+        overflow-x: hidden;
+      }
+      
+      .home-section {
+        overflow-x: hidden;
+        width: 100%;
+      }
+      
       .home-content {
         grid-template-columns: 1fr;
+        gap: 16px;
+        min-height: auto;
+        width: 100%;
+      }
+      
+      .home-column {
+        overflow: visible;
+        min-height: auto;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        overflow-y: auto;
+        max-height: 600px;
       }
       .home-sidebar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        padding: 16px;
+      }
+      .home-widget {
+        min-width: 0;
+      }
+      .home-overview {
         flex-direction: column;
+        gap: 16px;
+        padding: 20px 24px;
+      }
+      .home-overview-left {
+        width: 100%;
+        margin-right: 0;
+        justify-content: space-between;
+      }
+      .home-overview-stats {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        gap: 12px;
+      }
+      .home-stat-item {
+        flex: 1;
+        min-width: 140px;
+        padding: 10px 14px;
+      }
+      .home-date-day {
+        font-size: 48px;
+      }
+      .home-date-weekday {
+        font-size: 16px;
+      }
+      .news-filter {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .news-filter-btn {
+        font-size: 11px;
+        padding: 5px 10px;
+      }
+      .event-tabs {
+        flex-wrap: wrap;
+      }
+      .event-tab-btn {
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+      .quick-links {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    /* 中等屏幕优化 (992px - 1199px) - 侧边栏保持显示 */
+    @media (max-width: 1199px) and (min-width: 992px) {
+      .sidebar {
+        width: 240px;
+      }
+      .main-content {
+        margin-left: 240px;
+      }
+      .top-header {
+        padding: 0 20px;
+      }
+      .top-header h1 {
+        font-size: 16px;
+      }
+      .top-header-actions {
+        gap: 8px;
+      }
+      .top-header-actions .btn {
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      /* 搜索框在中等屏幕可以稍微缩小 */
+      .smart-search-container {
+        max-width: 300px;
+      }
+    }
+    
+    /* 小屏幕优化 (768px - 991px) - 顶部导航栏 */
+    @media (max-width: 991px) and (min-width: 768px) {
+      .top-header {
+        padding: 0 16px;
+      }
+      .top-header h1 {
+        font-size: 15px;
+      }
+      .top-header-actions .btn {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+      .smart-search-container {
+        max-width: 200px;
+      }
+    }
+    
+    /* 移动端 - 大手机 (576px - 767px) */
+    @media (max-width: 767px) and (min-width: 576px) {
+      /* 确保侧边栏在移动端隐藏 */
+      .sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 12px;
+        overflow-x: hidden;
+        overflow-y: visible;
+      }
+      
+      .home-section {
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
+      }
+      
+      .home-content {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        min-height: auto;
+        width: 100%;
+        overflow-x: hidden;
+        display: grid !important;
+        visibility: visible !important;
+      }
+      
+      .home-column {
+        overflow: visible;
+        min-height: auto;
+        max-height: none;
+        width: 100%;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        overflow-y: visible;
+        max-height: none;
+        min-height: auto;
+        display: block !important;
+        visibility: visible !important;
+      }
+      .home-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        visibility: visible !important;
+      }
+      .home-widget {
+        min-width: 0;
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-header {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-content {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      /* 确保首页和所有模块可见 */
+      #homeView {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-section {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .recommendation-item,
+      .subscription-tags,
+      .quick-links,
+      .alert-item {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      .home-overview {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px 20px;
+        border-radius: 12px;
+      }
+      .home-overview-left {
+        width: 100%;
+        margin-right: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .home-date {
+        width: 100%;
+      }
+      .home-date-day {
+        font-size: 42px;
+      }
+      .home-weather,
+      .home-announcement-bubble {
+        width: 100%;
+        max-width: 100%;
+      }
+      .home-overview-stats {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-top: 16px !important;
+      }
+      .home-stat-item {
+        width: 100% !important;
+        padding: 10px 12px !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      .home-stat-number {
+        font-size: 20px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      .home-stat-label {
+        font-size: 11px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      .home-column-header {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .home-column-header h3 {
+        font-size: 15px;
+      }
+      .news-filter {
+        width: 100%;
+        order: 2;
+        margin-top: 8px;
+      }
+      .news-filter-btn {
+        flex: 1;
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+      .news-region-tabs,
+      .event-region-tabs {
+        padding: 10px 12px;
+      }
+      .news-region-tab,
+      .event-region-tab {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+      .event-tabs {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+      }
+      .event-tab-btn {
+        flex: 1;
+        min-width: calc(33.333% - 4px);
+        font-size: 11px;
+        padding: 8px 6px;
+      }
+      .news-card,
+      .event-card {
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .news-card-title {
+        font-size: 13px;
+      }
+      .event-card-title {
+        font-size: 14px;
+      }
+      .event-card-info {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .quick-links {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .quick-link-btn {
+        padding: 12px 8px;
+        font-size: 11px;
+      }
+      .quick-link-btn span:first-child {
+        font-size: 20px;
+      }
+      .subscription-tags {
+        gap: 6px;
+      }
+      .subscription-tag {
+        font-size: 11px;
+        padding: 5px 10px;
+      }
+    }
+    
+    /* 移动端 - 小手机 (< 576px) */
+    @media (max-width: 575px) {
+      /* 确保侧边栏在超小屏幕隐藏 */
+      .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 8px;
+        overflow-x: hidden;
+        overflow-y: visible;
+      }
+      
+      .home-section {
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
+      }
+      
+      .home-content {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        min-height: auto;
+        width: 100%;
+        overflow-x: hidden;
+      }
+      
+      .home-column {
+        overflow: visible;
+        min-height: auto;
+        max-height: none;
+        width: 100%;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        overflow-y: visible;
+        max-height: none;
+        min-height: auto;
+        display: block !important;
+        visibility: visible !important;
+      }
+      .home-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        visibility: visible !important;
+      }
+      .home-widget {
+        min-width: 0;
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-header {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-content {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      /* 确保首页和所有模块可见 */
+      #homeView {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-section {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-content {
+        display: grid !important;
+        visibility: visible !important;
+      }
+      
+      .recommendation-item,
+      .subscription-tags,
+      .quick-links,
+      .alert-item {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      .home-widget-header {
+        padding: 12px;
+        display: flex !important;
+        visibility: visible !important;
+      }
+      .home-widget-header h4 {
+        font-size: 13px;
+      }
+      .home-widget-content {
+        padding: 12px;
+        display: block !important;
+        visibility: visible !important;
+      }
+      /* 确保所有首页模块都可见 */
+      .home-column {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        min-height: auto !important;
+      }
+      .home-content {
+        display: grid !important;
+        visibility: visible !important;
+        grid-template-columns: 1fr !important;
+      }
+      .home-section {
+        display: flex !important;
+        visibility: visible !important;
+        flex-direction: column !important;
+      }
+      .home-overview {
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 12px;
+      }
+      .home-overview-left {
+        width: 100%;
+        margin-right: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .home-date {
+        width: 100%;
+      }
+      .home-date-day {
+        font-size: 36px;
+      }
+      .home-date-weekday {
+        font-size: 14px;
+      }
+      .home-date-full {
+        font-size: 12px;
+      }
+      .home-weather,
+      .home-announcement-bubble {
+        width: 100%;
+        max-width: 100%;
+        padding: 10px 16px;
+      }
+      .home-weather span {
+        font-size: 24px;
+      }
+      .home-overview-stats {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .home-stat-item {
+        width: 100%;
+        padding: 10px;
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+      }
+      .home-stat-icon {
+        font-size: 20px;
+      }
+      .home-stat-number {
+        font-size: 18px;
+      }
+      .home-stat-label {
+        font-size: 10px;
+      }
+      .home-column {
+        border-radius: 12px;
+      }
+      .home-column-header {
+        padding: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .home-column-header h3 {
+        font-size: 14px;
+        width: 100%;
+      }
+      .news-filter {
+        width: 100%;
+        order: 2;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .news-filter-btn {
+        flex: 1;
+        min-width: calc(50% - 2px);
+        font-size: 10px;
+        padding: 5px 6px;
+      }
+      .news-region-tabs,
+      .event-region-tabs {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .news-region-tab,
+      .event-region-tab {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+      .event-tabs {
+        padding: 8px 10px;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .event-tab-btn {
+        flex: 1;
+        min-width: calc(50% - 2px);
+        font-size: 10px;
+        padding: 6px 4px;
+      }
+      .home-news-list,
+      .home-events-list {
+        padding: 10px;
+      }
+      .news-card,
+      .event-card {
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+      }
+      .news-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .news-card-title {
+        font-size: 12px;
+        width: 100%;
+      }
+      .news-card-time {
+        margin-left: 0;
+        font-size: 10px;
+      }
+      .news-card-source {
+        font-size: 11px;
+      }
+      .news-card-actions {
+        flex-direction: column;
+        gap: 6px;
+      }
+      .news-card-action-btn {
+        width: 100%;
+        font-size: 11px;
+        padding: 6px;
+      }
+      .event-card-title {
+        font-size: 13px;
+      }
+      .event-card-info {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .event-card-status {
+        font-size: 10px;
+        padding: 3px 8px;
+      }
+      .home-column-footer {
+        padding: 12px;
+      }
+      .home-column-footer .btn {
+        width: 100%;
+        margin: 4px 0;
+      }
+      .quick-links {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .quick-link-btn {
+        padding: 12px;
+        flex-direction: row;
+        justify-content: flex-start;
+        text-align: left;
+      }
+      .quick-link-btn span:first-child {
+        font-size: 24px;
+        margin-right: 12px;
+      }
+      .subscription-tags {
+        gap: 6px;
+      }
+      .subscription-tag {
+        font-size: 10px;
+        padding: 4px 8px;
+      }
+      .recommendation-item {
+        padding: 10px;
+        gap: 10px;
+      }
+      .recommendation-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+      }
+      .recommendation-title {
+        font-size: 12px;
+      }
+      .recommendation-desc {
+        font-size: 10px;
+      }
+      .alert-item {
+        padding: 8px 10px;
+        font-size: 12px;
       }
     }
     
@@ -4586,6 +5297,71 @@
     /* ==========================================
        📱 移动端响应式增强
        ========================================== */
+    
+    /* 移动端通用修复 - 确保所有功能模块可见 */
+    @media (max-width: 768px) {
+      /* 确保首页视图默认显示 */
+      #homeView {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      /* 确保所有首页模块可见 */
+      .home-section {
+        display: flex !important;
+        visibility: visible !important;
+        flex-direction: column !important;
+      }
+      
+      .home-content {
+        display: grid !important;
+        visibility: visible !important;
+        grid-template-columns: 1fr !important;
+      }
+      
+      .home-column {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+      }
+      
+      .home-sidebar {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-header,
+      .home-widget-content {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-content {
+        display: block !important;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .recommendation-item,
+      .subscription-tags,
+      .quick-links,
+      .alert-item {
+        display: flex !important;
+        visibility: visible !important;
+      }
+    }
+    
     @media (max-width: 768px) {
       /* 顶部导航栏优化 */
       .top-header {
@@ -4650,9 +5426,86 @@
         margin-left: 0;
         padding: 12px;
         margin-top: 60px;
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
       }
       .content-wrapper {
         max-width: 100%;
+        overflow-x: hidden;
+      }
+      
+      /* 确保首页区域可以正常滚动 */
+      .home-section {
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
+        display: flex !important;
+        visibility: visible !important;
+        flex-direction: column !important;
+      }
+      
+      .home-content {
+        min-height: auto;
+        width: 100%;
+        overflow-x: hidden;
+        display: grid !important;
+        visibility: visible !important;
+        grid-template-columns: 1fr !important;
+      }
+      
+      .home-column {
+        overflow: visible;
+        min-height: auto;
+        max-height: none;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        overflow-y: visible;
+        max-height: none;
+        min-height: auto;
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .home-sidebar {
+        display: flex !important;
+        visibility: visible !important;
+        flex-direction: column !important;
+      }
+      
+      .home-widget {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-header {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .home-widget-content {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      /* 确保所有功能模块可见 */
+      #homeView {
+        display: flex !important;
+        visibility: visible !important;
+      }
+      
+      .recommendation-item,
+      .subscription-tags,
+      .quick-links,
+      .alert-item {
+        display: flex !important;
+        visibility: visible !important;
       }
       
       /* 搜索框优化 */
@@ -4672,6 +5525,18 @@
         padding: 16px;
         margin-bottom: 16px;
         border-radius: var(--radius-md);
+        overflow: visible;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      
+      /* 确保所有视图都可以正常显示 */
+      section[id$="View"],
+      .card {
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
+        max-width: 100%;
       }
       .card-header {
         flex-direction: column;
@@ -4757,14 +5622,17 @@
       .table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        -ms-overflow-style: -ms-autohiding-scrollbar;
       }
       table {
         font-size: 12px;
         min-width: 600px;
+        width: 100%;
       }
       table th,
       table td {
         padding: 8px 10px;
+        white-space: nowrap;
       }
       
       /* 字段行优化 */
@@ -4843,9 +5711,15 @@
       }
       .main-content {
         padding: 8px;
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
       }
       .card {
         padding: 12px;
+        overflow: visible;
+        width: 100%;
+        box-sizing: border-box;
       }
       .stat-card-number {
         font-size: 24px;
@@ -4853,6 +5727,44 @@
       .btn {
         padding: 10px 12px;
         font-size: 12px;
+      }
+      
+      /* 确保首页所有模块都可以查看 */
+      .home-section {
+        width: 100%;
+        overflow-x: hidden;
+        overflow-y: visible;
+      }
+      
+      .home-content {
+        width: 100%;
+        min-height: auto;
+        overflow-x: hidden;
+      }
+      
+      .home-column {
+        width: 100%;
+        overflow: visible;
+        min-height: auto;
+        max-height: none;
+      }
+      
+      .home-news-list,
+      .home-events-list {
+        width: 100%;
+        overflow-y: visible;
+        max-height: none;
+        min-height: auto;
+      }
+      
+      .home-widget {
+        width: 100%;
+        overflow: visible;
+      }
+      
+      .home-widget-content {
+        overflow: visible;
+        max-height: none;
       }
     }
     
@@ -4887,12 +5799,12 @@
     /* Evo 浮动按钮和图标 */
     .evo-assistant {
       position: fixed !important;
-      bottom: 80px !important;
+      bottom: 30vh !important;
       right: 20px !important;
       z-index: 99999 !important;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
       pointer-events: auto !important;
-      animation: evo-float 6s ease-in-out infinite;
+      /* 移除动画，保持固定位置 */
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
@@ -4921,7 +5833,7 @@
       position: relative;
       visibility: visible !important;
       opacity: 1 !important;
-      animation: evo-button-float 4s ease-in-out infinite;
+      /* 移除动画，保持固定位置 */
       border: 3px solid rgba(255, 255, 255, 0.3);
     }
 
@@ -4936,7 +5848,7 @@
       transform: scale(1.15) translateY(-5px);
       box-shadow: 0 8px 24px rgba(102, 126, 234, 0.7), 
                   0 0 40px rgba(102, 126, 234, 0.4);
-      animation-play-state: paused;
+      /* 移除 animation-play-state，因为已经移除了动画 */
     }
 
     .evo-pigeon-icon {
@@ -4950,7 +5862,7 @@
 
     .evo-icon {
       font-size: 40px;
-      animation: evo-fly 2.5s ease-in-out infinite;
+      /* 移除动画，保持固定位置 */
       display: block;
       filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) 
               drop-shadow(0 0 20px rgba(102, 126, 234, 0.6));
@@ -5003,7 +5915,7 @@
     /* Evo 对话框 */
     .evo-dialog {
       position: absolute;
-      bottom: 70px;
+      bottom: 100px; /* 图标高度70px + 30px间距，确保对话框不被图标遮住 */
       right: 90px; /* 图标宽度70px + 20px间距，对话框显示在图标左侧 */
       width: 320px; /* 缩小对话框尺寸 */
       max-width: calc(90vw - 120px); /* 确保不会超出屏幕 */
@@ -5020,8 +5932,8 @@
     /* 欢迎消息气泡弹窗（类似微信消息气泡） */
     .evo-welcome-bubble {
       position: fixed;
-      bottom: 160px; /* 图标上方 */
-      right: 100px; /* 图标左侧（图标宽度70px + 间距30px） */
+      bottom: calc(30vh + 100px); /* 图标上方100px（图标位置30vh + 间距100px） */
+      right: 20px; /* 与图标右边缘对齐 */
       z-index: 99998;
       max-width: 280px;
       animation: evo-bubble-appear 0.3s ease-out;
@@ -5046,7 +5958,7 @@
       content: '';
       position: absolute;
       bottom: -8px;
-      right: 20px; /* 小尾巴在气泡右侧，指向图标 */
+      right: 35px; /* 小尾巴在气泡右侧，指向图标中心（图标宽度70px的一半） */
       width: 0;
       height: 0;
       border-left: 8px solid transparent;
@@ -5575,21 +6487,21 @@
     /* 移动端适配 */
     @media (max-width: 768px) {
       .evo-assistant {
-        bottom: 100px;
+        bottom: 30vh;
         right: 15px;
       }
       
       .evo-dialog {
         width: calc(100vw - 30px);
         max-width: none;
-        bottom: 70px;
+        bottom: 100px; /* 图标上方，确保不被遮挡 */
         right: 0;
         max-height: calc(100vh - 100px);
       }
 
       .evo-welcome-bubble {
-        bottom: 180px;
-        right: 15px;
+        bottom: calc(30vh + 100px); /* 与图标对齐，图标上方100px */
+        right: 15px; /* 与移动端图标位置对齐 */
         max-width: calc(100vw - 100px);
       }
 
@@ -7704,6 +8616,27 @@
     return !!getAuthToken();
   }
 
+  // 设备标记（用于后台识别不同设备）
+  const DEVICE_ID_KEY = 'pigeon_device_id';
+
+  function getOrCreateDeviceId() {
+    try {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        if (window.crypto && window.crypto.randomUUID) {
+          id = window.crypto.randomUUID();
+        } else {
+          id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        localStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    } catch (e) {
+      console.warn('生成设备ID失败:', e);
+      return null;
+    }
+  }
+
   // 云端保存数据（使用后端API）
   async function saveToCloud(key, data) {
     if (!isCloudSyncEnabled) return false;
@@ -7743,6 +8676,131 @@
       console.warn('⚠️ 云端保存失败，使用本地存储:', error.message);
       // 云端失败不影响本地保存
       return false;
+    }
+  }
+
+  // 自动同步完整用户数据到后台/云端（PC 端）
+  let lastUserDataSyncAt = 0;
+
+  async function autoSyncUserData(options = {}) {
+    const { force = false } = options;
+    try {
+      if (!isCloudSyncEnabled) return;
+
+      const token = getAuthToken();
+      if (!token) return;
+
+      const now = Date.now();
+      if (!force && now - lastUserDataSyncAt < 60000) {
+        return;
+      }
+
+      const apiUrl = getBackendApiUrl();
+      const deviceId = getOrCreateDeviceId();
+      const deviceInfo = {
+        userAgent: navigator.userAgent || '',
+        platform: navigator.platform || ''
+      };
+
+      const body = {
+        pigeons,
+        races,
+        healthRecords,
+        trainingRecords,
+        pairings,
+        qualificationRecords,
+        deviceId,
+        deviceInfo
+      };
+
+      const resp = await fetch(apiUrl + '/user/data/full', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (resp.ok) {
+        lastUserDataSyncAt = now;
+      } else {
+        console.warn('自动同步完整用户数据失败:', resp.status);
+      }
+    } catch (e) {
+      console.warn('自动同步完整用户数据异常:', e);
+    }
+  }
+
+  // 当本地数据缺失时，从后台/云端恢复
+  async function restoreUserDataIfMissing() {
+    try {
+      if (!isCloudSyncEnabled) return;
+
+      const token = getAuthToken();
+      if (!token) return;
+
+      const hasLocalPigeons = !!localStorage.getItem(STORAGE_KEY);
+
+      if (hasLocalPigeons) {
+        return;
+      }
+
+      const apiUrl = getBackendApiUrl();
+      const resp = await fetch(apiUrl + '/user/data/full', {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (!resp.ok) {
+        console.warn('从后台获取完整用户数据失败:', resp.status);
+        return;
+      }
+
+      const result = await resp.json();
+      if (!result.success || !result.data) return;
+
+      const data = result.data;
+
+      if (Array.isArray(data.pigeons) && data.pigeons.length > 0) {
+        pigeons = data.pigeons;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(pigeons));
+      }
+      if (Array.isArray(data.races) && data.races.length > 0) {
+        races = data.races;
+      }
+      if (Array.isArray(data.healthRecords) && data.healthRecords.length > 0) {
+        healthRecords.length = 0;
+        healthRecords.push(...data.healthRecords);
+        localStorage.setItem(HEALTH_RECORDS_KEY, JSON.stringify(healthRecords));
+      }
+      if (Array.isArray(data.trainingRecords) && data.trainingRecords.length > 0) {
+        const raw = JSON.stringify(data.trainingRecords);
+        localStorage.setItem(TRAINING_STORAGE_KEY, raw);
+      }
+      if (Array.isArray(data.pairings) && data.pairings.length > 0) {
+        pairings.length = 0;
+        pairings.push(...data.pairings);
+        localStorage.setItem(PAIRINGS_STORAGE_KEY, JSON.stringify(pairings));
+      }
+      if (Array.isArray(data.qualificationRecords) && data.qualificationRecords.length > 0) {
+        qualificationRecords.length = 0;
+        qualificationRecords.push(...data.qualificationRecords);
+        localStorage.setItem(QUALIFICATION_STORAGE_KEY, JSON.stringify(qualificationRecords));
+      }
+
+      console.log('✅ PC端已从后台恢复完整用户数据');
+
+      try {
+        renderPigeonList();
+        renderStats();
+      } catch (e) {
+        console.warn('恢复后刷新视图时出错:', e);
+      }
+    } catch (e) {
+      console.warn('尝试从后台恢复完整用户数据失败:', e);
     }
   }
 
@@ -7915,10 +8973,23 @@
   Object.keys(views).forEach(key => {
     if (views[key]) {
       console.log(`✓ ${key}: 存在`);
+      // 默认隐藏所有视图，除了homeView
+      if (key !== 'homeView') {
+        views[key].style.display = 'none';
+      } else {
+        // 确保homeView默认显示
+        views[key].style.display = '';
+      }
     } else {
       console.error(`✗ ${key}: 不存在！`);
     }
   });
+  
+  // 确保首页默认显示
+  if (views.homeView) {
+    views.homeView.style.display = '';
+  }
+  
   const navButtons = document.querySelectorAll('header nav button');
   const sidebarItems = document.querySelectorAll('.sidebar-item');
 
@@ -17414,8 +18485,8 @@
     alert(detailHtml.replace(/<[^>]*>/g, '\n').replace(/\n+/g, '\n').trim());
   };
   
-  // 执行能力分析
-  function performQualificationAnalysis() {
+  // 执行能力分析（调用后端API，包含AI分析）
+  async function performQualificationAnalysis() {
     const pigeonId = document.getElementById('qualificationPigeonSelect').value;
     const raceDistance = parseFloat(document.getElementById('qualificationDistance').value);
     
@@ -17424,16 +18495,94 @@
       return;
     }
     
-    const analysis = analyzeQualification(pigeonId, raceDistance);
-    if (!analysis) return;
+    const btn = document.getElementById('btnAnalyzeQualification');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '分析中...';
     
-    // 显示分析结果
-    displayQualificationResult(analysis);
-    
-    // 自动保存到记录表格
-    saveQualificationRecord(analysis);
-    
-    alert(`分析完成！${analysis.pigeonName || analysis.pigeonRing} 适合${raceDistance}公里比赛的能力为 ${analysis.qualificationPercent}%`);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('请先登录！');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+      }
+      
+      const apiUrl = getBackendApiUrl();
+      const response = await fetch(`${apiUrl}/qualification/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ pigeonId, raceDistance })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || '分析失败');
+      }
+      
+      const analysis = result.data;
+      const pigeon = pigeons.find(p => p.id === pigeonId);
+      
+      // 转换格式以兼容前端显示
+      const formattedAnalysis = {
+        id: 'qual_' + Date.now(),
+        pigeonId: pigeonId,
+        pigeonName: pigeon?.name || '',
+        pigeonRing: pigeon?.ring || analysis.pigeonRing,
+        raceDistance: raceDistance,
+        qualificationPercent: Math.round(analysis.qualification.score || 0),
+        qualificationLevel: analysis.qualification.status,
+        recommendation: analysis.qualification.message,
+        conclusion: `${pigeon?.name || analysis.pigeonRing} (${analysis.pigeonRing}) 适合${raceDistance}公里比赛的能力为 ${Math.round(analysis.qualification.score || 0)}%，${analysis.qualification.message}。`,
+        trainingAnalysis: {
+          score: analysis.trainingAnalysis.score || 0,
+          message: analysis.trainingAnalysis.message,
+          details: [
+            `平均速度：${analysis.trainingAnalysis.avgSpeed?.toFixed(1) || '未知'}公里/小时`,
+            `最近训练次数：${analysis.trainingAnalysis.recentTrainingCount || 0}次`,
+            `相关训练次数：${analysis.trainingAnalysis.relevantTrainingCount || 0}次`
+          ]
+        },
+        raceAnalysis: {
+          score: analysis.raceHistoryAnalysis.score || 0,
+          message: analysis.raceHistoryAnalysis.message,
+          details: analysis.raceHistoryAnalysis.raceCount ? [
+            `历史比赛场次：${analysis.raceHistoryAnalysis.raceCount}场`,
+            `平均排名：${Math.round(analysis.raceHistoryAnalysis.avgRank || 0)}`,
+            `完赛率：${(analysis.raceHistoryAnalysis.completionRate * 100).toFixed(0)}%`
+          ] : []
+        },
+        comparisonAnalysis: analysis.comparisonAnalysis,
+        recommendations: analysis.recommendations || [],
+        aiAnalysis: analysis.aiAnalysis || null,
+        disclaimer: result.disclaimer || '本分析结果仅供参考，实际参赛资格以赛事组委会规定为准。',
+        createdAt: new Date().toISOString()
+      };
+      
+      // 显示免责声明
+      if (result.disclaimer) {
+        document.getElementById('qualificationDisclaimer').textContent = result.disclaimer;
+      }
+      
+      // 显示分析结果
+      displayQualificationResult(formattedAnalysis);
+      
+      // 自动保存到记录表格
+      saveQualificationRecord(formattedAnalysis);
+      
+      alert(`分析完成！${formattedAnalysis.pigeonName || formattedAnalysis.pigeonRing} 适合${raceDistance}公里比赛的能力为 ${formattedAnalysis.qualificationPercent}%`);
+    } catch (error) {
+      console.error('能力分析失败:', error);
+      alert('分析失败：' + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   }
   
   // 显示分析结果
@@ -17479,13 +18628,32 @@
     `;
     
     // 显示建议
-    document.getElementById('qualificationRecommendations').innerHTML = `
-      <ul style="margin:0;padding-left:20px;line-height:2;">
-        <li>${analysis.recommendation}</li>
-        <li>建议持续关注该鸽子的训练表现和健康状况</li>
-        ${analysis.qualificationPercent < 60 ? '<li>建议增加针对性训练，提高比赛能力</li>' : ''}
-      </ul>
-    `;
+    let recommendationsHtml = '<ul style="margin:0;padding-left:20px;line-height:2;">';
+    if (analysis.recommendations && analysis.recommendations.length > 0) {
+      analysis.recommendations.forEach(rec => {
+        recommendationsHtml += `<li>${rec}</li>`;
+      });
+    } else {
+      recommendationsHtml += `<li>${analysis.recommendation}</li>`;
+      recommendationsHtml += '<li>建议持续关注该鸽子的训练表现和健康状况</li>';
+      if (analysis.qualificationPercent < 60) {
+        recommendationsHtml += '<li>建议增加针对性训练，提高比赛能力</li>';
+      }
+    }
+    recommendationsHtml += '</ul>';
+    
+    // 显示AI分析结果（如果有）
+    if (analysis.aiAnalysis && analysis.aiAnalysis.summary) {
+      recommendationsHtml += `
+        <div style="margin-top:20px;padding:16px;background:#f0f9ff;border-left:4px solid #3b82f6;border-radius:4px;">
+          <h4 style="margin:0 0 12px;color:#1e40af;font-size:16px;">🤖 AI智能分析</h4>
+          <p style="margin:0;line-height:1.8;color:#1e3a8a;white-space:pre-wrap;">${analysis.aiAnalysis.summary}</p>
+          ${analysis.aiAnalysis.model ? `<p style="margin:8px 0 0;font-size:12px;color:#64748b;">分析模型：${analysis.aiAnalysis.model}</p>` : ''}
+        </div>
+      `;
+    }
+    
+    document.getElementById('qualificationRecommendations').innerHTML = recommendationsHtml;
   }
   
   // 填充能力分析鸽子选择框
@@ -18059,7 +19227,7 @@
           // 强制设置可见性样式
           assistant.style.cssText = `
             position: fixed !important;
-            bottom: 80px !important;
+            bottom: 30vh !important;
             right: 20px !important;
             z-index: 99999 !important;
             display: block !important;
@@ -18269,7 +19437,7 @@
       if (assistantEl) {
         assistantEl.style.cssText = `
           position: fixed !important;
-          bottom: 80px !important;
+          bottom: 30vh !important;
           right: 20px !important;
           z-index: 99999 !important;
           display: block !important;
@@ -18295,7 +19463,7 @@
         if (checkAssistant) {
           checkAssistant.style.cssText = `
             position: fixed !important;
-            bottom: 80px !important;
+            bottom: 30vh !important;
             right: 20px !important;
             z-index: 99999 !important;
             display: block !important;
@@ -19135,10 +20303,10 @@
         bubble.className = 'evo-welcome-bubble';
         
         // 强制设置样式以确保可见（直接设置style属性，!important通过CSS类确保）
-        // 气泡显示在图标左侧
+        // 气泡显示在图标上方，与图标右边缘对齐
         bubble.style.position = 'fixed';
-        bubble.style.bottom = '160px';
-        bubble.style.right = '100px'; /* 图标左侧（图标宽度70px + 间距30px） */
+        bubble.style.bottom = 'calc(30vh + 100px)'; /* 图标上方100px（图标位置30vh + 间距100px） */
+        bubble.style.right = '20px'; /* 与图标右边缘对齐 */
         bubble.style.zIndex = '99998';
         bubble.style.maxWidth = '280px';
         bubble.style.pointerEvents = 'auto';
@@ -19655,6 +20823,89 @@
     }, 5000);
   })();
   
+  // 确保首页默认显示（移动端特别重要）
+  function ensureHomeViewVisible() {
+    const homeView = document.getElementById('homeView');
+    if (homeView) {
+      homeView.style.display = 'flex';
+      homeView.style.visibility = 'visible';
+      homeView.style.opacity = '1';
+      
+      // 确保所有首页模块可见
+      const homeSection = homeView.querySelector('.home-section');
+      if (homeSection) {
+        homeSection.style.display = 'flex';
+        homeSection.style.visibility = 'visible';
+      }
+      
+      const homeContent = homeView.querySelector('.home-content');
+      if (homeContent) {
+        homeContent.style.display = 'grid';
+        homeContent.style.visibility = 'visible';
+      }
+      
+      // 确保所有列可见
+      const homeColumns = homeView.querySelectorAll('.home-column');
+      homeColumns.forEach(col => {
+        col.style.display = 'flex';
+        col.style.visibility = 'visible';
+        col.style.opacity = '1';
+      });
+      
+      // 确保所有小部件可见
+      const homeWidgets = homeView.querySelectorAll('.home-widget');
+      homeWidgets.forEach(widget => {
+        widget.style.display = 'block';
+        widget.style.visibility = 'visible';
+      });
+      
+      console.log('✅ 已确保首页所有模块可见');
+    }
+  }
+  
+  // 检查URL参数，判断是否从app.html跳转过来
+  const urlParams = new URLSearchParams(window.location.search);
+  const restored = urlParams.get('restored') === 'true';
+  const deviceType = urlParams.get('device') || 'desktop';
+  
+  // 如果是从app.html跳转过来且标记为已恢复，显示提示
+  if (restored) {
+    setTimeout(() => {
+      showNotification('✅ 数据已从云端恢复', 'success', 5000);
+    }, 2000);
+  }
+  
+  // 页面加载时确保首页显示
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(ensureHomeViewVisible, 100);
+      // 默认切换到首页
+      if (typeof switchView === 'function') {
+        switchView('homeView');
+      }
+      // 如果本地数据缺失且已登录，尝试从后台/云端恢复
+      setTimeout(() => {
+        restoreUserDataIfMissing();
+      }, 1500);
+      // 页面加载后主动触发一次完整用户数据同步（如果已有数据）
+      setTimeout(() => {
+        autoSyncUserData({ force: true });
+      }, 5000);
+    });
+  } else {
+    setTimeout(ensureHomeViewVisible, 100);
+    // 默认切换到首页
+    if (typeof switchView === 'function') {
+      switchView('homeView');
+    }
+    setTimeout(() => {
+      restoreUserDataIfMissing();
+    }, 1500);
+    setTimeout(() => {
+      autoSyncUserData({ force: true });
+    }, 5000);
+  }
+  
   // 运行异常检测
   setTimeout(showAnomalyAlerts, 1000);
   
@@ -19799,7 +21050,7 @@
     if (assistant) {
       assistant.style.cssText = `
         position: fixed !important;
-        bottom: 80px !important;
+        bottom: 30vh !important;
         right: 20px !important;
         z-index: 99999 !important;
         display: block !important;

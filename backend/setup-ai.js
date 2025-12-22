@@ -132,8 +132,19 @@ async function main() {
     
     switch (choice) {
       case '1':
-        apiKeyName = 'ZHIPU_API_KEY';
-        serviceName = '智谱AI';
+        // 询问是用于Evo还是中枢管家
+        log('\n请选择API Key的用途：', 'bright');
+        log('1. Evo智能助手（名称：智鸽）', 'cyan');
+        log('2. 中枢管家（名称：智鸽·中枢管家）', 'cyan');
+        const useChoice = await question(rl, '请选择 (1/2): ');
+        
+        if (useChoice.trim() === '1') {
+          apiKeyName = 'ZHIPU_API_KEY_EVO';
+          serviceName = '智谱AI - Evo智能助手（名称：智鸽）';
+        } else {
+          apiKeyName = 'ZHIPU_API_KEY_ADMIN';
+          serviceName = '智谱AI - 中枢管家（名称：智鸽·中枢管家）';
+        }
         getKeyUrl = 'https://open.bigmodel.cn/';
         break;
       case '2':
@@ -210,6 +221,9 @@ async function main() {
 
 // 运行主函数
 main().catch(console.error);
+
+
+
 
 
 

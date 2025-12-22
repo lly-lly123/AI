@@ -96,7 +96,19 @@ class CloudStorageService {
     if (!this.isInitialized) return;
 
     try {
-      const tables = ['users', 'pigeons', 'training', 'races', 'admin_logs', 'login_logs', 'tokens', 'news_sources', 'usage_stats'];
+      const tables = [
+        'users',
+        'pigeons',
+        'training',
+        'races',
+        'admin_logs',
+        'login_logs',
+        'tokens',
+        'news_sources',
+        'usage_stats',
+        'user_data',
+        'backups'
+      ];
       
       for (const table of tables) {
         await this.syncTable(table);

@@ -55,6 +55,8 @@ function checkGitIgnore() {
 
 function checkSourceCodeForApiKeys() {
   const dangerousPatterns = [
+    /ZHIPU_API_KEY_EVO\s*=\s*['"][^'"]+['"]/,
+    /ZHIPU_API_KEY_ADMIN\s*=\s*['"][^'"]+['"]/,
     /ZHIPU_API_KEY\s*=\s*['"][^'"]+['"]/,
     /QWEN_API_KEY\s*=\s*['"][^'"]+['"]/,
     /HUGGING_FACE_API_KEY\s*=\s*['"][^'"]+['"]/,
@@ -219,6 +221,9 @@ function main() {
 }
 
 main();
+
+
+
 
 
 

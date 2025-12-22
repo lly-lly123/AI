@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const apiRoutes = require('./routes/api');
@@ -8,13 +9,34 @@ const cron = require('node-cron');
 const dataService = require('./services/dataService');
 const authService = require('./services/authService');
 const storageService = require('./services/storageService');
+const { apiLimiter, strictLimiter, aiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
+// 安全头设置
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
 // 中间件
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API限流
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', strictLimiter);
+app.use('/api/auth/register', strictLimiter);
+app.use('/api/evo/', aiLimiter);
 
 // 静态文件服务 - 提供前端页面（指向上级目录）
 const frontendPath = path.join(__dirname, '..');
@@ -135,6 +157,142 @@ async function initDefaultAdmin() {
         status: 'active'
       });
       logger.info('✅ 默认管理员账户已创建');
+      logger.info('   用户名: admin');
+      logger.info('   密码: admin123');
+      logger.info('   ⚠️  请首次登录后立即修改密码！');
+    } else {
+      logger.info('默认管理员账户已存在');
+    }
+  } catch (error) {
+    logger.error('初始化默认管理员账户失败', error);
+  }
+}
+
+// 启动服务器（仅在非Vercel环境）
+if (!process.env.VERCEL) {
+  const PORT = config.server.port || 3000;
+  app.listen(PORT, async () => {
+    logger.info(`服务器启动成功，端口: ${PORT}`);
+    logger.info(`环境: ${config.server.env}`);
+    
+    // 初始化默认管理员账户
+    await initDefaultAdmin();
+    
+    // 启动时预加载数据
+    try {
+      logger.info('预加载数据...');
+      await dataService.fetchNews();
+      await dataService.fetchEvents();
+      logger.info('数据预加载完成');
+    } catch (error) {
+      logger.error('数据预加载失败', error);
+    }
+  });
+
+  // 优雅关闭
+  process.on('SIGTERM', () => {
+    logger.info('收到SIGTERM信号，正在关闭服务器...');
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    logger.info('收到SIGINT信号，正在关闭服务器...');
+    process.exit(0);
+  });
+} else {
+  // Vercel环境：初始化但不启动服务器
+  (async () => {
+    await initDefaultAdmin();
+  })();
+}
+
+module.exports = app;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      logger.info('   用户名: admin');
+      logger.info('   密码: admin123');
+      logger.info('   ⚠️  请首次登录后立即修改密码！');
+    } else {
+      logger.info('默认管理员账户已存在');
+    }
+  } catch (error) {
+    logger.error('初始化默认管理员账户失败', error);
+  }
+}
+
+// 启动服务器（仅在非Vercel环境）
+if (!process.env.VERCEL) {
+  const PORT = config.server.port || 3000;
+  app.listen(PORT, async () => {
+    logger.info(`服务器启动成功，端口: ${PORT}`);
+    logger.info(`环境: ${config.server.env}`);
+    
+    // 初始化默认管理员账户
+    await initDefaultAdmin();
+    
+    // 启动时预加载数据
+    try {
+      logger.info('预加载数据...');
+      await dataService.fetchNews();
+      await dataService.fetchEvents();
+      logger.info('数据预加载完成');
+    } catch (error) {
+      logger.error('数据预加载失败', error);
+    }
+  });
+
+  // 优雅关闭
+  process.on('SIGTERM', () => {
+    logger.info('收到SIGTERM信号，正在关闭服务器...');
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    logger.info('收到SIGINT信号，正在关闭服务器...');
+    process.exit(0);
+  });
+} else {
+  // Vercel环境：初始化但不启动服务器
+  (async () => {
+    await initDefaultAdmin();
+  })();
+}
+
+module.exports = app;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       logger.info('   用户名: admin');
       logger.info('   密码: admin123');
       logger.info('   ⚠️  请首次登录后立即修改密码！');

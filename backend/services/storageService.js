@@ -34,15 +34,50 @@ class StorageService {
       for (const [key, filePath] of Object.entries(STORAGE_FILES)) {
         try {
           await fs.access(filePath);
+          // 文件存在，检查是否为空
+          const data = await fs.readFile(filePath, 'utf8');
+          if (!data || data.trim() === '' || data.trim() === '[]' || data.trim() === '{}') {
+            // 文件为空，尝试从云端恢复
+            await this.restoreFromCloud(key);
+          }
         } catch {
-          // 文件不存在，创建空文件
-          await fs.writeFile(filePath, JSON.stringify([], null, 2), 'utf8');
+          // 文件不存在，先尝试从云端恢复，失败则创建空文件
+          const restored = await this.restoreFromCloud(key);
+          if (!restored) {
+            await fs.writeFile(filePath, JSON.stringify([], null, 2), 'utf8');
+          }
         }
       }
       
       logger.info('存储服务初始化完成');
     } catch (error) {
       logger.error('存储服务初始化失败', error);
+    }
+  }
+
+  /**
+   * 从云端恢复数据
+   */
+  async restoreFromCloud(fileKey) {
+    try {
+      if (!cloudStorageService.isAvailable()) {
+        return false;
+      }
+
+      logger.info(`尝试从云端恢复数据: ${fileKey}`);
+      const cloudData = await cloudStorageService.loadFromCloud(fileKey);
+      
+      if (cloudData && cloudData.length > 0) {
+        const filePath = STORAGE_FILES[fileKey];
+        await fs.writeFile(filePath, JSON.stringify(cloudData, null, 2), 'utf8');
+        logger.info(`✅ 已从云端恢复 ${fileKey}，共 ${cloudData.length} 条记录`);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      logger.warn(`从云端恢复 ${fileKey} 失败:`, error.message);
+      return false;
     }
   }
 

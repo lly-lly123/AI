@@ -1,5 +1,6 @@
 const storageService = require('./storageService');
 const trainingService = require('./trainingService');
+const aiService = require('./aiService');
 const logger = require('../utils/logger');
 const moment = require('moment');
 
@@ -51,10 +52,25 @@ class QualificationService {
       // 生成建议
       analysis.recommendations = this.generateRecommendations(analysis);
 
+      // 调用AI进行综合评估
+      let aiAnalysis = null;
+      try {
+        aiAnalysis = await this.getAIAnalysis(analysis, pigeon, localAssociationData, nationalRaceData);
+        if (aiAnalysis && aiAnalysis.success) {
+          analysis.aiAnalysis = aiAnalysis.data;
+          // 如果AI提供了建议，合并到建议列表
+          if (aiAnalysis.data.recommendations && Array.isArray(aiAnalysis.data.recommendations)) {
+            analysis.recommendations = [...analysis.recommendations, ...aiAnalysis.data.recommendations];
+          }
+        }
+      } catch (error) {
+        logger.warn('AI综合分析失败，使用规则分析结果:', error.message);
+      }
+
       return {
         success: true,
         data: analysis,
-        disclaimer: '本分析结果仅供参考，实际参赛资格以赛事组委会规定为准。数据来源于训练记录、历史比赛记录及公开赛事数据，可能存在误差。'
+        disclaimer: '本分析结果仅供参考，实际参赛资格以赛事组委会规定为准。数据来源于训练记录、历史比赛记录、当地及全国赛鸽数据，并结合AI智能分析，可能存在误差。'
       };
     } catch (error) {
       logger.error('分析参赛资格失败', error);
@@ -369,6 +385,104 @@ class QualificationService {
       not_qualified: `综合评分${score.toFixed(1)}分，暂不具备参赛资格，建议继续训练`
     };
     return messages[status] || '无法评估';
+  }
+
+  /**
+   * 调用AI进行综合分析
+   */
+  async getAIAnalysis(analysis, pigeon, localData, nationalData) {
+    try {
+      const prompt = `请综合分析以下信鸽的参赛能力：
+
+【鸽子基本信息】
+- 足环号：${pigeon.ring}
+- 名称：${pigeon.name || '未命名'}
+- 性别：${pigeon.gender || '未知'}
+- 类型：${pigeon.type || '未知'}
+
+【训练分析结果】
+- 训练状态：${analysis.trainingAnalysis.status}
+- 训练评分：${analysis.trainingAnalysis.score}/100
+- 平均速度：${analysis.trainingAnalysis.avgSpeed || '未知'}公里/小时
+- 最近训练次数：${analysis.trainingAnalysis.recentTrainingCount}
+- 训练评估：${analysis.trainingAnalysis.message}
+
+【历史比赛分析】
+- 比赛状态：${analysis.raceHistoryAnalysis.status}
+- 比赛评分：${analysis.raceHistoryAnalysis.score}/100
+- 平均排名：${analysis.raceHistoryAnalysis.avgRank || '无'}
+- 完赛率：${(analysis.raceHistoryAnalysis.completionRate * 100).toFixed(0) || 0}%
+- 比赛评估：${analysis.raceHistoryAnalysis.message}
+
+【对比分析】
+- 与当地协会对比：${analysis.comparisonAnalysis.localComparison ? `速度${analysis.comparisonAnalysis.localComparison.avgSpeed}公里/小时，百分位${analysis.comparisonAnalysis.localComparison.percentile.toFixed(0)}%` : '无数据'}
+- 与全国数据对比：${analysis.comparisonAnalysis.nationalComparison ? `速度${analysis.comparisonAnalysis.nationalComparison.avgSpeed}公里/小时，百分位${analysis.comparisonAnalysis.nationalComparison.percentile.toFixed(0)}%` : '无数据'}
+
+【当地协会基准数据】
+- 平均速度：${localData.avgSpeed}公里/小时
+- 完赛率：${(localData.completionRate * 100).toFixed(0)}%
+- 平均排名：${localData.avgRank}
+
+【全国赛事基准数据】
+- 平均速度：${nationalData.avgSpeed}公里/小时
+- 完赛率：${(nationalData.completionRate * 100).toFixed(0)}%
+- 平均排名：${nationalData.avgRank}
+
+【综合评估结果】
+- 参赛资格：${analysis.qualification.status}
+- 综合评分：${analysis.qualification.score.toFixed(1)}/100
+- 置信度：${(analysis.qualification.confidence * 100).toFixed(0)}%
+
+请基于以上数据，提供：
+1. 综合能力评估（考虑训练、历史比赛、与基准数据对比）
+2. 参赛建议（是否适合参赛，需要注意什么）
+3. 改进建议（如何提高参赛成功率）
+4. 风险评估（参赛可能面临的风险）
+
+请以专业、客观的角度分析，并明确说明这是基于数据的评估，仅供参考。`;
+
+      const context = {
+        totalPigeons: 1,
+        analysisType: 'qualification',
+        raceDistance: analysis.raceDistance
+      };
+
+      const aiResult = await aiService.chat(prompt, [], context);
+
+      if (aiResult && aiResult.text) {
+        return {
+          success: true,
+          data: {
+            summary: aiResult.text,
+            recommendations: this.extractRecommendations(aiResult.text),
+            model: aiResult.model || 'AI分析',
+            provider: aiResult.provider || 'AI服务'
+          }
+        };
+      }
+
+      return { success: false };
+    } catch (error) {
+      logger.error('AI综合分析失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 从AI回复中提取建议
+   */
+  extractRecommendations(aiText) {
+    const recommendations = [];
+    const lines = aiText.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.match(/^[0-9]+[\.、]/) || trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('建议')) {
+        recommendations.push(trimmed.replace(/^[0-9]+[\.、]\s*/, '').replace(/^[-•]\s*/, '').replace(/^建议[:：]\s*/, ''));
+      }
+    }
+
+    return recommendations.length > 0 ? recommendations : [aiText.substring(0, 200)];
   }
 }
 

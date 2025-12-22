@@ -1,0 +1,97 @@
+/**
+ * 主内容区样式
+ */
+
+.main-content { 
+  margin-left: var(--sidebar-width); 
+  margin-top: var(--header-height); 
+  padding: 28px; 
+  min-height: calc(100vh - var(--header-height));
+  background: var(--bg-primary);
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: calc(100% - var(--sidebar-width));
+}
+
+.content-wrapper { 
+  max-width: 1600px; 
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px;
+  }
+}
+
+
+
+
+
+
+ * 主内容区样式
+ */
+
+.main-content { 
+  margin-left: var(--sidebar-width); 
+  margin-top: var(--header-height); 
+  padding: 28px; 
+  min-height: calc(100vh - var(--header-height));
+  background: var(--bg-primary);
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: calc(100% - var(--sidebar-width));
+}
+
+.content-wrapper { 
+  max-width: 1600px; 
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px;
+  }
+}
+
+
+
+
+
+
+ * 主内容区样式
+ */
+
+.main-content { 
+  margin-left: var(--sidebar-width); 
+  margin-top: var(--header-height); 
+  padding: 28px; 
+  min-height: calc(100vh - var(--header-height));
+  background: var(--bg-primary);
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: calc(100% - var(--sidebar-width));
+}
+
+.content-wrapper { 
+  max-width: 1600px; 
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px;
+  }
+}
+
+
+
+
+
+

@@ -83,8 +83,10 @@ module.exports = {
   ai: {
     // Hugging Face API Key（可选，有API Key可以获得更高的免费额度）
     huggingFaceApiKey: process.env.HUGGING_FACE_API_KEY || null,
-    // 智谱AI API Key（国内可访问，推荐使用）
-    zhipuApiKey: process.env.ZHIPU_API_KEY || null,
+    // 智谱AI API Key - Evo智能助手使用（名称：智鸽）
+    zhipuApiKey: process.env.ZHIPU_API_KEY_EVO || process.env.ZHIPU_API_KEY || null,
+    // 智谱AI API Key - 中枢管家使用（名称：智鸽·中枢管家）
+    zhipuApiKeyAdmin: process.env.ZHIPU_API_KEY_ADMIN || null,
     // 通义千问 API Key（阿里云，国内可访问）
     qwenApiKey: process.env.QWEN_API_KEY || null,
     // AI模型选择（可选，默认自动选择）

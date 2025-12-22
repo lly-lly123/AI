@@ -5,9 +5,10 @@
 require('dotenv').config();
 
 const config = {
-  // 智谱AI配置
+  // 智谱AI配置（使用独立的API Key：智鸽·中枢管家）
   zhipu: {
-    apiKey: process.env.ZHIPU_API_KEY || '394d6e959c914e84b9d11501ba1d5a5e.vL6gL0gWV6o69nk7',
+    // 优先使用ZHIPU_API_KEY_ADMIN（名称：智鸽·中枢管家），如果没有则使用ZHIPU_API_KEY作为兼容
+    apiKey: process.env.ZHIPU_API_KEY_ADMIN || process.env.ZHIPU_API_KEY || null,
     model: process.env.ZHIPU_MODEL || 'glm-4',
     apiBase: process.env.ZHIPU_API_BASE || 'https://open.bigmodel.cn/api/paas/v4',
     enabled: process.env.AI_ENABLED !== 'false', // 默认启用

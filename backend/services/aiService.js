@@ -88,9 +88,47 @@ class AIService {
   }
 
   /**
-   * 构建系统提示词（保持 Evo 身份）
+   * 加载功能使用说明文档
    */
-  buildSystemPrompt(context = {}) {
+  async loadFunctionGuides() {
+    try {
+      const fs = require('fs').promises;
+      const path = require('path');
+      const guidePath = path.join(__dirname, '../../功能使用说明.md');
+      
+      try {
+        const content = await fs.readFile(guidePath, 'utf8');
+        // 缓存功能说明（避免每次都读取文件）
+        this.functionGuides = content;
+        return content;
+      } catch (error) {
+        logger.warn('功能使用说明文档不存在，使用默认说明');
+        return null;
+      }
+    } catch (error) {
+      logger.warn('加载功能使用说明失败:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 构建系统提示词（保持 Evo 身份，包含功能使用说明）
+   */
+  async buildSystemPrompt(context = {}) {
+    // 加载功能使用说明（如果还没有加载）
+    if (!this.functionGuides) {
+      await this.loadFunctionGuides();
+    }
+    
+    let functionGuidesSection = '';
+    if (this.functionGuides) {
+      // 提取功能说明的关键部分（避免提示词过长）
+      const guides = this.functionGuides;
+      // 只包含主要功能部分，去掉详细说明
+      const mainSections = guides.match(/##\s+[\w\s]+/g) || [];
+      functionGuidesSection = `\n\n## 系统功能使用说明\n\n${guides.substring(0, Math.min(guides.length, 8000))}\n\n（功能说明已加载，请结合这些说明回答用户问题）`;
+    }
+    
     return `你是 Evo，一个专业的信鸽管理智能助手。你的身份和特点：
 
 1. **身份**：Evo 智能助手，专门为信鸽爱好者提供专业服务
@@ -106,11 +144,14 @@ class AIService {
    - 使用简洁明了的语言
    - 提供实用的建议和帮助
    - 适当使用表情符号让对话更生动
+   - 结合系统功能使用说明回答用户问题
 
 4. **当前系统信息**：
    - 总鸽子数：${context.totalPigeons || 0}
    - 在世鸽子：${context.alivePigeons || 0}
    - 种鸽数量：${context.breeders || 0}
+
+5. **重要**：当用户询问如何使用某个功能时，请参考系统功能使用说明，提供详细、准确的指导。${functionGuidesSection}
 
 请始终以 Evo 的身份回答用户的问题，保持专业和友好的态度。`;
   }
@@ -118,12 +159,13 @@ class AIService {
   /**
    * 格式化对话历史（适配 Hugging Face API）
    */
-  formatMessages(question, history = [], context = {}) {
+  async formatMessages(question, history = [], context = {}) {
     // 构建完整的对话文本
     let conversation = '';
     
-    // 添加系统提示
-    conversation += `System: ${this.buildSystemPrompt(context)}\n\n`;
+    // 添加系统提示（异步）
+    const systemPrompt = await this.buildSystemPrompt(context);
+    conversation += `System: ${systemPrompt}\n\n`;
     
     // 添加历史对话（最多保留最近10轮）
     const recentHistory = history.slice(-10);
@@ -144,6 +186,11 @@ class AIService {
    * 调用 AI API（支持多个提供商）
    */
   async chat(question, history = [], context = {}) {
+    // 确保功能说明已加载
+    if (!this.functionGuides) {
+      await this.loadFunctionGuides();
+    }
+    
     // 尝试多个提供商，直到成功
     const providersToTry = [
       this.currentProvider,
@@ -265,7 +312,7 @@ class AIService {
    * 使用智谱AI进行对话
    */
   async chatWithZhipu(question, history = [], context = {}, provider) {
-    const messages = this.formatMessagesForChatAPI(question, history, context);
+    const messages = await this.formatMessagesForChatAPI(question, history, context);
     
     const response = await axios.post(
       provider.apiUrl,
@@ -291,7 +338,7 @@ class AIService {
    * 使用通义千问进行对话
    */
   async chatWithQwen(question, history = [], context = {}, provider) {
-    const messages = this.formatMessagesForChatAPI(question, history, context);
+    const messages = await this.formatMessagesForChatAPI(question, history, context);
     
     const response = await axios.post(
       provider.apiUrl,
@@ -321,7 +368,7 @@ class AIService {
    * 使用免费AI代理进行对话（国内可访问）
    */
   async chatWithFreeAI(question, history = [], context = {}, provider) {
-    const messages = this.formatMessagesForChatAPI(question, history, context);
+    const messages = await this.formatMessagesForChatAPI(question, history, context);
     
     try {
       const response = await axios.post(
@@ -352,7 +399,7 @@ class AIService {
    * 使用 Hugging Face 进行对话（原有逻辑）
    */
   async chatWithHuggingFace(question, history = [], context = {}, provider) {
-    const conversationText = this.formatMessages(question, history, context);
+    const conversationText = await this.formatMessages(question, history, context);
     
     const requestData = {
       inputs: conversationText,
