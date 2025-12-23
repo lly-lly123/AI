@@ -1,0 +1,14 @@
+# ============================================================================
+# Zeabur 环境变量配置
+# 请在Zeabur控制台的 Variables 页面添加以下环境变量
+# ============================================================================
+
+PORT=3000
+NODE_ENV=production
+
+# Supabase配置（必需）- 请从 https://supabase.com 获取
+# SUPABASE_URL=https://xxx.supabase.co
+# SUPABASE_ANON_KEY=your-anon-key
+AI_MODEL=auto
+API_KEY=your-api-key-here
+LOG_LEVEL=info
