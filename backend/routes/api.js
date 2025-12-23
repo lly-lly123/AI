@@ -1092,14 +1092,112 @@ router.get('/announcements/latest', async (req, res) => {
 });
 
 /**
+ * 提交用户意见与反馈（登录可选）
+ * POST /api/feedback
+ * Body: { content: string, contact?: string, page?: string, source?: string }
+ */
+router.post('/feedback', async (req, res) => {
+  try {
+    const { content, contact, page, source } = req.body || {};
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: '反馈内容不能为空'
+      });
+    }
+
+    const user = req.user || null;
+    const feedbackItem = {
+      id: `fb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      content: content.trim(),
+      contact: contact ? String(contact).trim() : '',
+      page: page || '',
+      source: source || 'web',
+      userId: user ? user.id : null,
+      username: user ? user.username : null,
+      userRole: user ? user.role : null,
+      userAgent: req.get('user-agent') || '',
+      ip: req.ip || req.headers['x-forwarded-for'] || '',
+      createdAt: new Date().toISOString(),
+      status: 'new'
+    };
+
+    await storageService.add('feedbacks', feedbackItem);
+
+    res.json({
+      success: true,
+      message: '反馈已提交，感谢您的宝贵意见！',
+      data: { id: feedbackItem.id }
+    });
+  } catch (error) {
+    logger.error('提交反馈失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '提交反馈失败，请稍后重试'
+    });
+  }
+});
+
+/**
+ * 获取用户意见与反馈列表（管理员）
+ * GET /api/admin/feedbacks
+ * Query: page, limit, status
+ */
+router.get('/admin/feedbacks', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const status = req.query.status;
+
+    const all = await storageService.read('feedbacks') || [];
+
+    let filtered = all;
+    if (status) {
+      filtered = all.filter(item => item.status === status);
+    }
+
+    // 按时间倒序
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const items = filtered.slice(start, end);
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        page,
+        limit,
+        total: filtered.length
+      }
+    });
+  } catch (error) {
+    logger.error('获取反馈列表失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取反馈列表失败'
+    });
+  }
+});
+
+/**
  * 获取所有公告（管理员）
  * GET /api/admin/announcements
  */
 router.get('/admin/announcements', authenticate, requireAdmin, async (req, res) => {
   try {
     const announcements = await storageService.read('announcements') || [];
+    // 补齐缺失字段，避免旧数据报错
+    const normalized = announcements.map(a => ({
+      history: [],
+      ...a,
+      createdAt: a.createdAt || a.updatedAt || new Date().toISOString(),
+      updatedAt: a.updatedAt || a.createdAt || new Date().toISOString()
+    }));
     // 按创建时间倒序排列
-    const sorted = announcements.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const sorted = normalized.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     res.json({
       success: true,
@@ -1136,7 +1234,8 @@ router.post('/admin/announcements', authenticate, requireAdmin, async (req, res)
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: req.user.id,
-      expiresAt: null // 可以后续添加过期时间功能
+      expiresAt: null, // 可以后续添加过期时间功能
+      history: [] // 历史版本
     };
     
     const announcements = await storageService.read('announcements') || [];
@@ -1176,6 +1275,10 @@ router.put('/admin/announcements/:id', authenticate, requireAdmin, async (req, r
       });
     }
     
+    let changed = false;
+    const prevContent = announcements[index].content;
+    const prevActive = announcements[index].active;
+    const prevUpdatedAt = announcements[index].updatedAt || announcements[index].createdAt || new Date().toISOString();
     if (content !== undefined) {
       if (!content || !content.trim()) {
         return res.status(400).json({
@@ -1184,13 +1287,24 @@ router.put('/admin/announcements/:id', authenticate, requireAdmin, async (req, r
         });
       }
       announcements[index].content = content.trim();
+      changed = true;
     }
     
     if (active !== undefined) {
       announcements[index].active = active;
+      changed = true;
     }
     
-    announcements[index].updatedAt = new Date().toISOString();
+    if (changed) {
+      const snapshot = {
+        content: prevContent,
+        active: prevActive,
+        timestamp: prevUpdatedAt
+      };
+      announcements[index].history = announcements[index].history || [];
+      announcements[index].history.unshift(snapshot);
+      announcements[index].updatedAt = new Date().toISOString();
+    }
     
     await storageService.write('announcements', announcements);
     
@@ -1204,6 +1318,29 @@ router.put('/admin/announcements/:id', authenticate, requireAdmin, async (req, r
     res.status(400).json({
       success: false,
       error: error.message || '更新公告失败'
+    });
+  }
+});
+
+/**
+ * 获取公告历史版本（管理员）
+ * GET /api/admin/announcements/:id/history
+ */
+router.get('/admin/announcements/:id/history', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const announcements = await storageService.read('announcements') || [];
+    const announcement = announcements.find(a => a.id === id);
+    if (!announcement) {
+      return res.status(404).json({ success: false, error: '公告不存在' });
+    }
+    const history = announcement.history || [];
+    res.json({ success: true, data: history });
+  } catch (error) {
+    logger.error('获取公告历史失败', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || '获取公告历史失败'
     });
   }
 });
@@ -2015,6 +2152,86 @@ router.post('/admin/backup', authenticate, requireAdmin, async (req, res) => {
 // ==========================================
 
 /**
+ * 获取 AI 设置（管理员）
+ * GET /api/admin/ai-settings
+ */
+router.get('/admin/ai-settings', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const saved = await storageService.read('ai_settings') || {};
+
+    const mask = (val) => (val ? '***已配置***' : '');
+
+    res.json({
+      success: true,
+      data: {
+        zhipuApiKeyEvo: mask(saved.zhipuApiKeyEvo || config.ai.zhipuApiKey),
+        zhipuApiKeyAdmin: mask(saved.zhipuApiKeyAdmin || config.ai.zhipuApiKeyAdmin),
+        qwenApiKey: mask(saved.qwenApiKey || config.ai.qwenApiKey),
+        huggingFaceApiKey: mask(saved.huggingFaceApiKey || config.ai.huggingFaceApiKey),
+        model: saved.model || config.ai.model || 'auto',
+        updatedAt: saved.updatedAt || null,
+        updatedBy: saved.updatedBy || null
+      }
+    });
+  } catch (error) {
+    logger.error('获取AI设置失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取AI设置失败'
+    });
+  }
+});
+
+/**
+ * 保存 AI 设置（管理员）
+ * POST /api/admin/ai-settings
+ * Body: { zhipuApiKeyEvo?, zhipuApiKeyAdmin?, qwenApiKey?, huggingFaceApiKey?, model? }
+ */
+router.post('/admin/ai-settings', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const {
+      zhipuApiKeyEvo,
+      zhipuApiKeyAdmin,
+      qwenApiKey,
+      huggingFaceApiKey,
+      model
+    } = req.body || {};
+
+    const payload = {
+      zhipuApiKeyEvo: zhipuApiKeyEvo || '',
+      zhipuApiKeyAdmin: zhipuApiKeyAdmin || '',
+      qwenApiKey: qwenApiKey || '',
+      huggingFaceApiKey: huggingFaceApiKey || '',
+      model: model || 'auto',
+      updatedAt: new Date().toISOString(),
+      updatedBy: req.user.id
+    };
+
+    await storageService.write('ai_settings', payload);
+    // 立即应用到运行时AI服务
+    aiService.applyKeySettings(payload);
+
+    res.json({
+      success: true,
+      data: {
+        ...payload,
+        zhipuApiKeyEvo: payload.zhipuApiKeyEvo ? '***已配置***' : '',
+        zhipuApiKeyAdmin: payload.zhipuApiKeyAdmin ? '***已配置***' : '',
+        qwenApiKey: payload.qwenApiKey ? '***已配置***' : '',
+        huggingFaceApiKey: payload.huggingFaceApiKey ? '***已配置***' : ''
+      },
+      message: 'AI 设置已保存并应用'
+    });
+  } catch (error) {
+    logger.error('保存AI设置失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '保存AI设置失败'
+    });
+  }
+});
+
+/**
  * 获取系统设置（管理员）
  * GET /api/admin/system-settings
  */
@@ -2344,114 +2561,6 @@ router.get('/function-guides', async (req, res) => {
 });
 
 module.exports = router;
-
-
-
-
-    const filtered = announcements.filter(a => a.id !== id);
-    
-    if (filtered.length === announcements.length) {
-      return res.status(404).json({
-        success: false,
-        error: '公告不存在'
-      });
-    }
-    
-    await storageService.write('announcements', filtered);
-    
-    res.json({
-      success: true,
-      message: '公告删除成功'
-    });
-  } catch (error) {
-    logger.error('删除公告失败', error);
-    res.status(400).json({
-      success: false,
-      error: error.message || '删除公告失败'
-    });
-  }
-});
-
-// ==========================================
-// Evo 智能助手 AI 聊天 API
-// ==========================================
-
-/**
- * Evo 智能助手聊天接口
- * POST /api/evo/chat
- * Body: { question: string, history: array, context: object }
- */
-router.post('/evo/chat', authenticate, async (req, res) => {
-  try {
-    const { question, history = [], context = {} } = req.body;
-    
-    if (!question || !question.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: '问题不能为空'
-      });
-    }
-
-    // 获取用户数据作为上下文
-    const pigeons = await storageService.filter('pigeons', 
-      p => p.userId === req.user.id
-    ) || [];
-    
-    const enhancedContext = {
-      ...context,
-      totalPigeons: pigeons.length,
-      alivePigeons: pigeons.filter(p => p.alive).length,
-      breeders: pigeons.filter(p => p.type === '种鸽' && p.alive).length,
-      userId: req.user.id,
-      username: req.user.username
-    };
-
-    // 调用 AI 服务
-    const result = await aiService.chat(question, history, enhancedContext);
-    
-    // 记录使用统计
-    await adminService.recordUsage(req.user.id, 'evo_chat');
-    
-    res.json({
-      success: true,
-      data: {
-        text: result.text,
-        response: result.text,
-        model: result.model,
-        provider: result.provider,
-        error: result.error || null
-      },
-      modelInfo: aiService.getModelInfo()
-    });
-  } catch (error) {
-    logger.error('Evo 聊天失败', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || '聊天服务暂时不可用',
-      message: '请稍后重试'
-    });
-  }
-});
-
-/**
- * 获取 AI 模型信息
- * GET /api/evo/model-info
- */
-router.get('/evo/model-info', authenticate, async (req, res) => {
-  try {
-    const modelInfo = aiService.getModelInfo();
-    res.json({
-      success: true,
-      data: modelInfo
-    });
-  } catch (error) {
-    logger.error('获取模型信息失败', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || '获取模型信息失败'
-    });
-  }
-});
 
 /**
  * 测试 AI 连接
@@ -3475,37 +3584,6 @@ router.get('/function-guides', async (req, res) => {
 });
 
 module.exports = router;
-
-
-
-
-    const filtered = announcements.filter(a => a.id !== id);
-    
-    if (filtered.length === announcements.length) {
-      return res.status(404).json({
-        success: false,
-        error: '公告不存在'
-      });
-    }
-    
-    await storageService.write('announcements', filtered);
-    
-    res.json({
-      success: true,
-      message: '公告删除成功'
-    });
-  } catch (error) {
-    logger.error('删除公告失败', error);
-    res.status(400).json({
-      success: false,
-      error: error.message || '删除公告失败'
-    });
-  }
-});
-
-// ==========================================
-// Evo 智能助手 AI 聊天 API
-// ==========================================
 
 /**
  * Evo 智能助手聊天接口

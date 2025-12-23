@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快速测试登录功能</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-card {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .password-wrapper {
+      position: relative;
+    }
+    .password-wrapper input {
+      padding-right: 45px;
+    }
+    .toggle-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    button[type="submit"]:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+    .info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #3b82f6;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-card">
+    <h1>🔧 登录功能快速测试</h1>
+    <div class="info">
+      <strong>测试说明：</strong><br>
+      1. 点击眼睛图标测试密码显示功能<br>
+      2. 输入 admin / admin123 测试登录功能<br>
+      3. 必须勾选"使用本地验证"
+    </div>
+    
+    <form id="testLoginForm">
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="testUsername" placeholder="admin" value="admin" />
+      </div>
+      
+      <div class="form-group">
+        <label>密码</label>
+        <div class="password-wrapper">
+          <input type="password" id="testPassword" placeholder="admin123" value="admin123" />
+          <button type="button" class="toggle-btn" onclick="testTogglePassword()" title="显示密码">👁️</button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label style="font-weight: normal; cursor: pointer;">
+          <input type="checkbox" id="testUseLocalAuth" checked style="width: auto; margin-right: 8px;" />
+          使用本地验证
+        </label>
+      </div>
+      
+      <button type="submit">登录测试</button>
+      <div id="testResult"></div>
+    </form>
+  </div>
+
+  <script>
+    // 密码显示切换函数
+    function testTogglePassword() {
+      console.log('🔄 testTogglePassword 被调用');
+      const passwordInput = document.getElementById('testPassword');
+      const toggleBtn = event.target;
+      
+      if (!passwordInput) {
+        console.error('❌ 密码输入框未找到');
+        alert('密码输入框未找到');
+        return;
+      }
+      
+      try {
+        const currentType = passwordInput.getAttribute('type') || passwordInput.type || 'password';
+        const newType = currentType === 'password' ? 'text' : 'password';
+        
+        console.log('🔄 切换密码显示:', { currentType, newType });
+        
+        passwordInput.setAttribute('type', newType);
+        passwordInput.type = newType;
+        
+        if (newType === 'text') {
+          toggleBtn.textContent = '🙈';
+          toggleBtn.title = '隐藏密码';
+        } else {
+          toggleBtn.textContent = '👁️';
+          toggleBtn.title = '显示密码';
+        }
+        
+        setTimeout(() => {
+          passwordInput.focus();
+        }, 10);
+        
+        console.log('✅ 密码显示状态已切换:', newType);
+      } catch (error) {
+        console.error('❌ 切换密码显示状态失败:', error);
+        alert('切换失败: ' + error.message);
+      }
+    }
+    
+    // 登录表单处理
+    document.getElementById('testLoginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('testUsername').value.trim().toLowerCase();
+      const password = document.getElementById('testPassword').value.trim();
+      const useLocalAuth = document.getElementById('testUseLocalAuth').checked;
+      const resultDiv = document.getElementById('testResult');
+      
+      console.log('🔍 登录信息:', { username, password: '***', useLocalAuth });
+      
+      if (!useLocalAuth) {
+        resultDiv.innerHTML = '<div class="result error">❌ 请勾选"使用本地验证"</div>';
+        return;
+      }
+      
+      if (username === 'admin' && password === 'admin123') {
+        resultDiv.innerHTML = '<div class="result success">✅ 登录成功！用户名和密码正确。<br>如果admin.html无法登录，请检查浏览器控制台的错误信息。</div>';
+        console.log('✅ 登录成功');
+      } else {
+        resultDiv.innerHTML = '<div class="result error">❌ 登录失败：用户名或密码错误<br>正确账号：admin / admin123</div>';
+        console.log('❌ 登录失败');
+      }
+    });
+    
+    console.log('✅ 测试页面已加载');
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

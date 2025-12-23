@@ -13,7 +13,7 @@ class SecurityMonitor {
       // SQL注入模式
       sqlInjection: [
         /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
-        /('|(\\')|(;)|(--)|(\/\*)|(\*\/)|(\+)|(\%)/i
+        /('|(\\')|(;)|(--)|(\/\*)|(\*\/)|(\+)|(\%))/i
       ],
       // XSS模式
       xss: [

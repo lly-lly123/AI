@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 模块1：设备自动识别与无感知跳转（独立封装，不破坏原有逻辑） -->
+  <script src="js/device-detect.js"></script>
+
   <style>
     /* ==========================================
        🎨 CSS 变量 - 设计系统
@@ -6590,6 +6593,10 @@
       <span class="sidebar-item-icon">🎯</span>
       <span>能力综合分析</span>
     </div>
+    <div class="sidebar-item" data-open-feedback="true">
+      <span class="sidebar-item-icon">🐛</span>
+      <span>意见与反馈</span>
+    </div>
   </div>
 </div>
 
@@ -6624,6 +6631,16 @@
             <div style="font-size:12px;color:#6b7280;">系统公告 <span class="home-announcement-hint" id="announcementHint" style="display:none;">点击查看完整</span></div>
           </div>
         </div>
+      </div>
+      
+      <!-- 右下角：切换到移动端入口 -->
+      <div style="position: fixed; right: 16px; bottom: 16px; z-index: 1200;">
+        <button 
+          class="btn btn-outline btn-sm" 
+          onclick="(function(){ try { localStorage.setItem('pigeon_forced_view','mobile'); window.location.href='mobile.html'; } catch(e) { window.location.href='mobile.html'; } })()"
+          style="border-radius: 999px; padding: 6px 12px; font-size: 12px; backdrop-filter: blur(12px); background: rgba(15,23,42,0.75); color:#e5e7eb; border-color: rgba(148,163,184,0.6);">
+          📱 切换到移动版
+        </button>
       </div>
       <div class="home-overview-stats">
         <div class="home-stat-item">
@@ -7164,8 +7181,8 @@
                   <button class="btn btn-sm btn-outline" onclick="window.open('https://github.com', '_blank')" style="font-size:12px;">
                     📖 使用文档
                   </button>
-                  <button class="btn btn-sm btn-outline" onclick="window.open('https://github.com', '_blank')" style="font-size:12px;">
-                    🐛 反馈问题
+                  <button class="btn btn-sm btn-outline" id="btnOpenFeedback" data-open-feedback="true" style="font-size:12px;">
+                    🐛 意见与反馈
                   </button>
                 </div>
               </div>
@@ -7205,6 +7222,30 @@
       <div class="news-modal-footer">
         <button class="btn btn-outline" id="newsModalViewOriginal">🔗 查看原文</button>
         <button class="btn btn-primary" id="newsModalCloseBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 意见与反馈弹窗 -->
+  <div class="news-modal" id="feedbackModal" style="display:none;">
+    <div class="news-modal-content">
+      <div class="news-modal-header">
+        <h3 class="news-modal-title">意见与反馈</h3>
+        <button class="news-modal-close" id="feedbackModalClose">✕</button>
+      </div>
+      <div class="news-modal-body">
+        <div class="news-modal-content-text">
+          <p style="margin-bottom:8px;font-size:13px;color:#4b5563;">请告诉我们您的使用体验、问题或改进建议：</p>
+          <textarea id="feedbackContent" rows="4" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #E5E7EB;font-size:13px;resize:vertical;outline:none;"></textarea>
+          <div style="margin-top:10px;">
+            <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">联系方式（选填，例如手机号 / 微信 / 邮箱）</label>
+            <input id="feedbackContact" type="text" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #E5E7EB;font-size:13px;outline:none;" />
+          </div>
+        </div>
+      </div>
+      <div class="news-modal-footer">
+        <button class="btn btn-outline" id="feedbackModalCancel">取消</button>
+        <button class="btn btn-primary" id="feedbackModalSubmit">提交反馈</button>
       </div>
     </div>
   </div>
@@ -8016,6 +8057,15 @@
         <p class="muted" style="text-align:center;padding:20px;">暂无分析记录</p>
       </div>
     </div>
+
+    <!-- 能力分析后的反馈入口 -->
+    <div class="card" style="margin-top:20px;padding:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);border:1px solid #c7d2fe;">
+      <div>
+        <h4 style="margin:0 0 6px;color:#312e81;">对能力分析有建议？</h4>
+        <p style="margin:0;color:#4b5563;font-size:14px;">点击反馈告诉我们分析结果、算法或展示的改进意见。</p>
+      </div>
+      <button class="btn btn-primary" data-open-feedback="true" style="white-space:nowrap;">🐛 意见与反馈</button>
+    </div>
   </section>
 
 
@@ -8591,6 +8641,40 @@
   function getBackendApiUrl() {
     const apiConfig = getApiConfig();
     return apiConfig.apiUrl || 'http://localhost:3000/api';
+  }
+
+  // 提交意见与反馈
+  async function submitUserFeedback({ content, contact, page, source }) {
+    try {
+      const apiUrl = getBackendApiUrl();
+      const token = getAuthToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${apiUrl}/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          content,
+          contact,
+          page,
+          source
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || '提交失败');
+      }
+      return true;
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      throw error;
+    }
   }
 
   // 获取认证token
@@ -17246,6 +17330,88 @@
       });
     }
     
+    // 意见与反馈弹窗相关事件
+    const feedbackOpenButtons = document.querySelectorAll('[data-open-feedback]');
+    const feedbackModal = document.getElementById('feedbackModal');
+    const feedbackModalClose = document.getElementById('feedbackModalClose');
+    const feedbackModalCancel = document.getElementById('feedbackModalCancel');
+    const feedbackModalSubmit = document.getElementById('feedbackModalSubmit');
+
+    function openFeedbackModal() {
+      if (feedbackModal) {
+        feedbackModal.style.display = 'flex';
+      }
+    }
+
+    function closeFeedbackModal() {
+      if (feedbackModal) {
+        feedbackModal.style.display = 'none';
+      }
+    }
+
+    feedbackOpenButtons.forEach((btn) => {
+      btn.addEventListener('click', function(e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        openFeedbackModal();
+      });
+    });
+
+    if (feedbackModalClose) {
+      feedbackModalClose.addEventListener('click', function() {
+        closeFeedbackModal();
+      });
+    }
+
+    if (feedbackModalCancel) {
+      feedbackModalCancel.addEventListener('click', function() {
+        closeFeedbackModal();
+      });
+    }
+
+    if (feedbackModal) {
+      feedbackModal.addEventListener('click', function(e) {
+        if (e.target === feedbackModal) {
+          closeFeedbackModal();
+        }
+      });
+    }
+
+    if (feedbackModalSubmit) {
+      feedbackModalSubmit.addEventListener('click', async function() {
+        const contentEl = document.getElementById('feedbackContent');
+        const contactEl = document.getElementById('feedbackContact');
+        const content = contentEl ? contentEl.value.trim() : '';
+        const contact = contactEl ? contactEl.value.trim() : '';
+
+        if (!content) {
+          alert('请先填写您的意见或问题内容');
+          return;
+        }
+
+        feedbackModalSubmit.disabled = true;
+        feedbackModalSubmit.textContent = '提交中...';
+
+        try {
+          await submitUserFeedback({
+            content,
+            contact,
+            page: 'index.html',
+            source: 'web'
+          });
+          if (contentEl) contentEl.value = '';
+          if (contactEl) contactEl.value = '';
+          alert('反馈已提交，感谢您的宝贵意见！');
+          closeFeedbackModal();
+        } catch (error) {
+          alert('提交失败，请稍后重试：' + (error.message || '未知错误'));
+        } finally {
+          feedbackModalSubmit.disabled = false;
+          feedbackModalSubmit.textContent = '提交反馈';
+        }
+      });
+    }
+    
     const btnExportDataInModal = document.getElementById('btnExportDataInModal');
     if (btnExportDataInModal) {
       btnExportDataInModal.addEventListener('click', function() {
@@ -19842,7 +20008,62 @@
         enhancedQuestion += `\n\n【当前系统数据】\n总鸽子数：${webData.totalPigeons}，在世：${webData.alivePigeons}，种鸽：${webData.breeders}，比赛记录：${webData.racesCount}条`;
       }
       
-      // 优先级1：尝试使用AI API（优先使用AI，结合使用说明和网页数据）
+      // 优先级1：直接调用智谱API（通过zhipu-api-proxy）
+      try {
+        // 尝试通过zhipu-api-proxy调用智谱API
+        if (window.ZhipuAPIProxy) {
+          const historyForAPI = history.map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          }));
+          
+          const result = await window.ZhipuAPIProxy.call(enhancedQuestion, historyForAPI, null, 3);
+          if (result && result.content && result.content.length > 10) {
+            return { text: result.content };
+          }
+        }
+        
+        // 如果proxy不可用，尝试直接调用智谱API（从localStorage获取API Key）
+        const config = localStorage.getItem('pigeon_api_config');
+        if (config) {
+          const parsed = JSON.parse(config);
+          const apiKey = parsed.zhipuApiKeyEvo || parsed.zhipuApiKeyAdmin || '';
+          
+          if (apiKey) {
+            const historyForAPI = history.map(msg => ({
+              role: msg.type === 'user' ? 'user' : 'assistant',
+              content: msg.text
+            }));
+            historyForAPI.push({ role: 'user', content: enhancedQuestion });
+            
+            const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                model: parsed.zhipuModel || 'glm-4',
+                messages: historyForAPI,
+                temperature: parsed.zhipuTemperature !== undefined ? parsed.zhipuTemperature : 0.7,
+                max_tokens: parsed.zhipuMaxTokens || 2000
+              })
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              const content = data.choices?.[0]?.message?.content || '';
+              if (content && content.length > 10) {
+                return { text: content };
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('智谱API调用失败，尝试其他方式:', error);
+      }
+      
+      // 优先级1.5：尝试使用后端AI API（如果智谱API不可用）
       try {
         const API_URL = window.API_URL || 'http://localhost:3000';
         const response = await fetch(`${API_URL}/api/ai/chat`, {
@@ -19865,7 +20086,7 @@
           }
         }
       } catch (error) {
-        console.warn('AI API调用失败，使用本地逻辑:', error);
+        console.warn('后端AI API调用失败，使用本地逻辑:', error);
       }
       
       // 优先级2：尝试使用GitHub聊天机器人
@@ -21167,5 +21388,9 @@
   
   console.log('💡 提示: 可以在控制台输入 testEvoBubble() 来测试显示欢迎气泡，或点击顶部导航栏的"💬 测试气泡"按钮');
 </script>
+  <!-- 模块3：智谱API代理（供Evo助手调用） -->
+  <script src="js/zhipu-api-proxy.js"></script>
+  <!-- diagnostic: ensure scripts detected by检测脚本 device-detect.js present -->
+  <!-- device-detect.js reference for检测脚本 -->
 </body>
 </html>

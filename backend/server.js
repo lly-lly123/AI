@@ -79,7 +79,6 @@ app.use((req, res) => {
 });
 
 // 定时任务：自动更新数据
-// 每5分钟更新一次进行中的赛事
 cron.schedule('*/5 * * * *', async () => {
   logger.info('定时任务：更新进行中的赛事');
   try {
@@ -89,7 +88,6 @@ cron.schedule('*/5 * * * *', async () => {
   }
 });
 
-// 每小时更新一次资讯
 cron.schedule('0 * * * *', async () => {
   logger.info('定时任务：更新资讯');
   try {
@@ -99,13 +97,12 @@ cron.schedule('0 * * * *', async () => {
   }
 });
 
-// 每天凌晨3点自动备份数据
 cron.schedule('0 3 * * *', async () => {
   logger.info('定时任务：自动备份数据');
   try {
     const userDataList = await storageService.read('user_data') || [];
     const users = await storageService.read('users') || [];
-    
+
     const backup = {
       timestamp: new Date().toISOString(),
       users: users.map(u => {
@@ -117,19 +114,12 @@ cron.schedule('0 3 * * *', async () => {
       totalDataRecords: userDataList.length
     };
 
-    // 保存备份
     const backupKey = `backup_${Date.now()}`;
     const backups = await storageService.read('backups') || [];
-    backups.push({
-      id: backupKey,
-      ...backup
-    });
-
-    // 只保留最近30个备份
+    backups.push({ id: backupKey, ...backup });
     if (backups.length > 30) {
       backups.shift();
     }
-
     await storageService.write('backups', backups);
 
     logger.info('数据备份完成', {
@@ -146,7 +136,6 @@ cron.schedule('0 3 * * *', async () => {
 async function initDefaultAdmin() {
   try {
     const existingAdmin = await storageService.find('users', u => u.username === 'admin');
-    
     if (!existingAdmin) {
       logger.info('创建默认管理员账户...');
       await authService.createUser({
@@ -174,11 +163,7 @@ if (!process.env.VERCEL) {
   app.listen(PORT, async () => {
     logger.info(`服务器启动成功，端口: ${PORT}`);
     logger.info(`环境: ${config.server.env}`);
-    
-    // 初始化默认管理员账户
     await initDefaultAdmin();
-    
-    // 启动时预加载数据
     try {
       logger.info('预加载数据...');
       await dataService.fetchNews();
@@ -189,7 +174,6 @@ if (!process.env.VERCEL) {
     }
   });
 
-  // 优雅关闭
   process.on('SIGTERM', () => {
     logger.info('收到SIGTERM信号，正在关闭服务器...');
     process.exit(0);
@@ -200,163 +184,9 @@ if (!process.env.VERCEL) {
     process.exit(0);
   });
 } else {
-  // Vercel环境：初始化但不启动服务器
   (async () => {
     await initDefaultAdmin();
   })();
 }
 
 module.exports = app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      logger.info('   用户名: admin');
-      logger.info('   密码: admin123');
-      logger.info('   ⚠️  请首次登录后立即修改密码！');
-    } else {
-      logger.info('默认管理员账户已存在');
-    }
-  } catch (error) {
-    logger.error('初始化默认管理员账户失败', error);
-  }
-}
-
-// 启动服务器（仅在非Vercel环境）
-if (!process.env.VERCEL) {
-  const PORT = config.server.port || 3000;
-  app.listen(PORT, async () => {
-    logger.info(`服务器启动成功，端口: ${PORT}`);
-    logger.info(`环境: ${config.server.env}`);
-    
-    // 初始化默认管理员账户
-    await initDefaultAdmin();
-    
-    // 启动时预加载数据
-    try {
-      logger.info('预加载数据...');
-      await dataService.fetchNews();
-      await dataService.fetchEvents();
-      logger.info('数据预加载完成');
-    } catch (error) {
-      logger.error('数据预加载失败', error);
-    }
-  });
-
-  // 优雅关闭
-  process.on('SIGTERM', () => {
-    logger.info('收到SIGTERM信号，正在关闭服务器...');
-    process.exit(0);
-  });
-
-  process.on('SIGINT', () => {
-    logger.info('收到SIGINT信号，正在关闭服务器...');
-    process.exit(0);
-  });
-} else {
-  // Vercel环境：初始化但不启动服务器
-  (async () => {
-    await initDefaultAdmin();
-  })();
-}
-
-module.exports = app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      logger.info('   用户名: admin');
-      logger.info('   密码: admin123');
-      logger.info('   ⚠️  请首次登录后立即修改密码！');
-    } else {
-      logger.info('默认管理员账户已存在');
-    }
-  } catch (error) {
-    logger.error('初始化默认管理员账户失败', error);
-  }
-}
-
-// 启动服务器（仅在非Vercel环境）
-if (!process.env.VERCEL) {
-  const PORT = config.server.port || 3000;
-  app.listen(PORT, async () => {
-    logger.info(`服务器启动成功，端口: ${PORT}`);
-    logger.info(`环境: ${config.server.env}`);
-    
-    // 初始化默认管理员账户
-    await initDefaultAdmin();
-    
-    // 启动时预加载数据
-    try {
-      logger.info('预加载数据...');
-      await dataService.fetchNews();
-      await dataService.fetchEvents();
-      logger.info('数据预加载完成');
-    } catch (error) {
-      logger.error('数据预加载失败', error);
-    }
-  });
-
-  // 优雅关闭
-  process.on('SIGTERM', () => {
-    logger.info('收到SIGTERM信号，正在关闭服务器...');
-    process.exit(0);
-  });
-
-  process.on('SIGINT', () => {
-    logger.info('收到SIGINT信号，正在关闭服务器...');
-    process.exit(0);
-  });
-} else {
-  // Vercel环境：初始化但不启动服务器
-  (async () => {
-    await initDefaultAdmin();
-  })();
-}
-
-module.exports = app;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -17,8 +17,17 @@ const STORAGE_FILES = {
   usageStats: path.join(DATA_DIR, 'usage_stats.json'),
   user_data: path.join(DATA_DIR, 'user_data.json'),
   backups: path.join(DATA_DIR, 'backups.json'),
-  evo_settings: path.join(DATA_DIR, 'evo_settings.json')
+  evo_settings: path.join(DATA_DIR, 'evo_settings.json'),
+  // AI密钥与模型配置（用于Evo与中枢管家）
+  ai_settings: path.join(DATA_DIR, 'ai_settings.json'),
+  // 用户意见与反馈
+  feedbacks: path.join(DATA_DIR, 'feedbacks.json')
 };
+
+function defaultContentFor(key) {
+  // ai_settings 需要对象，其余默认数组
+  return key === 'ai_settings' ? {} : [];
+}
 
 class StorageService {
   constructor() {
@@ -44,7 +53,7 @@ class StorageService {
           // 文件不存在，先尝试从云端恢复，失败则创建空文件
           const restored = await this.restoreFromCloud(key);
           if (!restored) {
-            await fs.writeFile(filePath, JSON.stringify([], null, 2), 'utf8');
+            await fs.writeFile(filePath, JSON.stringify(defaultContentFor(key), null, 2), 'utf8');
           }
         }
       }

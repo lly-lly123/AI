@@ -45,6 +45,9 @@ class AIService {
       }
     };
     
+    // 记录模型选择
+    this.modelChoice = config.ai?.model || 'auto';
+
     // 当前使用的提供商
     this.currentProvider = this.selectProvider();
     
@@ -61,6 +64,59 @@ class AIService {
         '支持中文对话',
         '高性能响应'
       ]
+    };
+
+    // 异步加载存储中的AI密钥配置
+    this.initFromStorage();
+  }
+
+  async initFromStorage() {
+    try {
+      const storageService = require('./storageService');
+      const saved = await storageService.read('ai_settings');
+      if (saved && Object.keys(saved).length > 0) {
+        this.applyKeySettings(saved);
+        logger.info('AI 配置已从存储加载');
+      }
+    } catch (error) {
+      logger.warn('加载存储中的AI配置失败:', error.message);
+    }
+  }
+
+  /**
+   * 应用外部传入的AI密钥/模型配置
+   */
+  applyKeySettings(settings = {}) {
+    const setIf = (provider, keyName) => {
+      if (settings[keyName]) {
+        provider.apiKey = settings[keyName];
+        provider.enabled = true;
+      }
+    };
+
+    setIf(this.providers.zhipu, 'zhipuApiKeyEvo');
+    // 中枢管家Key，当前沿用智谱通道
+    if (settings.zhipuApiKeyAdmin) {
+      this.providers.zhipu.apiKey = settings.zhipuApiKeyAdmin;
+      this.providers.zhipu.enabled = true;
+    }
+    setIf(this.providers.qwen, 'qwenApiKey');
+    setIf(this.providers.huggingface, 'huggingFaceApiKey');
+
+    if (settings.model) {
+      this.modelChoice = settings.model;
+    }
+
+    // 重新选择最优提供商
+    this.currentProvider = this.selectProvider();
+    this.modelInfo = {
+      name: this.currentProvider.name,
+      provider: this.currentProvider.provider,
+      source: this.currentProvider.apiUrl,
+      description: '智能对话模型，支持中文对话',
+      free: true,
+      requiresApiKey: !!this.currentProvider.apiKey,
+      features: ['完全免费使用', '支持中文对话', '高性能响应']
     };
   }
 
