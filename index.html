@@ -10008,13 +10008,25 @@
     
     // 新增鸽子按钮
     const btnGoCreate = document.getElementById('btnGoCreate');
-    if (btnGoCreate && !btnGoCreate.onclick) {
-      btnGoCreate.onclick = () => {
-        setupCreateForm();
-        switchView('createView');
-      };
+    if (btnGoCreate) {
+      // 移除旧的事件监听器
+      const newBtn = btnGoCreate.cloneNode(true);
+      btnGoCreate.parentNode.replaceChild(newBtn, btnGoCreate);
+      
+      // 添加新的事件监听器
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('新增鸽子按钮被点击');
+        if (typeof setupCreateForm === 'function') {
+          setupCreateForm();
+        }
+        if (typeof switchView === 'function') {
+          switchView('createView');
+        }
+      });
       console.log('✓ btnGoCreate 事件已绑定');
-    } else if (!btnGoCreate) {
+    } else {
       console.warn('✗ btnGoCreate 未找到');
     }
     
@@ -10027,6 +10039,10 @@
   } else {
     initAllButtonEvents();
   }
+  
+  // 延迟再次绑定，确保按钮已加载
+  setTimeout(initAllButtonEvents, 500);
+  setTimeout(initAllButtonEvents, 1000);
 
   // 详情视图：浏览 + 编辑
   const dTitle = document.getElementById('d_title');
@@ -10974,18 +10990,33 @@
         e.stopPropagation();
         
         const view = sidebarItem.dataset.view;
-        console.log('点击了菜单项:', view, sidebarItem.textContent.trim());
+        const openFeedback = sidebarItem.dataset.openFeedback;
+        
+        console.log('点击了菜单项:', view || openFeedback, sidebarItem.textContent.trim());
         
         if (view) {
           try {
-            switchView(view);
-            console.log('视图切换成功:', view);
+            if (typeof switchView === 'function') {
+              switchView(view);
+              console.log('视图切换成功:', view);
+            } else {
+              console.error('switchView 函数未定义');
+            }
           } catch (error) {
             console.error('视图切换失败:', error);
             alert('切换视图时出错: ' + error.message);
           }
+        } else if (openFeedback === 'true') {
+          // 打开意见反馈对话框
+          const feedbackModal = document.getElementById('feedbackModal');
+          if (feedbackModal) {
+            feedbackModal.style.display = 'flex';
+            console.log('打开意见反馈对话框');
+          } else {
+            console.warn('意见反馈对话框未找到');
+          }
         } else {
-          console.warn('菜单项缺少 data-view 属性:', sidebarItem);
+          console.warn('菜单项缺少 data-view 或 data-open-feedback 属性:', sidebarItem);
         }
       }
     }); // 使用冒泡阶段（默认）
@@ -11005,13 +11036,60 @@
     // 延迟再次确保绑定（备用方案）
     setTimeout(() => {
       if (!sidebarEventsBound) {
+        console.log('延迟绑定侧边栏事件...');
         bindSidebarEvents();
       }
     }, 500);
+    
+    // 再次延迟绑定，确保所有元素都已加载
+    setTimeout(() => {
+      if (!sidebarEventsBound) {
+        console.log('最终尝试绑定侧边栏事件...');
+        bindSidebarEvents();
+      }
+    }, 1000);
   }
   
   // 初始化侧边栏事件
   initSidebarEvents();
+  
+  // 确保侧边栏项目可以点击（添加直接事件绑定作为备用）
+  function bindSidebarItemsDirectly() {
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => {
+      // 移除可能存在的旧事件监听器
+      const newItem = item.cloneNode(true);
+      item.parentNode.replaceChild(newItem, item);
+      
+      // 添加点击事件
+      newItem.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const view = newItem.dataset.view;
+        const openFeedback = newItem.dataset.openFeedback;
+        
+        if (view) {
+          console.log('直接点击侧边栏项:', view);
+          if (typeof switchView === 'function') {
+            switchView(view);
+          }
+        } else if (openFeedback === 'true') {
+          // 打开反馈对话框
+          const feedbackModal = document.getElementById('feedbackModal');
+          if (feedbackModal) {
+            feedbackModal.style.display = 'flex';
+          }
+        }
+      });
+    });
+    console.log('侧边栏项目直接事件绑定完成，共', sidebarItems.length, '项');
+  }
+  
+  // 延迟绑定直接事件
+  setTimeout(bindSidebarItemsDirectly, 100);
+  setTimeout(bindSidebarItemsDirectly, 500);
+  setTimeout(bindSidebarItemsDirectly, 1000);
 
   // 视图切换按钮事件
   const btnTableView = document.getElementById('btnTableView');
@@ -14542,56 +14620,8 @@
   views.healthView = document.getElementById('healthView');
   views.analysisView = document.getElementById('analysisView');
   
-  // 原始 switchView 函数增强
-  const originalSwitchView = switchView;
-  switchView = function(name) {
-    // 调用原始切换逻辑
-    Object.keys(views).forEach(k => {
-      if (views[k]) views[k].style.display = (k === name) ? '' : 'none';
-    });
-    
-  sidebarItems.forEach(item => {
-      if (item.dataset.view === name) item.classList.add('active');
-      else item.classList.remove('active');
-    });
-    
-    // 血统关系视图
-    if (name === 'pedigreeView') {
-      refreshPedigreeView();
-    }
-    
-    // 比赛管理视图
-    if (name === 'raceView') {
-      loadRaces();
-      syncRacesToPigeons();
-      renderRaceList();
-      fillStatsPigeonSelect();
-      generateOverallAnalysis();
-    }
-    
-    // 繁育配对视图
-    if (name === 'breedingView') {
-      loadPairings();
-      fillBreedingSelects();
-      renderPairingHistory();
-      updateBreedingAssessment();
-    }
-    
-    // 健康管理视图
-    if (name === 'healthView') {
-      loadHealthRecords();
-      fillHealthPigeonSelects();
-      renderHealthOverview();
-      renderHealthAlerts();
-    }
-    
-    // 智能分析视图
-    if (name === 'analysisView') {
-      loadPairings();
-      loadHealthRecords();
-      runFullAnalysis();
-    }
-  };
+  // 注意：switchView 函数已在后面统一定义，这里不再重复定义
+  // 保留原始函数引用，后续会在统一版本中合并所有功能
   
   // ========================================
   // 🔍 模块7：智能搜索
@@ -17732,26 +17762,58 @@
     });
   }
   
-  // 快捷入口
-  document.querySelectorAll('.quick-link-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const action = btn.dataset.action;
-      switch (action) {
-        case 'addPigeon':
-          switchView('createView');
-          break;
-        case 'addRace':
-          switchView('raceView');
-          break;
-        case 'breeding':
-          switchView('breedingView');
-          break;
-        case 'analysis':
-          switchView('analysisView');
-          break;
-      }
+  // 快捷入口按钮事件绑定
+  function bindQuickLinkButtons() {
+    const quickLinkButtons = document.querySelectorAll('.quick-link-btn');
+    console.log('找到快捷入口按钮数量:', quickLinkButtons.length);
+    
+    quickLinkButtons.forEach(btn => {
+      // 移除可能存在的旧事件监听器
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const action = newBtn.dataset.action;
+        console.log('快捷入口按钮点击:', action);
+        
+        if (typeof switchView === 'function') {
+          switch (action) {
+            case 'addPigeon':
+              switchView('createView');
+              break;
+            case 'addRace':
+              switchView('raceView');
+              break;
+            case 'breeding':
+              switchView('breedingView');
+              break;
+            case 'analysis':
+              switchView('analysisView');
+              break;
+            default:
+              console.warn('未知的快捷入口动作:', action);
+          }
+        } else {
+          console.error('switchView 函数未定义');
+        }
+      });
     });
-  });
+    
+    console.log('快捷入口按钮事件绑定完成');
+  }
+  
+  // 延迟绑定快捷入口按钮
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindQuickLinkButtons);
+  } else {
+    bindQuickLinkButtons();
+  }
+  
+  setTimeout(bindQuickLinkButtons, 500);
+  setTimeout(bindQuickLinkButtons, 1000);
   
   // 添加订阅
   document.getElementById('btnAddSubscription')?.addEventListener('click', () => {
@@ -17769,21 +17831,25 @@
   // 扩展视图对象，添加首页
   views.homeView = document.getElementById('homeView');
   
-  // 更新 switchView 函数以支持首页（最终的完整版本）
-  const originalSwitchViewHome = switchView;
+  // 统一并增强 switchView 函数（最终完整版本）
+  const originalSwitchView = switchView;
   switchView = function(name) {
+    console.log('切换视图:', name);
+    
     // 如果当前在编辑模式且要切换到其他视图，检查是否有未保存的更改
     const detailView = document.getElementById('detailView');
     if (detailView && detailView.style.display !== 'none') {
       const editMode = document.getElementById('editMode');
       if (editMode && editMode.style.display !== 'none') {
         // 检查是否有未保存的更改
-        if (hasUnsavedChanges()) {
+        if (typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
           if (!confirm('您有未保存的更改，确定要离开编辑页面吗？\n\n如果离开，所有未保存的更改将会丢失。')) {
             return; // 用户取消切换
           }
           // 用户确认离开，退出编辑模式
-          setEditMode(false);
+          if (typeof setEditMode === 'function') {
+            setEditMode(false);
+          }
         }
       }
     }
@@ -17815,133 +17881,120 @@
     // 更新导航按钮
     const currentNavButtons = document.querySelectorAll('header nav button');
     currentNavButtons.forEach(btn => {
-      if (btn.dataset.view === name) btn.classList.add('active');
-      else btn.classList.remove('active');
+      if (btn.dataset.view === name) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
     });
     
-    // 首页视图
-    if (name === 'homeView') {
-      if (typeof initHomePage === 'function') {
-        initHomePage();
-      }
-    }
-    
-    // 数据概览视图
-    if (name === 'dashboardView') {
-      if (typeof refreshDashboard === 'function') {
-        refreshDashboard();
-      }
-    }
-    
-    // 鸽子管理视图
-    if (name === 'listView') {
-      if (typeof refreshList === 'function') {
-        refreshList();
-      }
-    }
-    
-    // 血统关系视图
-    if (name === 'pedigreeView') {
-      if (typeof refreshPedigreeView === 'function') {
-        refreshPedigreeView();
-      }
-    }
-    
-    // 统计分析视图
-    if (name === 'statsView') {
-      if (typeof renderStatsViewTable === 'function') {
-        renderStatsViewTable();
-      }
-    }
-    
-    // 比赛管理视图
-    if (name === 'raceView') {
-      if (typeof loadRaces === 'function') {
-        loadRaces();
-      }
-      if (typeof syncRacesToPigeons === 'function') {
-        syncRacesToPigeons();
-      }
-      if (typeof renderRaceList === 'function') {
-        renderRaceList();
-      }
-      if (typeof fillStatsPigeonSelect === 'function') {
-        fillStatsPigeonSelect();
-      }
-      if (typeof generateOverallAnalysis === 'function') {
-        generateOverallAnalysis();
-      }
-    }
-    
-    // 繁育配对视图
-    if (name === 'breedingView') {
-      if (typeof loadPairings === 'function') {
-        loadPairings();
-      }
-      if (typeof fillBreedingSelects === 'function') {
-        fillBreedingSelects();
-      }
-      if (typeof renderPairingHistory === 'function') {
-        renderPairingHistory();
-      }
-      if (typeof updateBreedingAssessment === 'function') {
-        updateBreedingAssessment();
-      }
-    }
-    
-    // 健康管理视图
-    if (name === 'healthView') {
-      if (typeof loadHealthRecords === 'function') {
-        loadHealthRecords();
-      }
-      if (typeof fillHealthPigeonSelects === 'function') {
-        fillHealthPigeonSelects();
-      }
-      if (typeof renderHealthOverview === 'function') {
-        renderHealthOverview();
-      }
-      if (typeof renderHealthAlerts === 'function') {
-        renderHealthAlerts();
-      }
-    }
-    
-    // 智能分析视图
-    if (name === 'analysisView') {
-      if (typeof loadPairings === 'function') {
-        loadPairings();
-      }
-      if (typeof loadHealthRecords === 'function') {
-        loadHealthRecords();
-      }
-      if (typeof runFullAnalysis === 'function') {
-        runFullAnalysis();
-      }
-    }
-    
-    // 训练模块视图
-    if (name === 'trainingView') {
-      if (typeof loadTrainingRecords === 'function') {
-        loadTrainingRecords();
-      }
-      if (typeof renderTrainingTable === 'function') {
-        renderTrainingTable();
-      }
-      if (typeof updateTrainingStats === 'function') {
-        updateTrainingStats();
-      }
-    }
-    
-    // 能力综合分析视图
-    if (name === 'qualificationView') {
-      if (typeof loadQualificationRecords === 'function') {
-        loadQualificationRecords();
-      }
-      if (typeof renderQualificationTable === 'function') {
-        renderQualificationTable();
-      }
-      if (typeof fillQualificationPigeonSelect === 'function') {
-        fillQualificationPigeonSelect();
-      }
+    // 根据视图执行特定操作
+    switch(name) {
+      case 'homeView':
+        if (typeof initHomePage === 'function') {
+          initHomePage();
+        } else if (typeof refreshHomeView === 'function') {
+          refreshHomeView();
+        }
+        break;
+      case 'dashboardView':
+        if (typeof refreshDashboard === 'function') {
+          refreshDashboard();
+        }
+        break;
+      case 'listView':
+        if (typeof refreshList === 'function') {
+          refreshList();
+        }
+        break;
+      case 'pedigreeView':
+        if (typeof refreshPedigreeView === 'function') {
+          refreshPedigreeView();
+        }
+        break;
+      case 'statsView':
+        if (typeof renderStatsViewTable === 'function') {
+          renderStatsViewTable();
+        }
+        break;
+      case 'raceView':
+        if (typeof loadRaces === 'function') {
+          loadRaces();
+        }
+        if (typeof syncRacesToPigeons === 'function') {
+          syncRacesToPigeons();
+        }
+        if (typeof renderRaceList === 'function') {
+          renderRaceList();
+        }
+        if (typeof fillStatsPigeonSelect === 'function') {
+          fillStatsPigeonSelect();
+        }
+        if (typeof generateOverallAnalysis === 'function') {
+          generateOverallAnalysis();
+        }
+        break;
+      case 'breedingView':
+        if (typeof loadPairings === 'function') {
+          loadPairings();
+        }
+        if (typeof fillBreedingSelects === 'function') {
+          fillBreedingSelects();
+        }
+        if (typeof renderPairingHistory === 'function') {
+          renderPairingHistory();
+        }
+        if (typeof updateBreedingAssessment === 'function') {
+          updateBreedingAssessment();
+        }
+        break;
+      case 'healthView':
+        if (typeof loadHealthRecords === 'function') {
+          loadHealthRecords();
+        }
+        if (typeof fillHealthPigeonSelects === 'function') {
+          fillHealthPigeonSelects();
+        }
+        if (typeof renderHealthOverview === 'function') {
+          renderHealthOverview();
+        }
+        if (typeof renderHealthAlerts === 'function') {
+          renderHealthAlerts();
+        }
+        break;
+      case 'analysisView':
+        if (typeof loadPairings === 'function') {
+          loadPairings();
+        }
+        if (typeof loadHealthRecords === 'function') {
+          loadHealthRecords();
+        }
+        if (typeof runFullAnalysis === 'function') {
+          runFullAnalysis();
+        }
+        break;
+      case 'trainingView':
+        if (typeof loadTrainingRecords === 'function') {
+          loadTrainingRecords();
+        }
+        if (typeof renderTrainingTable === 'function') {
+          renderTrainingTable();
+        }
+        if (typeof updateTrainingStats === 'function') {
+          updateTrainingStats();
+        }
+        break;
+      case 'qualificationView':
+        if (typeof loadQualificationRecords === 'function') {
+          loadQualificationRecords();
+        }
+        if (typeof renderQualificationTable === 'function') {
+          renderQualificationTable();
+        }
+        if (typeof fillQualificationPigeonSelect === 'function') {
+          fillQualificationPigeonSelect();
+        }
+        break;
     }
     
     console.log('视图切换完成:', name);
