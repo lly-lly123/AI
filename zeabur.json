@@ -1,10 +1,5 @@
 {
-  "build": {
-    "command": "cd backend && npm install",
-    "rootDirectory": "."
-  },
-  "run": {
-    "command": "cd backend && npm start",
-    "rootDirectory": "."
-  }
+  "buildCommand": "cd backend && npm install",
+  "startCommand": "cd backend && npm start",
+  "rootDirectory": "."
 }

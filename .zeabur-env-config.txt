@@ -10,5 +10,5 @@ NODE_ENV=production
 # SUPABASE_URL=https://xxx.supabase.co
 # SUPABASE_ANON_KEY=your-anon-key
 AI_MODEL=auto
-API_KEY=your-api-key-here
+API_KEY=6ed04e0834817cfe8da1da6d7003959f
 LOG_LEVEL=info
