@@ -31,3 +31,5 @@ cd /Users/macbookair/Desktop/AI && bash 一键自动部署.sh
 
 
 
+
+
