@@ -180,3 +180,15 @@ CREATE INDEX IF NOT EXISTS idx_feedbacks_status ON feedbacks(status);
 -- 现在可以在Zeabur环境变量中配置SUPABASE_URL和SUPABASE_ANON_KEY
 -- ============================================================================
 
+
+
+
+
+
+
+
+
+
+
+
+

@@ -102,3 +102,15 @@ fi
 echo "下一步：获取Supabase API配置信息"
 echo ""
 
+
+
+
+
+
+
+
+
+
+
+
+
