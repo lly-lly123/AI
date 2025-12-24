@@ -38,6 +38,34 @@ app.use('/api/auth/login', strictLimiter);
 app.use('/api/auth/register', strictLimiter);
 app.use('/api/evo/', aiLimiter);
 
+// API路由（必须在静态文件服务之前）
+app.use('/api', apiRoutes);
+
+// 移动端设备检测和自动跳转（在静态文件服务之前）
+app.get('/', (req, res, next) => {
+  const userAgent = req.get('user-agent') || '';
+  const ua = userAgent.toLowerCase();
+  
+  // 检测移动设备
+  const mobileKeywords = [
+    'iphone', 'ipad', 'ipod',
+    'android',
+    'mobile', 'tablet',
+    'blackberry', 'windows phone',
+    'opera mini', 'opera mobi',
+    'iemobile'
+  ];
+  
+  const isMobile = mobileKeywords.some(keyword => ua.includes(keyword));
+  
+  // 如果是移动设备且不是访问 mobile.html，重定向到 mobile.html
+  if (isMobile && !req.path.includes('mobile.html')) {
+    return res.redirect('/mobile.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
+  }
+  
+  next();
+});
+
 // 静态文件服务 - 提供前端页面（指向上级目录）
 const frontendPath = path.join(__dirname, '..');
 app.use(express.static(frontendPath, {
@@ -56,9 +84,6 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-// API路由（必须在静态文件服务之前）
-app.use('/api', apiRoutes);
 
 // 错误处理
 app.use((err, req, res, next) => {
