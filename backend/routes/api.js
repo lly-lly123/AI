@@ -7,6 +7,7 @@ const authService = require('../services/authService');
 const adminService = require('../services/adminService');
 const storageService = require('../services/storageService');
 const aiService = require('../services/aiService');
+const fileStorageService = require('../services/fileStorageService');
 const logger = require('../utils/logger');
 const config = require('../config/config');
 const {
@@ -4679,6 +4680,99 @@ router.get('/function-guides', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || '获取功能说明失败'
+    });
+  }
+});
+
+/**
+ * 文件上传接口 - 大容量存储
+ * POST /api/storage/upload
+ * 需要认证
+ */
+router.post('/storage/upload', authenticate, async (req, res) => {
+  try {
+    const { file, fileName, folder } = req.body;
+    
+    if (!file || !fileName) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少文件数据或文件名'
+      });
+    }
+
+    let fileBuffer;
+    if (typeof file === 'string' && file.startsWith('data:')) {
+      const base64Data = file.split(',')[1];
+      fileBuffer = Buffer.from(base64Data, 'base64');
+    } else if (Buffer.isBuffer(file)) {
+      fileBuffer = file;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: '不支持的文件格式'
+      });
+    }
+
+    if (!fileStorageService.isAvailable()) {
+      return res.status(503).json({
+        success: false,
+        error: '文件存储服务未配置，请配置七牛云、Supabase Storage或阿里云OSS'
+      });
+    }
+
+    const result = await fileStorageService.uploadFile(
+      fileBuffer,
+      fileName,
+      folder || 'uploads'
+    );
+
+    logger.info(`文件上传成功: ${fileName}`, {
+      userId: req.user.id,
+      url: result.url,
+      provider: result.provider
+    });
+
+    res.json({
+      success: true,
+      data: {
+        url: result.url,
+        key: result.key,
+        provider: result.provider,
+        fileName: fileName
+      }
+    });
+  } catch (error) {
+    logger.error('文件上传失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '文件上传失败'
+    });
+  }
+});
+
+/**
+ * 获取存储服务状态
+ * GET /api/storage/status
+ */
+router.get('/storage/status', async (req, res) => {
+  try {
+    const isAvailable = fileStorageService.isAvailable();
+    const activeProvider = fileStorageService.getActiveProvider();
+    const availableProviders = fileStorageService.getAvailableProviders();
+
+    res.json({
+      success: true,
+      data: {
+        available: isAvailable,
+        activeProvider: activeProvider,
+        availableProviders: availableProviders
+      }
+    });
+  } catch (error) {
+    logger.error('获取存储服务状态失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取存储服务状态失败'
     });
   }
 });
