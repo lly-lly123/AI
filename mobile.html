@@ -2552,8 +2552,7 @@
       if (!announcementEl || !announcementTextEl) return;
       
       try {
-        const apiConfig = getApiConfig();
-        const apiUrl = apiConfig.apiUrl || 'http://localhost:3000/api';
+        const apiUrl = getBackendApiUrl();
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -2667,18 +2666,30 @@
       const config = localStorage.getItem('pigeon_api_config');
       if (config) {
         const parsed = JSON.parse(config);
-        if (!parsed.apiUrl) {
-          parsed.apiUrl = 'http://localhost:3000/api';
+        // 如果配置了自定义API URL，使用它
+        if (parsed.apiUrl && !parsed.apiUrl.includes('localhost')) {
+          return parsed;
         }
-        return parsed;
       }
-      const defaultBaseUrl = 'http://localhost:3000/api';
-      return {
+      
+      // 自动检测当前域名并构建API URL
+      const currentOrigin = window.location.origin;
+      const defaultBaseUrl = currentOrigin + '/api';
+      
+      // 保存自动检测的配置
+      const autoConfig = {
         apiUrl: defaultBaseUrl,
         newsApiUrl: defaultBaseUrl + '/news',
         eventsApiUrl: defaultBaseUrl + '/events',
         apiKey: ''
       };
+      
+      // 如果localStorage中没有配置，保存自动检测的配置
+      if (!config) {
+        localStorage.setItem('pigeon_api_config', JSON.stringify(autoConfig));
+      }
+      
+      return autoConfig;
     }
 
     // 示例资讯数据
@@ -2991,7 +3002,12 @@
     // 获取后端API地址
     function getBackendApiUrl() {
       const apiConfig = getApiConfig();
-      return apiConfig.apiUrl || 'http://localhost:3000/api';
+      // 如果配置的URL包含localhost，自动使用当前域名
+      if (apiConfig.apiUrl && apiConfig.apiUrl.includes('localhost')) {
+        const currentOrigin = window.location.origin;
+        return currentOrigin + '/api';
+      }
+      return apiConfig.apiUrl || (window.location.origin + '/api');
     }
     
     // 设置认证token
@@ -3108,12 +3124,28 @@
         });
 
         if (resp.ok) {
+          const result = await resp.json();
           lastUserDataSyncAt = now;
+          console.log('✅ 数据已成功保存到服务器');
         } else {
-          console.warn('自动同步用户数据失败:', resp.status);
+          const errorText = await resp.text();
+          console.error('❌ 自动同步用户数据失败:', resp.status, errorText);
+          // 尝试解析错误信息
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.error) {
+              console.error('错误详情:', errorData.error);
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
         }
       } catch (e) {
-        console.warn('自动同步用户数据异常:', e);
+        console.error('❌ 自动同步用户数据异常:', e);
+        // 显示用户友好的错误提示
+        if (e.message) {
+          console.error('错误消息:', e.message);
+        }
       }
     }
 
@@ -3820,8 +3852,8 @@
     }
     
     // 显示设置模态框
-    function showSettingsModal() {
-      const menu = document.getElementById('settingsModal');
+    window.showSettingsModal = function() {
+      let menu = document.getElementById('settingsModal');
       if (!menu) {
         const menuHTML = `
           <div id="settingsModal" class="mobile-modal" style="display:none;">
@@ -4012,15 +4044,30 @@
         document.body.insertAdjacentHTML('beforeend', menuHTML);
       }
       
+      if (!menu) {
+        console.error('无法创建或找到设置模态框');
+        return;
+      }
+      
       // 设置当前主题
       const currentTheme = localStorage.getItem('pigeon_theme_preference') || 'light';
       const themeSelect = document.getElementById('themeSelect');
-      if (themeSelect) themeSelect.value = currentTheme;
+      if (themeSelect) {
+        themeSelect.value = currentTheme;
+      }
       
-      // 加载设置
-      loadSettingsValues();
+      // 加载设置（如果函数存在）
+      if (typeof loadSettingsValues === 'function') {
+        try {
+          loadSettingsValues();
+        } catch (e) {
+          console.warn('加载设置值失败:', e);
+        }
+      }
       
-      document.getElementById('settingsModal').style.display = 'flex';
+      // 确保模态框显示
+      menu.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
     }
     
     // 关闭设置模态框
@@ -4028,6 +4075,7 @@
       const modal = document.getElementById('settingsModal');
       if (modal) {
         modal.style.display = 'none';
+        document.body.style.overflow = ''; // 恢复背景滚动
       }
     }
     
@@ -10377,8 +10425,7 @@
       // 加载设置（从后台同步）
       async function loadSettings() {
         try {
-          const apiConfig = getApiConfig();
-          const apiUrl = apiConfig.apiUrl || 'http://localhost:3000/api';
+          const apiUrl = getBackendApiUrl();
           
           const response = await fetch(`${apiUrl}/evo-settings`, {
             method: 'GET',
@@ -10681,8 +10728,7 @@
     // 同步Evo设置（从后台）
     async function syncEvoSettings() {
       try {
-        const apiConfig = getApiConfig();
-        const apiUrl = apiConfig.apiUrl || 'http://localhost:3000/api';
+        const apiUrl = getBackendApiUrl();
         
         const syncFlag = localStorage.getItem('evo_settings_sync');
         const lastSyncTime = localStorage.getItem('evo_settings_sync_timestamp');

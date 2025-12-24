@@ -8640,7 +8640,12 @@
   // 获取API配置
   function getBackendApiUrl() {
     const apiConfig = getApiConfig();
-    return apiConfig.apiUrl || 'http://localhost:3000/api';
+    // 如果配置的URL包含localhost，自动使用当前域名
+    if (apiConfig.apiUrl && apiConfig.apiUrl.includes('localhost')) {
+      const currentOrigin = window.location.origin;
+      return currentOrigin + '/api';
+    }
+    return apiConfig.apiUrl || (window.location.origin + '/api');
   }
 
   // 提交意见与反馈
@@ -15494,12 +15499,30 @@
     const config = localStorage.getItem('pigeon_api_config');
     if (config) {
       const parsed = JSON.parse(config);
-      // 确保有apiUrl字段
-      if (!parsed.apiUrl) {
-        parsed.apiUrl = 'http://localhost:3000/api';
+      // 如果配置了自定义API URL且不是localhost，使用它
+      if (parsed.apiUrl && !parsed.apiUrl.includes('localhost')) {
+        return parsed;
       }
-      return parsed;
     }
+    
+    // 自动检测当前域名并构建API URL
+    const currentOrigin = window.location.origin;
+    const defaultBaseUrl = currentOrigin + '/api';
+    
+    // 保存自动检测的配置
+    const autoConfig = {
+      apiUrl: defaultBaseUrl,
+      newsApiUrl: defaultBaseUrl + '/news',
+      eventsApiUrl: defaultBaseUrl + '/events',
+      apiKey: ''
+    };
+    
+    // 如果localStorage中没有配置，保存自动检测的配置
+    if (!config) {
+      localStorage.setItem('pigeon_api_config', JSON.stringify(autoConfig));
+    }
+    
+    return autoConfig;
     
     // 默认配置（后端服务地址）
     const defaultBaseUrl = 'http://localhost:3000/api';
