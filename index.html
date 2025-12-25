@@ -9040,7 +9040,7 @@
     });
   }
 
-  // 视图切换 - 包含所有视图
+  // 视图切换 - 包含所有视图（暴露到全局以便备用方案使用）
   const views = {
     homeView: document.getElementById('homeView'),
     dashboardView: document.getElementById('dashboardView'),
@@ -9057,6 +9057,9 @@
     qualificationView: document.getElementById('qualificationView'),
   };
   
+  // 暴露views对象到全局（供备用方案使用）
+  window.views = views;
+  
   // 验证所有视图元素是否存在
   console.log('=== 视图元素检查 ===');
   Object.keys(views).forEach(key => {
@@ -9071,6 +9074,18 @@
       }
     } else {
       console.error(`✗ ${key}: 不存在！`);
+      // 尝试延迟获取
+      setTimeout(() => {
+        const el = document.getElementById(key);
+        if (el) {
+          views[key] = el;
+          window.views[key] = el;
+          console.log(`✓ ${key}: 延迟获取成功`);
+          if (key !== 'homeView') {
+            el.style.display = 'none';
+          }
+        }
+      }, 100);
     }
   });
   
@@ -9079,30 +9094,62 @@
     views.homeView.style.display = '';
   }
   
+  // 延迟验证（确保所有元素都已加载）
+  setTimeout(() => {
+    Object.keys(views).forEach(key => {
+      if (!views[key]) {
+        const el = document.getElementById(key);
+        if (el) {
+          views[key] = el;
+          window.views[key] = el;
+          if (key !== 'homeView') {
+            el.style.display = 'none';
+          }
+        }
+      }
+    });
+  }, 500);
+  
   const navButtons = document.querySelectorAll('header nav button');
   const sidebarItems = document.querySelectorAll('.sidebar-item');
 
+  // 统一的switchView函数（完整版本，包含所有功能）
   function switchView(name) {
-    console.log('切换视图:', name);
+    console.log('🔀 切换视图:', name);
     
-    // 隐藏所有视图
+    // 如果当前在编辑模式且要切换到其他视图，检查是否有未保存的更改
+    const detailView = document.getElementById('detailView');
+    if (detailView && detailView.style.display !== 'none') {
+      const editMode = document.getElementById('editMode');
+      if (editMode && editMode.style.display !== 'none') {
+        // 检查是否有未保存的更改
+        if (typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
+          if (!confirm('您有未保存的更改，确定要离开编辑页面吗？\n\n如果离开，所有未保存的更改将会丢失。')) {
+            return; // 用户取消切换
+          }
+          // 用户确认离开，退出编辑模式
+          if (typeof setEditMode === 'function') {
+            setEditMode(false);
+          }
+        }
+      }
+    }
+    
+    // 先隐藏所有视图
     Object.keys(views).forEach(k => {
       if (views[k]) {
-        views[k].style.display = (k === name) ? '' : 'none';
-      }
-    });
-    
-    // 更新导航按钮状态（重新查询以确保获取最新元素）
-    const currentNavButtons = document.querySelectorAll('header nav button');
-    currentNavButtons.forEach(btn => {
-      if (btn.dataset.view === name) {
-        btn.classList.add('active');
+        if (k === name) {
+          views[k].style.display = '';
+          console.log('✅ 显示视图:', k);
+        } else {
+          views[k].style.display = 'none';
+        }
       } else {
-        btn.classList.remove('active');
+        console.warn('⚠️ 视图元素不存在:', k);
       }
     });
     
-    // 更新侧边栏菜单项状态（重新查询以确保获取最新元素）
+    // 更新侧边栏（确保重新查询，因为可能在某些时候失效）
     const currentSidebarItems = document.querySelectorAll('.sidebar-item');
     currentSidebarItems.forEach(item => {
       if (item.dataset.view === name) {
@@ -9112,32 +9159,38 @@
       }
     });
     
+    // 更新导航按钮
+    const currentNavButtons = document.querySelectorAll('header nav button');
+    currentNavButtons.forEach(btn => {
+      if (btn.dataset.view === name) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
     // 根据视图执行特定操作
     switch(name) {
       case 'homeView':
-        // 刷新首页数据
-        if (typeof refreshHomeView === 'function') {
+        if (typeof initHomePage === 'function') {
+          initHomePage();
+        } else if (typeof refreshHomeView === 'function') {
           refreshHomeView();
         }
         break;
       case 'dashboardView':
-        refreshDashboard();
+        if (typeof refreshDashboard === 'function') {
+          refreshDashboard();
+        }
         break;
       case 'listView':
-        refreshList();
+        if (typeof refreshList === 'function') {
+          refreshList();
+        }
         break;
       case 'pedigreeView':
         if (typeof refreshPedigreeView === 'function') {
           refreshPedigreeView();
-        }
-        break;
-      case 'raceView':
-        if (typeof loadRaces === 'function') {
-          loadRaces();
-          if (typeof syncRacesToPigeons === 'function') syncRacesToPigeons();
-          if (typeof renderRaceList === 'function') renderRaceList();
-          if (typeof fillStatsPigeonSelect === 'function') fillStatsPigeonSelect();
-          if (typeof generateOverallAnalysis === 'function') generateOverallAnalysis();
         }
         break;
       case 'statsView':
@@ -9145,7 +9198,27 @@
           renderStatsViewTable();
         }
         break;
+      case 'raceView':
+        if (typeof loadRaces === 'function') {
+          loadRaces();
+        }
+        if (typeof syncRacesToPigeons === 'function') {
+          syncRacesToPigeons();
+        }
+        if (typeof renderRaceList === 'function') {
+          renderRaceList();
+        }
+        if (typeof fillStatsPigeonSelect === 'function') {
+          fillStatsPigeonSelect();
+        }
+        if (typeof generateOverallAnalysis === 'function') {
+          generateOverallAnalysis();
+        }
+        break;
       case 'breedingView':
+        if (typeof loadPairings === 'function') {
+          loadPairings();
+        }
         if (typeof fillBreedingSelects === 'function') {
           fillBreedingSelects();
         }
@@ -9157,6 +9230,12 @@
         }
         break;
       case 'healthView':
+        if (typeof loadHealthRecords === 'function') {
+          loadHealthRecords();
+        }
+        if (typeof fillHealthPigeonSelects === 'function') {
+          fillHealthPigeonSelects();
+        }
         if (typeof renderHealthOverview === 'function') {
           renderHealthOverview();
         }
@@ -9165,12 +9244,53 @@
         }
         break;
       case 'analysisView':
+        if (typeof loadPairings === 'function') {
+          loadPairings();
+        }
+        if (typeof loadHealthRecords === 'function') {
+          loadHealthRecords();
+        }
         if (typeof runFullAnalysis === 'function') {
           runFullAnalysis();
         }
         break;
+      case 'trainingView':
+        if (typeof loadTrainingRecords === 'function') {
+          loadTrainingRecords();
+        }
+        if (typeof renderTrainingTable === 'function') {
+          renderTrainingTable();
+        }
+        if (typeof updateTrainingStats === 'function') {
+          updateTrainingStats();
+        }
+        break;
+      case 'qualificationView':
+        if (typeof loadQualificationRecords === 'function') {
+          loadQualificationRecords();
+        }
+        if (typeof renderQualificationTable === 'function') {
+          renderQualificationTable();
+        }
+        if (typeof fillQualificationPigeonSelect === 'function') {
+          fillQualificationPigeonSelect();
+        }
+        break;
     }
+    
+    console.log('✅ 视图切换完成:', name);
   }
+  
+  // 确保switchView函数全局可用（立即暴露，确保事件绑定可以访问）
+  window.switchView = switchView;
+  
+  // 强制确保switchView可用（多重保障）
+  if (typeof window.switchView === 'undefined') {
+    window.switchView = switchView;
+  }
+  
+  // 验证switchView已正确暴露
+  console.log('✅ switchView函数已暴露到window:', typeof window.switchView === 'function');
   
   // ========================================
   // 性能优化：防抖和节流工具函数
@@ -10952,15 +11072,158 @@
 
   // 足环号搜索功能已整合到智能搜索中
 
-  // 侧边栏菜单点击事件（使用事件委托，更可靠）
+  // 侧边栏菜单点击事件（强化版本，确保100%可靠）
   let sidebarEventsBound = false;
   
-  function bindSidebarEvents() {
-    // 如果已经绑定过，不再重复绑定
-    if (sidebarEventsBound) {
-      return;
+  // 核心点击处理函数（强化版本，确保100%可靠）
+  function handleSidebarItemClick(sidebarItem, e) {
+    if (!sidebarItem) {
+      console.error('❌ 侧边栏项元素不存在');
+      return false;
     }
     
+    // 阻止默认行为和事件冒泡
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+    
+    const view = sidebarItem.dataset.view;
+    const openFeedback = sidebarItem.dataset.openFeedback;
+    const itemText = sidebarItem.textContent.trim();
+    
+    console.log('✅ 处理菜单项点击:', view || openFeedback, itemText);
+    
+    if (view) {
+      try {
+        // 多重保障：优先使用全局的switchView
+        let switchViewFunc = window.switchView;
+        
+        // 如果全局没有，尝试使用本地函数
+        if (typeof switchViewFunc !== 'function') {
+          // 尝试从闭包中获取（如果switchView在同一个作用域）
+          try {
+            switchViewFunc = typeof switchView !== 'undefined' ? switchView : null;
+          } catch (err) {
+            console.warn('无法从闭包获取switchView:', err);
+          }
+        }
+        
+        // 如果还是没有，尝试从window获取（多种方式）
+        if (typeof switchViewFunc !== 'function') {
+          switchViewFunc = window['switchView'];
+        }
+        
+        // 最后尝试：直接查找函数定义
+        if (typeof switchViewFunc !== 'function') {
+          // 检查views对象是否存在，如果存在则手动切换
+          if (window.views && window.views[view]) {
+            console.log('🔄 使用views对象手动切换视图:', view);
+            // 隐藏所有视图
+            Object.keys(window.views).forEach(k => {
+              if (window.views[k]) {
+                window.views[k].style.display = k === view ? '' : 'none';
+              }
+            });
+            // 更新侧边栏状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+              if (item.dataset.view === view) {
+                item.classList.add('active');
+              } else {
+                item.classList.remove('active');
+              }
+            });
+            console.log('✅ 视图切换成功（手动方式）:', view);
+            return true;
+          }
+        }
+        
+        if (typeof switchViewFunc === 'function') {
+          console.log('🔄 调用switchView:', view);
+          switchViewFunc(view);
+          console.log('✅ 视图切换成功:', view);
+          return true;
+        } else {
+          console.error('❌ switchView 函数未定义，尝试重新初始化...');
+          // 尝试重新初始化
+          if (typeof switchView === 'function') {
+            window.switchView = switchView;
+            switchView(view);
+            return true;
+          } else {
+            console.error('❌ 无法找到switchView函数，使用备用方案');
+            // 备用方案：直接操作DOM
+            const targetView = document.getElementById(view);
+            if (targetView) {
+              // 隐藏所有视图
+              const allViews = ['homeView', 'dashboardView', 'listView', 'pedigreeView', 
+                              'statsView', 'raceView', 'breedingView', 'healthView', 
+                              'analysisView', 'trainingView', 'qualificationView'];
+              allViews.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.style.display = 'none';
+              });
+              // 显示目标视图
+              targetView.style.display = '';
+              // 更新侧边栏状态
+              document.querySelectorAll('.sidebar-item').forEach(item => {
+                if (item.dataset.view === view) {
+                  item.classList.add('active');
+                } else {
+                  item.classList.remove('active');
+                }
+              });
+              console.log('✅ 视图切换成功（备用方案）:', view);
+              return true;
+            } else {
+              console.error('❌ 目标视图元素不存在:', view);
+              alert('视图切换功能未初始化，请刷新页面重试');
+              return false;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ 视图切换失败:', error);
+        console.error('错误堆栈:', error.stack);
+        // 尝试备用方案
+        try {
+          const targetView = document.getElementById(view);
+          if (targetView) {
+            document.querySelectorAll('[id$="View"]').forEach(v => {
+              if (v.id !== view) v.style.display = 'none';
+            });
+            targetView.style.display = '';
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+              item.classList.toggle('active', item.dataset.view === view);
+            });
+            console.log('✅ 视图切换成功（错误恢复）:', view);
+            return true;
+          }
+        } catch (recoveryError) {
+          console.error('❌ 错误恢复也失败:', recoveryError);
+        }
+        alert('切换视图时出错: ' + error.message);
+        return false;
+      }
+    } else if (openFeedback === 'true') {
+      // 打开意见反馈对话框
+      const feedbackModal = document.getElementById('feedbackModal');
+      if (feedbackModal) {
+        feedbackModal.style.display = 'flex';
+        console.log('✅ 打开意见反馈对话框');
+        return true;
+      } else {
+        console.warn('⚠️ 意见反馈对话框未找到');
+        return false;
+      }
+    } else {
+      console.warn('⚠️ 菜单项缺少 data-view 或 data-open-feedback 属性:', sidebarItem);
+      return false;
+    }
+  }
+  
+  function bindSidebarEvents() {
     const sidebarMenu = document.querySelector('.sidebar-menu');
     if (!sidebarMenu) {
       console.warn('侧边栏菜单未找到，延迟重试...');
@@ -10968,60 +11231,44 @@
       return;
     }
     
-    // 标记为已绑定
-    sidebarEventsBound = true;
-    console.log('开始绑定侧边栏事件...');
+    console.log('🔧 开始绑定侧边栏事件（事件委托）...');
     
     // 检查所有菜单项
     const sidebarItems = sidebarMenu.querySelectorAll('.sidebar-item');
     console.log('找到菜单项数量:', sidebarItems.length);
     sidebarItems.forEach((item, index) => {
-      console.log(`菜单项 ${index + 1}:`, item.dataset.view, item.textContent.trim());
+      console.log(`菜单项 ${index + 1}:`, item.dataset.view || item.dataset.openFeedback, item.textContent.trim());
     });
     
-    // 使用事件委托，在父元素上监听点击事件
-    sidebarMenu.addEventListener('click', function(e) {
-      console.log('侧边栏菜单被点击，目标元素:', e.target.tagName, e.target.className);
-      // 查找被点击的侧边栏项（使用closest方法更可靠）
+    // 方法1：使用事件委托，在父元素上监听点击事件（使用capture阶段确保捕获）
+    const delegateHandler = function(e) {
+      console.log('🔘 侧边栏菜单被点击，目标元素:', e.target.tagName, e.target.className);
       const sidebarItem = e.target.closest('.sidebar-item');
-      
       if (sidebarItem) {
         e.preventDefault();
         e.stopPropagation();
-        
-        const view = sidebarItem.dataset.view;
-        const openFeedback = sidebarItem.dataset.openFeedback;
-        
-        console.log('点击了菜单项:', view || openFeedback, sidebarItem.textContent.trim());
-        
-        if (view) {
-          try {
-            if (typeof switchView === 'function') {
-              switchView(view);
-              console.log('视图切换成功:', view);
-            } else {
-              console.error('switchView 函数未定义');
-            }
-          } catch (error) {
-            console.error('视图切换失败:', error);
-            alert('切换视图时出错: ' + error.message);
-          }
-        } else if (openFeedback === 'true') {
-          // 打开意见反馈对话框
-          const feedbackModal = document.getElementById('feedbackModal');
-          if (feedbackModal) {
-            feedbackModal.style.display = 'flex';
-            console.log('打开意见反馈对话框');
-          } else {
-            console.warn('意见反馈对话框未找到');
-          }
-        } else {
-          console.warn('菜单项缺少 data-view 或 data-open-feedback 属性:', sidebarItem);
-        }
+        handleSidebarItemClick(sidebarItem, e);
       }
-    }); // 使用冒泡阶段（默认）
+    };
     
-    console.log('侧边栏事件绑定完成');
+    // 移除旧的事件监听器（如果存在）
+    if (sidebarMenu._delegateHandler) {
+      sidebarMenu.removeEventListener('click', sidebarMenu._delegateHandler, true);
+      sidebarMenu.removeEventListener('mousedown', sidebarMenu._delegateHandler, true);
+      sidebarMenu.removeEventListener('touchstart', sidebarMenu._delegateHandler, true);
+    }
+    
+    // 保存引用以便后续移除
+    sidebarMenu._delegateHandler = delegateHandler;
+    
+    // 绑定事件（使用capture阶段和passive:false确保可以阻止默认行为）
+    sidebarMenu.addEventListener('click', delegateHandler, { capture: true, passive: false });
+    sidebarMenu.addEventListener('mousedown', delegateHandler, { capture: true, passive: false });
+    sidebarMenu.addEventListener('touchstart', delegateHandler, { capture: true, passive: false });
+    
+    // 标记为已绑定
+    sidebarEventsBound = true;
+    console.log('✅ 侧边栏事件委托绑定完成');
   }
   
   // 等待DOM加载完成后绑定侧边栏事件
@@ -11053,43 +11300,124 @@
   // 初始化侧边栏事件
   initSidebarEvents();
   
-  // 确保侧边栏项目可以点击（添加直接事件绑定作为备用）
+  // 确保侧边栏项目可以点击（添加直接事件绑定作为备用，强化版本）
   function bindSidebarItemsDirectly() {
     const sidebarItems = document.querySelectorAll('.sidebar-item');
-    sidebarItems.forEach(item => {
-      // 移除可能存在的旧事件监听器
-      const newItem = item.cloneNode(true);
-      item.parentNode.replaceChild(newItem, item);
+    if (sidebarItems.length === 0) {
+      console.warn('⚠️ 未找到侧边栏菜单项，延迟重试...');
+      return false;
+    }
+    
+    console.log('🔧 直接绑定侧边栏项，共', sidebarItems.length, '项');
+    
+    let boundCount = 0;
+    sidebarItems.forEach((item, index) => {
+      // 确保元素可点击（每次都要设置，确保样式正确）
+      item.style.pointerEvents = 'auto';
+      item.style.cursor = 'pointer';
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
       
-      // 添加点击事件
-      newItem.addEventListener('click', function(e) {
+      // 移除旧的事件监听器（通过克隆节点来移除所有事件监听器）
+      if (item.dataset.bound === 'true') {
+        // 如果已经绑定过，先移除旧的事件监听器
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        // 重新获取新节点
+        const freshItem = sidebarItems[index] || document.querySelectorAll('.sidebar-item')[index];
+        if (freshItem) {
+          freshItem.style.pointerEvents = 'auto';
+          freshItem.style.cursor = 'pointer';
+          freshItem.setAttribute('role', 'button');
+          freshItem.setAttribute('tabindex', '0');
+        }
+      }
+      
+      // 获取当前要绑定的元素（可能是新克隆的节点）
+      const currentItem = document.querySelectorAll('.sidebar-item')[index];
+      if (!currentItem) return;
+      
+      // 标记为已绑定
+      currentItem.dataset.bound = 'true';
+      
+      // 添加多种事件类型以确保兼容性
+      const clickHandler = function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        const view = newItem.dataset.view;
-        const openFeedback = newItem.dataset.openFeedback;
-        
-        if (view) {
-          console.log('直接点击侧边栏项:', view);
-          if (typeof switchView === 'function') {
-            switchView(view);
-          }
-        } else if (openFeedback === 'true') {
-          // 打开反馈对话框
-          const feedbackModal = document.getElementById('feedbackModal');
-          if (feedbackModal) {
-            feedbackModal.style.display = 'flex';
-          }
+        e.stopImmediatePropagation();
+        console.log('🔘 直接点击侧边栏项:', currentItem.dataset.view || currentItem.dataset.openFeedback, currentItem.textContent.trim());
+        handleSidebarItemClick(currentItem, e);
+      };
+      
+      // 绑定多种事件（使用capture阶段确保捕获）
+      currentItem.addEventListener('click', clickHandler, { capture: true, passive: false });
+      currentItem.addEventListener('mousedown', clickHandler, { capture: true, passive: false });
+      currentItem.addEventListener('touchstart', clickHandler, { capture: true, passive: false });
+      
+      // 键盘支持
+      currentItem.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSidebarItemClick(currentItem, e);
         }
-      });
+      }, { capture: true });
+      
+      boundCount++;
+      console.log(`✅ 已绑定菜单项 ${index + 1}:`, currentItem.dataset.view || currentItem.dataset.openFeedback, currentItem.textContent.trim());
     });
-    console.log('侧边栏项目直接事件绑定完成，共', sidebarItems.length, '项');
+    
+    console.log(`✅ 侧边栏项目直接事件绑定完成，共绑定 ${boundCount} 项`);
+    return boundCount > 0;
   }
   
-  // 延迟绑定直接事件
-  setTimeout(bindSidebarItemsDirectly, 100);
-  setTimeout(bindSidebarItemsDirectly, 500);
-  setTimeout(bindSidebarItemsDirectly, 1000);
+  // 强化的事件绑定函数（确保在DOM完全加载后执行）
+  function ensureSidebarEventsBound() {
+    // 检查DOM是否已加载
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(ensureSidebarEventsBound, 100);
+      });
+      return;
+    }
+    
+    // 检查switchView函数是否已定义
+    if (typeof window.switchView !== 'function') {
+      console.warn('⚠️ switchView函数未定义，延迟重试...');
+      setTimeout(ensureSidebarEventsBound, 200);
+      return;
+    }
+    
+    // 检查侧边栏元素是否存在
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    if (!sidebarMenu) {
+      console.warn('⚠️ 侧边栏菜单未找到，延迟重试...');
+      setTimeout(ensureSidebarEventsBound, 200);
+      return;
+    }
+    
+    // 执行绑定
+    const success = bindSidebarItemsDirectly();
+    if (!success) {
+      console.warn('⚠️ 事件绑定失败，将重试...');
+      setTimeout(ensureSidebarEventsBound, 500);
+    }
+  }
+  
+  // 立即尝试绑定
+  ensureSidebarEventsBound();
+  
+  // 延迟绑定直接事件（多次尝试确保绑定成功）
+  setTimeout(ensureSidebarEventsBound, 100);
+  setTimeout(ensureSidebarEventsBound, 500);
+  setTimeout(ensureSidebarEventsBound, 1000);
+  setTimeout(ensureSidebarEventsBound, 2000);
+  setTimeout(ensureSidebarEventsBound, 3000);
+  
+  // 页面完全加载后再次确保绑定
+  window.addEventListener('load', function() {
+    setTimeout(ensureSidebarEventsBound, 100);
+  });
 
   // 视图切换按钮事件
   const btnTableView = document.getElementById('btnTableView');
@@ -17762,58 +18090,109 @@
     });
   }
   
-  // 快捷入口按钮事件绑定
+  // 快捷入口按钮事件绑定（强化版本）
   function bindQuickLinkButtons() {
     const quickLinkButtons = document.querySelectorAll('.quick-link-btn');
-    console.log('找到快捷入口按钮数量:', quickLinkButtons.length);
+    console.log('🔧 绑定快捷入口按钮，找到数量:', quickLinkButtons.length);
     
-    quickLinkButtons.forEach(btn => {
-      // 移除可能存在的旧事件监听器
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
+    quickLinkButtons.forEach((btn, index) => {
+      // 检查是否已绑定
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
       
-      newBtn.addEventListener('click', function(e) {
+      // 标记为已绑定
+      btn.dataset.bound = 'true';
+      
+      // 确保按钮可点击
+      btn.style.pointerEvents = 'auto';
+      btn.style.cursor = 'pointer';
+      btn.setAttribute('role', 'button');
+      btn.setAttribute('tabindex', '0');
+      
+      // 获取动作
+      const action = btn.dataset.action;
+      console.log(`✅ 绑定快捷按钮 ${index + 1}:`, action);
+      
+      // 创建点击处理函数
+      const clickHandler = function(e) {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         
-        const action = newBtn.dataset.action;
-        console.log('快捷入口按钮点击:', action);
+        console.log('🔘 快捷入口按钮点击:', action);
         
-        if (typeof switchView === 'function') {
-          switch (action) {
-            case 'addPigeon':
-              switchView('createView');
-              break;
-            case 'addRace':
-              switchView('raceView');
-              break;
-            case 'breeding':
-              switchView('breedingView');
-              break;
-            case 'analysis':
-              switchView('analysisView');
-              break;
-            default:
-              console.warn('未知的快捷入口动作:', action);
+        // 获取switchView函数（多重保障）
+        let switchViewFunc = window.switchView;
+        if (typeof switchViewFunc !== 'function') {
+          switchViewFunc = typeof switchView !== 'undefined' ? switchView : null;
+        }
+        if (typeof switchViewFunc !== 'function') {
+          switchViewFunc = window['switchView'];
+        }
+        
+        if (typeof switchViewFunc === 'function') {
+          try {
+            switch (action) {
+              case 'addPigeon':
+                console.log('🔄 切换到创建视图');
+                switchViewFunc('createView');
+                break;
+              case 'addRace':
+                console.log('🔄 切换到比赛视图');
+                switchViewFunc('raceView');
+                break;
+              case 'breeding':
+                console.log('🔄 切换到繁育视图');
+                switchViewFunc('breedingView');
+                break;
+              case 'analysis':
+                console.log('🔄 切换到分析视图');
+                switchViewFunc('analysisView');
+                break;
+              default:
+                console.warn('⚠️ 未知的快捷入口动作:', action);
+            }
+            console.log('✅ 快捷入口视图切换成功');
+          } catch (error) {
+            console.error('❌ 快捷入口视图切换失败:', error);
+            alert('切换视图时出错: ' + error.message);
           }
         } else {
-          console.error('switchView 函数未定义');
+          console.error('❌ switchView 函数未定义');
+          alert('视图切换功能未初始化，请刷新页面重试');
+        }
+      };
+      
+      // 绑定多种事件类型
+      btn.addEventListener('click', clickHandler, true);
+      btn.addEventListener('mousedown', clickHandler, true);
+      btn.addEventListener('touchstart', clickHandler, true);
+      
+      // 键盘支持
+      btn.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          clickHandler(e);
         }
       });
     });
     
-    console.log('快捷入口按钮事件绑定完成');
+    console.log('✅ 快捷入口按钮事件绑定完成');
   }
   
-  // 延迟绑定快捷入口按钮
+  // 延迟绑定快捷入口按钮（多次尝试确保绑定成功）
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bindQuickLinkButtons);
   } else {
     bindQuickLinkButtons();
   }
   
+  setTimeout(bindQuickLinkButtons, 100);
   setTimeout(bindQuickLinkButtons, 500);
   setTimeout(bindQuickLinkButtons, 1000);
+  setTimeout(bindQuickLinkButtons, 2000);
+  setTimeout(bindQuickLinkButtons, 3000);
   
   // 添加订阅
   document.getElementById('btnAddSubscription')?.addEventListener('click', () => {
@@ -17828,177 +18207,16 @@
     }
   });
   
-  // 扩展视图对象，添加首页
-  views.homeView = document.getElementById('homeView');
+  // 扩展视图对象，确保homeView已包含
+  if (!views.homeView) {
+    views.homeView = document.getElementById('homeView');
+  }
   
-  // 统一并增强 switchView 函数（最终完整版本）
-  const originalSwitchView = switchView;
-  switchView = function(name) {
-    console.log('切换视图:', name);
-    
-    // 如果当前在编辑模式且要切换到其他视图，检查是否有未保存的更改
-    const detailView = document.getElementById('detailView');
-    if (detailView && detailView.style.display !== 'none') {
-      const editMode = document.getElementById('editMode');
-      if (editMode && editMode.style.display !== 'none') {
-        // 检查是否有未保存的更改
-        if (typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
-          if (!confirm('您有未保存的更改，确定要离开编辑页面吗？\n\n如果离开，所有未保存的更改将会丢失。')) {
-            return; // 用户取消切换
-          }
-          // 用户确认离开，退出编辑模式
-          if (typeof setEditMode === 'function') {
-            setEditMode(false);
-          }
-        }
-      }
-    }
-    
-    // 先隐藏所有视图
-    Object.keys(views).forEach(k => {
-      if (views[k]) {
-        if (k === name) {
-          views[k].style.display = '';
-          console.log('显示视图:', k);
-        } else {
-          views[k].style.display = 'none';
-        }
-      } else {
-        console.warn('视图元素不存在:', k);
-      }
-    });
-    
-    // 更新侧边栏（确保重新查询，因为可能在某些时候失效）
-    const currentSidebarItems = document.querySelectorAll('.sidebar-item');
-    currentSidebarItems.forEach(item => {
-      if (item.dataset.view === name) {
-        item.classList.add('active');
-      } else {
-        item.classList.remove('active');
-      }
-    });
-    
-    // 更新导航按钮
-    const currentNavButtons = document.querySelectorAll('header nav button');
-    currentNavButtons.forEach(btn => {
-      if (btn.dataset.view === name) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
-    });
-    
-    // 根据视图执行特定操作
-    switch(name) {
-      case 'homeView':
-        if (typeof initHomePage === 'function') {
-          initHomePage();
-        } else if (typeof refreshHomeView === 'function') {
-          refreshHomeView();
-        }
-        break;
-      case 'dashboardView':
-        if (typeof refreshDashboard === 'function') {
-          refreshDashboard();
-        }
-        break;
-      case 'listView':
-        if (typeof refreshList === 'function') {
-          refreshList();
-        }
-        break;
-      case 'pedigreeView':
-        if (typeof refreshPedigreeView === 'function') {
-          refreshPedigreeView();
-        }
-        break;
-      case 'statsView':
-        if (typeof renderStatsViewTable === 'function') {
-          renderStatsViewTable();
-        }
-        break;
-      case 'raceView':
-        if (typeof loadRaces === 'function') {
-          loadRaces();
-        }
-        if (typeof syncRacesToPigeons === 'function') {
-          syncRacesToPigeons();
-        }
-        if (typeof renderRaceList === 'function') {
-          renderRaceList();
-        }
-        if (typeof fillStatsPigeonSelect === 'function') {
-          fillStatsPigeonSelect();
-        }
-        if (typeof generateOverallAnalysis === 'function') {
-          generateOverallAnalysis();
-        }
-        break;
-      case 'breedingView':
-        if (typeof loadPairings === 'function') {
-          loadPairings();
-        }
-        if (typeof fillBreedingSelects === 'function') {
-          fillBreedingSelects();
-        }
-        if (typeof renderPairingHistory === 'function') {
-          renderPairingHistory();
-        }
-        if (typeof updateBreedingAssessment === 'function') {
-          updateBreedingAssessment();
-        }
-        break;
-      case 'healthView':
-        if (typeof loadHealthRecords === 'function') {
-          loadHealthRecords();
-        }
-        if (typeof fillHealthPigeonSelects === 'function') {
-          fillHealthPigeonSelects();
-        }
-        if (typeof renderHealthOverview === 'function') {
-          renderHealthOverview();
-        }
-        if (typeof renderHealthAlerts === 'function') {
-          renderHealthAlerts();
-        }
-        break;
-      case 'analysisView':
-        if (typeof loadPairings === 'function') {
-          loadPairings();
-        }
-        if (typeof loadHealthRecords === 'function') {
-          loadHealthRecords();
-        }
-        if (typeof runFullAnalysis === 'function') {
-          runFullAnalysis();
-        }
-        break;
-      case 'trainingView':
-        if (typeof loadTrainingRecords === 'function') {
-          loadTrainingRecords();
-        }
-        if (typeof renderTrainingTable === 'function') {
-          renderTrainingTable();
-        }
-        if (typeof updateTrainingStats === 'function') {
-          updateTrainingStats();
-        }
-        break;
-      case 'qualificationView':
-        if (typeof loadQualificationRecords === 'function') {
-          loadQualificationRecords();
-        }
-        if (typeof renderQualificationTable === 'function') {
-          renderQualificationTable();
-        }
-        if (typeof fillQualificationPigeonSelect === 'function') {
-          fillQualificationPigeonSelect();
-        }
-        break;
-    }
-    
-    console.log('视图切换完成:', name);
-  };
+  // switchView函数已在前面定义，这里不再重复定义
+  // 确保switchView函数全局可用（如果还没有）
+  if (typeof window.switchView === 'undefined') {
+    window.switchView = switchView;
+  }
   
   // ========================================
   // 🏃 训练模块
@@ -21172,35 +21390,60 @@
     }, 2000);
   }
   
-  // 页面加载时确保首页显示
+  // 页面加载时确保首页显示（增强版）
+  function initializePageView() {
+    // 确保homeView显示
+    ensureHomeViewVisible();
+    
+    // 使用全局switchView函数切换到首页
+    const switchViewFunc = window.switchView || switchView;
+    if (typeof switchViewFunc === 'function') {
+      try {
+        switchViewFunc('homeView');
+        console.log('✅ 已切换到首页');
+      } catch (error) {
+        console.error('切换首页失败:', error);
+      }
+    } else {
+      console.warn('⚠️ switchView函数未定义，手动显示首页');
+      // 手动显示首页
+      const homeView = document.getElementById('homeView');
+      if (homeView) {
+        homeView.style.display = '';
+        // 隐藏其他视图
+        const allViews = ['dashboardView', 'listView', 'pedigreeView', 'statsView', 
+                          'raceView', 'breedingView', 'healthView', 'analysisView', 
+                          'trainingView', 'qualificationView'];
+        allViews.forEach(viewName => {
+          const view = document.getElementById(viewName);
+          if (view) view.style.display = 'none';
+        });
+      }
+    }
+    
+    // 如果本地数据缺失且已登录，尝试从后台/云端恢复
+    setTimeout(() => {
+      if (typeof restoreUserDataIfMissing === 'function') {
+        restoreUserDataIfMissing();
+      }
+    }, 1500);
+    
+    // 页面加载后主动触发一次完整用户数据同步（如果已有数据）
+    setTimeout(() => {
+      if (typeof autoSyncUserData === 'function') {
+        autoSyncUserData({ force: true });
+      }
+    }, 5000);
+  }
+  
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(ensureHomeViewVisible, 100);
-      // 默认切换到首页
-      if (typeof switchView === 'function') {
-        switchView('homeView');
-      }
-      // 如果本地数据缺失且已登录，尝试从后台/云端恢复
-      setTimeout(() => {
-        restoreUserDataIfMissing();
-      }, 1500);
-      // 页面加载后主动触发一次完整用户数据同步（如果已有数据）
-      setTimeout(() => {
-        autoSyncUserData({ force: true });
-      }, 5000);
+      setTimeout(initializePageView, 100);
+      setTimeout(initializePageView, 500);
     });
   } else {
-    setTimeout(ensureHomeViewVisible, 100);
-    // 默认切换到首页
-    if (typeof switchView === 'function') {
-      switchView('homeView');
-    }
-    setTimeout(() => {
-      restoreUserDataIfMissing();
-    }, 1500);
-    setTimeout(() => {
-      autoSyncUserData({ force: true });
-    }, 5000);
+    setTimeout(initializePageView, 100);
+    setTimeout(initializePageView, 500);
   }
   
   // 运行异常检测
