@@ -18,10 +18,12 @@
   <script src="js/pc-data-sync-fix.js"></script>
   
   <!-- 🧪 按钮点击自动化测试脚本（开发环境） -->
-  <script src="js/button-click-test.js"></script>
+  <!-- 已禁用：防止自动跳转干扰用户操作 -->
+  <!-- <script src="js/button-click-test.js"></script> -->
   
   <!-- 🧪 全面功能测试脚本（模拟用户使用环境） -->
-  <script src="js/comprehensive-test.js"></script>
+  <!-- 已禁用：防止自动跳转干扰用户操作 -->
+  <!-- <script src="js/comprehensive-test.js"></script> -->
   
   <!-- 🔧 PC端按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
   <script>
@@ -9569,6 +9571,243 @@
     });
   }
 
+  // PC端保存创建鸽子函数
+  async function saveCreatePigeonPC() {
+    // 获取足环号码 - 使用querySelector确保获取到正确的元素
+    const ringInput = document.getElementById('c_ring');
+    if (!ringInput) {
+      console.error('❌ 找不到足环号码输入框');
+      alert('表单未正确加载，请刷新页面重试。');
+      return;
+    }
+    
+    const ring = ringInput.value.trim();
+    console.log('🔍 读取足环号码:', ring, '长度:', ring.length);
+    
+    if (!ring) {
+      alert('足环号码为必填项。');
+      return;
+    }
+    
+    // 检查是否有活着的鸽子使用该足环号
+    const existingAlive = getPigeonByRing(ring);
+    if (existingAlive) {
+      alert('该足环号码已被活着的鸽子使用，请确认是否重复。');
+      return;
+    }
+
+    // 检查是否有已死亡的鸽子使用该足环号（回收使用）
+    const allWithRing = getAllPigeonsByRing(ring);
+    const deadPigeons = allWithRing.filter(p => !p.alive);
+    if (deadPigeons.length > 0) {
+      deadPigeons.forEach(p => {
+        p.ringRecycled = true;
+        p.recycledDate = new Date().toISOString().slice(0, 10);
+      });
+      if (!confirm(`该足环号曾被已死亡的鸽子使用过，系统将自动标记为"回收使用"。是否继续？`)) {
+        return;
+      }
+    }
+
+    let name = document.getElementById('c_name')?.value.trim() || '';
+    // 如果名称为空，自动分配一个未使用的名字
+    if (!name) {
+      if (typeof getRandomUnusedName === 'function') {
+        name = getRandomUnusedName();
+        if (!name) {
+          alert('所有可用名字都已使用完毕，请手动输入一个名字。');
+          return;
+        }
+      }
+    } else {
+      // 如果手动输入的名字在列表中，也标记为已使用
+      if (typeof loadUsedNames === 'function' && typeof saveUsedNames === 'function') {
+        const usedNames = loadUsedNames();
+        if (typeof PIGEON_NAMES !== 'undefined' && PIGEON_NAMES.includes(name) && !usedNames.has(name)) {
+          usedNames.add(name);
+          saveUsedNames(usedNames);
+        }
+      }
+    }
+
+    const gender = document.getElementById('c_gender')?.value || '';
+    const color = document.getElementById('c_color')?.value.trim() || '';
+    const birth = document.getElementById('c_birth')?.value || '';
+    const type = document.getElementById('c_type')?.value || '';
+    const fatherId = document.getElementById('c_father')?.value || null;
+    const motherId = document.getElementById('c_mother')?.value || null;
+    
+    // 获取存活状态
+    const aliveRadio = document.querySelector('input[name="c_alive"]:checked');
+    const alive = !aliveRadio || aliveRadio.value === 'alive';
+    const deathDate = alive ? null : (document.getElementById('c_death_date')?.value || null);
+    const deathReason = alive ? '' : (document.getElementById('c_death_reason')?.value.trim() || '');
+    
+    if (!alive && !deathDate) {
+      alert('已死亡状态下，死亡日期为必填。');
+      return;
+    }
+    
+    // 获取种鸽专用信息
+    const previousOwner = type === '种鸽' ? (document.getElementById('c_previousOwner')?.value.trim() || '') : '';
+    const previousRegion = type === '种鸽' ? (document.getElementById('c_previousRegion')?.value.trim() || '') : '';
+    
+    // 获取现鸽主和现地区
+    const currentOwner = document.getElementById('c_currentOwner')?.value.trim() || '';
+    const currentRegion = document.getElementById('c_currentRegion')?.value.trim() || '';
+    
+    // 记录鸽主-地区配对
+    if (currentOwner && currentRegion && typeof addOwnerRegionPair === 'function') {
+      addOwnerRegionPair(currentOwner, currentRegion);
+      if (typeof updateOwnerDatalist === 'function') {
+        updateOwnerDatalist('c_ownerList');
+      }
+      if (typeof updateRegionDatalist === 'function') {
+        updateRegionDatalist(currentOwner, 'c_regionList');
+      }
+    }
+
+    // 获取参赛记录
+    const races = [];
+    const raceListContainer = document.getElementById('c_raceList');
+    if (raceListContainer) {
+      raceListContainer.querySelectorAll('.race-item').forEach(item => {
+        if (item.getValue && typeof item.getValue === 'function') {
+          const raceData = item.getValue();
+          if (raceData.name || raceData.date) {
+            races.push(raceData);
+          }
+        }
+      });
+    }
+
+    // 处理图片上传
+    const bodyFile = document.getElementById('c_body_photo')?.files[0] || null;
+    const eyeFile = document.getElementById('c_eye_photo')?.files[0] || null;
+
+    let bodyImg = null;
+    let eyeImg = null;
+    
+    if (bodyFile) {
+      try {
+        if (!bodyFile.type || !bodyFile.type.startsWith('image/')) {
+          alert('站立侧身图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）。');
+          return;
+        }
+        bodyImg = await readFileAsDataURL(bodyFile);
+      } catch (e) {
+        console.error('读取站立侧身图片失败', e);
+        alert('读取站立侧身图片失败：' + (e.message || '未知错误') + '，请重试。');
+        return;
+      }
+    }
+    
+    if (eyeFile) {
+      try {
+        if (!eyeFile.type || !eyeFile.type.startsWith('image/')) {
+          alert('眼睛特写图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）。');
+          return;
+        }
+        eyeImg = await readFileAsDataURL(eyeFile);
+      } catch (e) {
+        console.error('读取眼睛图片失败', e);
+        alert('读取眼睛图片失败：' + (e.message || '未知错误') + '，请重试。');
+        return;
+      }
+    }
+
+    // 创建鸽子对象
+    const pigeon = {
+      id: generateId(),
+      ring,
+      name,
+      gender,
+      color,
+      birth,
+      type,
+      fatherId,
+      motherId,
+      alive,
+      deathDate,
+      deathReason,
+      isCore: !!document.getElementById('c_core')?.checked,
+      races,
+      images: {
+        body: bodyImg,
+        eye: eyeImg
+      },
+      ringRecycled: deadPigeons && deadPigeons.length > 0,
+      previousOwner: previousOwner,
+      previousRegion: previousRegion,
+      currentOwner: currentOwner,
+      currentRegion: currentRegion
+    };
+
+    // 保存到存储
+    const STORAGE_KEY = 'pigeon_manager_data_v1';
+    let pigeons = loadPigeons();
+    
+    // 如果有回收的足环号，先更新已死亡鸽子的标记
+    if (deadPigeons.length > 0) {
+      pigeons.forEach(p => {
+        const deadP = deadPigeons.find(dp => dp.id === p.id);
+        if (deadP) {
+          p.ringRecycled = true;
+          p.recycledDate = new Date().toISOString().slice(0, 10);
+        }
+      });
+    }
+    
+    pigeons.push(pigeon);
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pigeons));
+    } catch (e) {
+      console.error('保存鸽子数据失败:', e);
+      alert('保存失败：' + (e.message || '未知错误'));
+      return;
+    }
+
+    // 同步到云端
+    try {
+      if (typeof autoSyncUserData === 'function') {
+        await autoSyncUserData({ force: true });
+        console.log('✅ 数据已同步到云端');
+      } else if (typeof saveToCloud === 'function') {
+        await saveToCloud('pigeons', pigeons);
+        console.log('✅ 数据已同步到云端');
+      }
+    } catch (e) {
+      console.warn('⚠️ 同步到云端失败:', e);
+    }
+    
+    alert('保存成功，已生成档案。');
+    
+    // 切换回列表视图
+    if (typeof window.switchView === 'function') {
+      window.switchView('listView');
+    }
+    
+    // 刷新列表和仪表板
+    if (typeof refreshList === 'function') {
+      refreshList();
+    }
+    if (typeof refreshDashboard === 'function') {
+      refreshDashboard();
+    }
+    
+    // 触发storage事件，通知其他标签页
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: STORAGE_KEY,
+      newValue: JSON.stringify(pigeons),
+      oldValue: null,
+      storageArea: localStorage
+    }));
+  }
+
+  // 暴露到window对象
+  window.saveCreatePigeonPC = saveCreatePigeonPC;
+
   // ==========================================
   // 🔧 按钮点击问题修复脚本
   // ==========================================
@@ -10577,6 +10816,33 @@
           }, { capture: true, passive: false });
         }
       });
+      
+      // 修复保存创建鸽子按钮
+      const btnSaveCreate = document.getElementById('btnSaveCreate');
+      if (btnSaveCreate && btnSaveCreate.dataset.fixed !== 'true') {
+        btnSaveCreate.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        btnSaveCreate.dataset.fixed = 'true';
+        const newBtn = btnSaveCreate.cloneNode(true);
+        btnSaveCreate.parentNode.replaceChild(newBtn, btnSaveCreate);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', async function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log('🔘 保存创建鸽子');
+          
+          // 调用保存函数
+          if (typeof window.saveCreatePigeonPC === 'function') {
+            await window.saveCreatePigeonPC();
+          } else {
+            console.error('❌ saveCreatePigeonPC函数未定义');
+            alert('保存功能未初始化，请刷新页面重试。');
+          }
+          
+          return false;
+        }, { capture: true, passive: false });
+      }
       
       // 修复保存训练记录按钮
       const btnSaveTraining = document.getElementById('btnSaveTraining');
