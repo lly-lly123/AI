@@ -164,11 +164,13 @@
           e.preventDefault();
           e.stopPropagation();
           
+          const clickedCard = e.currentTarget || card;
+          
           // 方法1: 优先使用data-view属性（最可靠）
-          if (card.dataset.view && window.switchView) {
+          if (clickedCard.dataset.view && window.switchView) {
             try {
-              window.switchView(card.dataset.view);
-              console.log('✅ 卡片点击（data-view）:', card.dataset.view);
+              window.switchView(clickedCard.dataset.view);
+              console.log('✅ 卡片点击（data-view）:', clickedCard.dataset.view);
               return;
             } catch (err) {
               console.error('❌ switchView调用失败:', err);
@@ -176,7 +178,7 @@
           }
           
           // 方法2: 如果有onclick属性，执行它
-          const onclickAttr = card.getAttribute('onclick');
+          const onclickAttr = clickedCard.getAttribute('onclick');
           if (onclickAttr) {
             try {
               const func = new Function('event', onclickAttr);
@@ -198,7 +200,7 @@
           }
           
           // 方法3: 如果有data-open-feedback属性
-          if (card.dataset.openFeedback === 'true') {
+          if (clickedCard.dataset.openFeedback === 'true') {
             const feedbackTriggers = document.querySelectorAll('[data-open-feedback]');
             if (feedbackTriggers.length > 0) {
               const event = new Event('click');
@@ -209,35 +211,17 @@
           }
         };
         
-        // 移除所有旧的事件监听器（通过克隆节点）
-        const newCard = card.cloneNode(true);
-        card.parentNode.replaceChild(newCard, card);
-        const freshCard = card.parentNode.querySelector('.mobile-card[data-view="' + (card.dataset.view || '') + '"]') || 
-                         card.parentNode.querySelector('.mobile-card[onclick*="' + (card.getAttribute('onclick') || '').substring(0, 20) + '"]') ||
-                         card.parentNode.lastElementChild;
+        // 移除旧的事件监听器（使用once选项确保只执行一次，或者使用AbortController）
+        // 直接绑定新的事件监听器（使用capture确保优先执行）
+        card.addEventListener('touchend', handleCardClick, { passive: false, capture: true });
+        card.addEventListener('click', handleCardClick, { passive: false, capture: true });
+        card.addEventListener('touchstart', function(e) {
+          // 阻止默认行为，但允许事件继续传播
+          e.stopPropagation();
+        }, { passive: true, capture: true });
         
-        if (freshCard) {
-          // 重新应用样式
-          freshCard.style.setProperty('pointer-events', 'auto', 'important');
-          freshCard.style.setProperty('touch-action', 'manipulation', 'important');
-          freshCard.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.4)', 'important');
-          freshCard.style.setProperty('cursor', 'pointer', 'important');
-          freshCard.style.setProperty('position', 'relative', 'important');
-          freshCard.style.setProperty('z-index', '100', 'important');
-          freshCard.style.setProperty('user-select', 'none', 'important');
-          freshCard.style.setProperty('-webkit-user-select', 'none', 'important');
-          freshCard.removeAttribute('disabled');
-          
-          // 绑定新的事件监听器
-          freshCard.addEventListener('touchend', handleCardClick, { passive: false, capture: true });
-          freshCard.addEventListener('click', handleCardClick, { passive: false, capture: true });
-          freshCard.addEventListener('touchstart', function(e) {
-            e.stopPropagation();
-          }, { passive: true, capture: true });
-          
-          // 确保onclick属性也工作
-          freshCard.onclick = handleCardClick;
-        }
+        // 确保onclick属性也工作
+        card.onclick = handleCardClick;
       });
       
       console.log('✅ 已修复', mobileCards.length, '个移动端卡片');
