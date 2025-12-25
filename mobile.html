@@ -2031,27 +2031,27 @@
           <h2 class="mobile-section-title">⚙️ 更多功能</h2>
         </div>
         <div class="mobile-list">
-          <div class="mobile-card" data-view="pedigree" onclick="if(window.switchView){window.switchView('pedigree');}else{console.error('switchView未定义');}">
+          <div class="mobile-card" data-view="pedigree" onclick="(function(){try{const v=document.getElementById('pedigreeView');if(v){document.querySelectorAll('.mobile-view').forEach(el=>el.style.display='none');v.style.display='block';console.log('✅切换到血统视图');}else{console.error('pedigreeView不存在');}}catch(e){console.error('切换视图失败:',e);}})();return false;">
             <div class="mobile-card-title">🧬 血统关系</div>
             <div class="mobile-card-meta">查看血统树</div>
           </div>
-          <div class="mobile-card" data-view="breeding" onclick="if(window.switchView){window.switchView('breeding');}else{console.error('switchView未定义');}">
+          <div class="mobile-card" data-view="breeding" onclick="(function(){try{const v=document.getElementById('breedingView');if(v){document.querySelectorAll('.mobile-view').forEach(el=>el.style.display='none');v.style.display='block';console.log('✅切换到繁育视图');}else{console.error('breedingView不存在');}}catch(e){console.error('切换视图失败:',e);}})();return false;">
             <div class="mobile-card-title">💕 繁育配对</div>
             <div class="mobile-card-meta">配对评估和管理</div>
           </div>
-          <div class="mobile-card" data-view="health" onclick="if(window.switchView){window.switchView('health');}else{console.error('switchView未定义');}">
+          <div class="mobile-card" data-view="health" onclick="(function(){try{const v=document.getElementById('healthView');if(v){document.querySelectorAll('.mobile-view').forEach(el=>el.style.display='none');v.style.display='block';console.log('✅切换到健康视图');}else{console.error('healthView不存在');}}catch(e){console.error('切换视图失败:',e);}})();return false;">
             <div class="mobile-card-title">🩺 健康管理</div>
             <div class="mobile-card-meta">健康记录和提醒</div>
           </div>
-          <div class="mobile-card" data-view="analysis" onclick="if(window.switchView){window.switchView('analysis');}else{console.error('switchView未定义');}">
+          <div class="mobile-card" data-view="analysis" onclick="(function(){try{const v=document.getElementById('analysisView');if(v){document.querySelectorAll('.mobile-view').forEach(el=>el.style.display='none');v.style.display='block';console.log('✅切换到分析视图');}else{console.error('analysisView不存在');}}catch(e){console.error('切换视图失败:',e);}})();return false;">
             <div class="mobile-card-title">🧠 智能分析</div>
             <div class="mobile-card-meta">AI智能分析</div>
           </div>
-          <div class="mobile-card" data-view="training" onclick="if(window.switchView){window.switchView('training');}else{console.error('switchView未定义');}">
+          <div class="mobile-card" data-view="training" onclick="(function(){try{const v=document.getElementById('trainingView');if(v){document.querySelectorAll('.mobile-view').forEach(el=>el.style.display='none');v.style.display='block';console.log('✅切换到训练视图');}else{console.error('trainingView不存在');}}catch(e){console.error('切换视图失败:',e);}})();return false;">
             <div class="mobile-card-title">🏃 训练模块</div>
             <div class="mobile-card-meta">训练记录和分析</div>
           </div>
-          <div class="mobile-card" data-open-feedback="true">
+          <div class="mobile-card" data-open-feedback="true" onclick="(function(){try{const triggers=document.querySelectorAll('[data-open-feedback]');if(triggers.length>0){const e=new Event('click');triggers[0].dispatchEvent(e);console.log('✅触发反馈功能');}}catch(err){console.error('触发反馈失败:',err);}})();return false;">
             <div class="mobile-card-title">🐛 意见与反馈</div>
             <div class="mobile-card-meta">提交使用意见与问题</div>
           </div>
@@ -3329,19 +3329,55 @@
         }
       });
       
-      // 显示目标视图
-      if (views[viewName]) {
-        views[viewName].style.display = 'block';
+      // 显示目标视图（增强版，多重保障）
+      let targetView = null;
+      
+      // 方法1: 使用views对象
+      if (views && views[viewName]) {
+        targetView = views[viewName];
+      } else {
+        // 方法2: 直接通过ID查找（备用方案）
+        targetView = document.getElementById(viewName + 'View') || document.getElementById(viewName);
+      }
+      
+      if (targetView) {
+        targetView.style.display = 'block';
         
         // 重新绑定该视图中的所有按钮和卡片事件（确保新显示的视图按钮可用）
         setTimeout(() => {
-          const viewCards = views[viewName].querySelectorAll('.mobile-card[onclick]');
+          const viewCards = targetView.querySelectorAll('.mobile-card[onclick], .mobile-card[data-view]');
           viewCards.forEach(card => {
             card.style.setProperty('pointer-events', 'auto', 'important');
             card.style.setProperty('touch-action', 'manipulation', 'important');
-            card.style.setProperty('z-index', '50', 'important');
+            card.style.setProperty('z-index', '100', 'important');
             card.style.setProperty('position', 'relative', 'important');
             
+            // 如果有data-view属性，直接绑定事件
+            if (card.dataset.view) {
+              const viewName = card.dataset.view;
+              const handler = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  const v = document.getElementById(viewName + 'View') || document.getElementById(viewName);
+                  if (v) {
+                    document.querySelectorAll('.mobile-view').forEach(el => el.style.display = 'none');
+                    v.style.display = 'block';
+                    console.log('✅ 通过data-view切换:', viewName);
+                    // 调用switchView以触发其他逻辑
+                    if (window.switchView) {
+                      window.switchView(viewName);
+                    }
+                  }
+                } catch (err) {
+                  console.error('❌ 切换视图失败:', err);
+                }
+              };
+              card.addEventListener('touchend', handler, { passive: false, capture: true });
+              card.addEventListener('click', handler, { passive: false, capture: true });
+            }
+            
+            // 如果有onclick属性，也绑定
             const onclickAttr = card.getAttribute('onclick');
             if (onclickAttr) {
               const handler = function(e) {
@@ -3353,21 +3389,15 @@
                   console.log('✅ 视图内卡片点击:', onclickAttr);
                 } catch (err) {
                   console.error('❌ 执行失败:', err);
-                  if (window.switchView && onclickAttr.includes('switchView')) {
-                    const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
-                    if (match && match[1]) {
-                      window.switchView(match[1]);
-                    }
-                  }
                 }
               };
-              card.removeEventListener('touchend', handler);
               card.addEventListener('touchend', handler, { passive: false, capture: true });
+              card.addEventListener('click', handler, { passive: false, capture: true });
             }
           });
           
           // 也修复视图内的按钮
-          const viewButtons = views[viewName].querySelectorAll('button[onclick], .btn[onclick]');
+          const viewButtons = targetView.querySelectorAll('button[onclick], .btn[onclick]');
           viewButtons.forEach(btn => {
             btn.style.setProperty('pointer-events', 'auto', 'important');
             btn.style.setProperty('touch-action', 'manipulation', 'important');
@@ -3381,30 +3411,41 @@
         // 根据视图执行特定操作
         switch(viewName) {
           case 'home':
-            loadData();
+            if (typeof loadData === 'function') loadData();
             break;
           case 'pigeons':
-            refreshList();
+            if (typeof refreshList === 'function') refreshList();
             break;
           case 'races':
-            refreshRaceList();
+            if (typeof refreshRaceList === 'function') refreshRaceList();
             break;
           case 'stats':
-            refreshDashboard();
+            if (typeof refreshDashboard === 'function') refreshDashboard();
             break;
           case 'detail':
             // 详情视图已通过viewPigeonDetail函数加载
             break;
           case 'pedigree':
-            refreshPedigreeSelect();
+            if (typeof refreshPedigreeSelect === 'function') refreshPedigreeSelect();
             break;
           case 'training':
-            initTraining();
+            if (typeof initTraining === 'function') initTraining();
             break;
         }
         console.log('✅ 移动端视图切换成功:', viewName);
       } else {
         console.warn('⚠️ 移动端视图不存在:', viewName);
+        // 尝试直接查找所有可能的ID
+        const possibleIds = [viewName + 'View', viewName, 'moreView'];
+        for (const id of possibleIds) {
+          const el = document.getElementById(id);
+          if (el) {
+            document.querySelectorAll('.mobile-view').forEach(v => v.style.display = 'none');
+            el.style.display = 'block';
+            console.log('✅ 通过备用方法找到视图:', id);
+            return;
+          }
+        }
       }
     }
     
