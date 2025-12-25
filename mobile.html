@@ -3384,6 +3384,13 @@
       return apiConfig.apiUrl || (window.location.origin + '/api');
     }
     
+    // 初始化全局API URL（供其他函数使用）
+    function initGlobalApiUrl() {
+      if (!window.API_URL || window.API_URL.includes('localhost')) {
+        window.API_URL = window.location.origin;
+      }
+    }
+    
     // 设置认证token
     function setAuthToken(token) {
       if (token) {
@@ -3560,6 +3567,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      // 初始化全局API URL
+      initGlobalApiUrl();
       setupEventDelegation();
       
       const feedbackTriggers = document.querySelectorAll('[data-open-feedback]');
@@ -10595,7 +10604,7 @@
       }
       
       async function chatWithBackendAPI(question, history = []) {
-        const API_URL = window.API_URL || 'http://localhost:3000';
+        const API_URL = getBackendApiUrl().replace('/api', '') || window.location.origin;
         const token = localStorage.getItem('token');
         
         if (!token) {
@@ -11057,7 +11066,7 @@
         // 优先级1：通过后端代理调用智谱API（解决跨域问题）
         try {
           // 获取后端API地址
-          const apiUrl = window.API_URL || (window.location.protocol + '//' + window.location.host);
+          const apiUrl = getBackendApiUrl().replace('/api', '') || window.location.origin;
           
           // 构建消息历史
           const historyForAPI = history.map(msg => ({
@@ -11138,7 +11147,7 @@
         
         // 优先级1.5：尝试使用后端AI API（如果智谱API不可用）
         try {
-          const API_URL = window.API_URL || 'http://localhost:3000';
+          const API_URL = getBackendApiUrl().replace('/api', '') || window.location.origin;
           const response = await fetch(`${API_URL}/api/ai/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
