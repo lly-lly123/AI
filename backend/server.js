@@ -14,18 +14,11 @@ const { apiLimiter, strictLimiter, aiLimiter } = require('./middleware/rateLimit
 
 const app = express();
 
-// 安全头设置
+// 安全头设置 - 禁用CSP以允许内联事件处理器（应用中有大量onclick等内联事件）
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
+  contentSecurityPolicy: false,  // 完全禁用CSP，因为应用使用大量内联事件处理器
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 // 中间件
