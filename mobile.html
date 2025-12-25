@@ -1772,33 +1772,27 @@
       console.log('📋 找到', cards.length, '个功能模块卡片，开始修复...');
       
       cards.forEach((card, index) => {
-        // 克隆节点以移除所有旧的事件监听器
-        const newCard = card.cloneNode(true);
-        const parent = card.parentNode;
-        if (parent) {
-          parent.replaceChild(newCard, card);
-        }
+        // 不克隆节点，直接修复（避免可能的问题）
         
         // 强制设置样式（最高优先级）
-        newCard.style.cssText = `
-          pointer-events: auto !important;
-          touch-action: manipulation !important;
-          z-index: 99999 !important;
-          position: relative !important;
-          cursor: pointer !important;
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -webkit-tap-highlight-color: rgba(37, 99, 235, 0.5) !important;
-        `;
+        card.style.setProperty('pointer-events', 'auto', 'important');
+        card.style.setProperty('touch-action', 'manipulation', 'important');
+        card.style.setProperty('z-index', '99999', 'important');
+        card.style.setProperty('position', 'relative', 'important');
+        card.style.setProperty('cursor', 'pointer', 'important');
+        card.style.setProperty('user-select', 'none', 'important');
+        card.style.setProperty('-webkit-user-select', 'none', 'important');
+        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.5)', 'important');
+        card.removeAttribute('disabled');
         
-        // 创建最简单直接的事件处理（完全不阻止事件，只执行操作）
+        // 创建最简单直接的事件处理函数
         const directClick = function(e) {
-          console.log('🎯 [终极修复] 卡片', newCard.dataset.cardIndex || (index + 1), '被点击');
+          console.log('🎯 [终极修复] 卡片', card.dataset.cardIndex || (index + 1), '被点击，data-view:', card.dataset.view);
           
-          // 方法1: 如果有data-view属性，直接切换视图（最优先）
-          if (newCard.dataset.view) {
+          // 如果有data-view属性，直接切换视图
+          if (card.dataset.view) {
             try {
-              const viewName = newCard.dataset.view;
+              const viewName = card.dataset.view;
               const viewId = viewName + 'View';
               console.log('🔍 查找视图:', viewId);
               
@@ -1810,14 +1804,14 @@
                 const allViews = document.querySelectorAll('.mobile-view');
                 console.log('📋 找到', allViews.length, '个视图，开始隐藏...');
                 allViews.forEach(v => {
-                  v.style.display = 'none';
+                  if (v) v.style.display = 'none';
                 });
                 
                 // 显示目标视图
                 targetView.style.display = 'block';
                 console.log('✅✅✅ 视图切换成功:', viewName);
                 
-                // 如果switchView存在，也调用它（触发其他逻辑）
+                // 如果switchView存在，也调用它
                 if (window.switchView && typeof window.switchView === 'function') {
                   try {
                     window.switchView(viewName);
@@ -1833,16 +1827,17 @@
                 return true;
               } else {
                 console.error('❌ 视图不存在:', viewId);
-                console.error('可用的视图ID:', Array.from(document.querySelectorAll('.mobile-view')).map(v => v.id));
+                const allViewIds = Array.from(document.querySelectorAll('.mobile-view')).map(v => v.id).filter(Boolean);
+                console.error('可用的视图ID:', allViewIds);
               }
             } catch (err) {
               console.error('❌ 切换视图异常:', err);
-              console.error('错误堆栈:', err.stack);
+              if (err.stack) console.error('错误堆栈:', err.stack);
             }
           }
           
-          // 方法2: 如果有data-open-feedback属性
-          if (newCard.dataset.openFeedback === 'true') {
+          // 如果有data-open-feedback属性
+          if (card.dataset.openFeedback === 'true') {
             try {
               const triggers = document.querySelectorAll('[data-open-feedback]');
               if (triggers.length > 0) {
@@ -1859,8 +1854,13 @@
           return false;
         };
         
-        // 绑定多种事件（使用capture确保优先执行，但不阻止默认行为）
-        const touchendHandler = function(e) {
+        // 完全移除旧的事件监听器（通过重新设置）
+        card.ontouchend = null;
+        card.onclick = null;
+        
+        // 绑定新的事件处理（最简单直接）
+        card.ontouchend = function(e) {
+          console.log('📱 touchend事件触发');
           const result = directClick(e);
           if (result) {
             e.preventDefault();
@@ -1868,7 +1868,8 @@
           }
         };
         
-        const clickHandler = function(e) {
+        card.onclick = function(e) {
+          console.log('🖱️ click事件触发');
           const result = directClick(e);
           if (result) {
             e.preventDefault();
@@ -1876,17 +1877,28 @@
           }
         };
         
-        // 移除所有可能存在的旧事件监听器（通过设置新的事件处理）
-        newCard.ontouchend = touchendHandler;
-        newCard.onclick = clickHandler;
+        // 也添加addEventListener（多重保障）
+        card.addEventListener('touchend', function(e) {
+          console.log('📱 addEventListener touchend触发');
+          const result = directClick(e);
+          if (result) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false, capture: true });
         
-        // 也添加事件监听器（多重保障）
-        newCard.addEventListener('touchend', touchendHandler, { passive: false, capture: true });
-        newCard.addEventListener('click', clickHandler, { passive: false, capture: true });
+        card.addEventListener('click', function(e) {
+          console.log('🖱️ addEventListener click触发');
+          const result = directClick(e);
+          if (result) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, { passive: false, capture: true });
         
         // 也绑定到子元素（确保点击标题或描述也能触发）
-        const title = newCard.querySelector('.mobile-card-title');
-        const meta = newCard.querySelector('.mobile-card-meta');
+        const title = card.querySelector('.mobile-card-title');
+        const meta = card.querySelector('.mobile-card-meta');
         if (title) {
           title.style.pointerEvents = 'none';
           title.ontouchend = function(e) {
@@ -1902,7 +1914,7 @@
           };
         }
         
-        console.log('✅ 卡片', index + 1, '修复完成');
+        console.log('✅ 卡片', index + 1, '修复完成，data-view:', card.dataset.view);
       });
       
       console.log('✅ [终极修复] 所有功能模块卡片已修复');
