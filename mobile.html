@@ -22,14 +22,24 @@
         overlay.style.zIndex = '-1';
       });
       
-      // 2. 强制设置所有按钮可点击（移动端特定选择器）
-      const allClickableElements = document.querySelectorAll('button, .btn, .mobile-nav-item, .mobile-tab, .mobile-quick-link-btn, .btn-icon, .btn-primary, .btn-outline, .btn-secondary, [role="button"], a[onclick]');
+      // 2. 强制设置所有按钮可点击（移动端特定选择器，包括卡片等）
+      const allClickableElements = document.querySelectorAll('button, .btn, .mobile-nav-item, .mobile-tab, .mobile-quick-link-btn, .btn-icon, .btn-primary, .btn-outline, .btn-secondary, [role="button"], a[onclick], .mobile-card[onclick], .mobile-card[data-action], td[onclick], tr[onclick], .clickable, [data-clickable="true"]');
+      
+      // 使用WeakSet跟踪已处理的元素，避免重复处理
+      const processedElements = new WeakSet();
       
       allClickableElements.forEach(el => {
+        // 如果已经处理过，跳过
+        if (processedElements.has(el)) {
+          return;
+        }
+        
         el.style.setProperty('pointer-events', 'auto', 'important');
         el.style.setProperty('cursor', 'pointer', 'important');
         el.style.setProperty('position', 'relative', 'important');
         el.style.setProperty('z-index', '10', 'important');
+        el.style.setProperty('touch-action', 'manipulation', 'important');
+        el.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.3)', 'important');
         el.removeAttribute('disabled');
         if (!el.hasAttribute('role') && el.tagName !== 'A') {
           el.setAttribute('role', 'button');
@@ -37,6 +47,35 @@
         if (!el.hasAttribute('tabindex')) {
           el.setAttribute('tabindex', '0');
         }
+        
+        // 移动端：添加触摸事件支持
+        const handleTouch = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 触发点击事件
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          });
+          el.dispatchEvent(clickEvent);
+          
+          // 如果有点击处理函数，也调用它
+          if (el.onclick) {
+            try {
+              el.onclick(clickEvent);
+            } catch (err) {
+              console.warn('执行onclick失败:', err);
+            }
+          }
+        };
+        
+        // 添加触摸事件监听器（只添加一次）
+        el.addEventListener('touchend', handleTouch, { passive: false, capture: true });
+        
+        // 标记为已处理
+        processedElements.add(el);
       });
       
       // 2.1 特别修复保存按钮和资讯切换按钮
@@ -78,6 +117,75 @@
         const el = document.querySelector(selector);
         if (el) {
           el.style.setProperty('pointer-events', 'auto', 'important');
+          el.style.setProperty('touch-action', 'manipulation', 'important');
+        }
+      });
+      
+      // 3.1 特别修复移动端卡片点击
+      const mobileCards = document.querySelectorAll('.mobile-card');
+      mobileCards.forEach(card => {
+        card.style.setProperty('pointer-events', 'auto', 'important');
+        card.style.setProperty('touch-action', 'manipulation', 'important');
+        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.2)', 'important');
+        card.style.setProperty('cursor', 'pointer', 'important');
+        card.style.setProperty('position', 'relative', 'important');
+        card.style.setProperty('z-index', '5', 'important');
+        
+        // 如果卡片有onclick属性，确保触摸事件也能触发
+        if (card.hasAttribute('onclick')) {
+          const onclickHandler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const onclickAttr = card.getAttribute('onclick');
+            if (onclickAttr) {
+              try {
+                const func = new Function('event', onclickAttr);
+                func(e);
+              } catch (err) {
+                console.warn('执行卡片onclick失败:', err);
+              }
+            }
+          };
+          card.addEventListener('touchend', onclickHandler, { passive: false, capture: true });
+        }
+      });
+      
+      // 3.2 修复表格行点击
+      const clickableRows = document.querySelectorAll('tr[onclick], td[onclick]');
+      clickableRows.forEach(row => {
+        row.style.setProperty('pointer-events', 'auto', 'important');
+        row.style.setProperty('touch-action', 'manipulation', 'important');
+        row.style.setProperty('cursor', 'pointer', 'important');
+        row.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.2)', 'important');
+      });
+      
+      // 3.3 特别修复底部导航栏按钮
+      const bottomNavItems = document.querySelectorAll('.mobile-nav-item, .mobile-bottom-nav button');
+      bottomNavItems.forEach(item => {
+        item.style.setProperty('pointer-events', 'auto', 'important');
+        item.style.setProperty('touch-action', 'manipulation', 'important');
+        item.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.4)', 'important');
+        item.style.setProperty('cursor', 'pointer', 'important');
+        item.style.setProperty('z-index', '1000', 'important');
+        item.style.setProperty('position', 'relative', 'important');
+        item.removeAttribute('disabled');
+        
+        // 确保onclick事件能响应触摸
+        if (item.hasAttribute('onclick')) {
+          const onclickAttr = item.getAttribute('onclick');
+          const touchHandler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              if (onclickAttr) {
+                const func = new Function('event', onclickAttr);
+                func(e);
+              }
+            } catch (err) {
+              console.warn('执行底部导航onclick失败:', err);
+            }
+          };
+          item.addEventListener('touchend', touchHandler, { passive: false, capture: true });
         }
       });
       
@@ -85,7 +193,7 @@
       if (!document.getElementById('universal-button-fix-styles')) {
         const style = document.createElement('style');
         style.id = 'universal-button-fix-styles';
-        style.textContent = 'button, .btn, .mobile-nav-item, .mobile-tab, .mobile-quick-link-btn, .btn-icon, .btn-primary, .btn-outline, .btn-secondary, [role="button"], a[onclick] { pointer-events: auto !important; cursor: pointer !important; user-select: none !important; -webkit-user-select: none !important; position: relative !important; z-index: 10 !important; } button[onclick*="save"], button[onclick*="Save"], .btn-primary[onclick*="save"], .mobile-tab[data-region], button[onclick*="switchNewsRegion"], button[onclick*="switchNewsFilter"] { pointer-events: auto !important; cursor: pointer !important; z-index: 100 !important; position: relative !important; } .mobile-header, .mobile-content, .mobile-nav { pointer-events: auto !important; } body, html { pointer-events: auto !important; } .sidebar-overlay:not(.active), .loading-overlay:not(.active), .modal-backdrop:not(.active) { display: none !important; pointer-events: none !important; z-index: -1 !important; }';
+        style.textContent = 'button, .btn, .mobile-nav-item, .mobile-tab, .mobile-quick-link-btn, .btn-icon, .btn-primary, .btn-outline, .btn-secondary, [role="button"], a[onclick], .mobile-card[onclick], .mobile-card[data-action], td[onclick], tr[onclick], .clickable, [data-clickable="true"] { pointer-events: auto !important; cursor: pointer !important; user-select: none !important; -webkit-user-select: none !important; position: relative !important; z-index: 10 !important; touch-action: manipulation !important; -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important; } button[onclick*="save"], button[onclick*="Save"], .btn-primary[onclick*="save"], .mobile-tab[data-region], button[onclick*="switchNewsRegion"], button[onclick*="switchNewsFilter"] { pointer-events: auto !important; cursor: pointer !important; z-index: 100 !important; position: relative !important; touch-action: manipulation !important; -webkit-tap-highlight-color: rgba(37, 99, 235, 0.5) !important; } .mobile-card { pointer-events: auto !important; touch-action: manipulation !important; -webkit-tap-highlight-color: rgba(37, 99, 235, 0.2) !important; cursor: pointer !important; } .mobile-header, .mobile-content, .mobile-nav { pointer-events: auto !important; touch-action: manipulation !important; } body, html { pointer-events: auto !important; touch-action: manipulation !important; } .sidebar-overlay:not(.active), .loading-overlay:not(.active), .modal-backdrop:not(.active) { display: none !important; pointer-events: none !important; z-index: -1 !important; } * { -webkit-touch-callout: none !important; }';
         document.head.appendChild(style);
       }
       
@@ -110,6 +218,33 @@
     // 暴露到全局
     window.forceFixAllButtons = forceFixAllButtons;
     console.log('✅ [内嵌] 移动端按钮点击修复脚本已加载');
+    
+    // 全局触摸事件处理（确保所有onclick都能响应触摸）
+    document.addEventListener('touchend', function(e) {
+      const target = e.target;
+      // 如果触摸的元素有onclick属性，确保触发
+      if (target && target.hasAttribute('onclick')) {
+        // 检查是否已经有click事件处理
+        const hasClickHandler = target.onclick || target.getAttribute('onclick');
+        if (hasClickHandler) {
+          // 延迟触发，确保触摸事件完成
+          setTimeout(() => {
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            });
+            target.dispatchEvent(clickEvent);
+          }, 10);
+        }
+      }
+    }, { passive: false, capture: true });
+    
+    // 确保body和html可点击
+    document.body.style.pointerEvents = 'auto';
+    document.body.style.touchAction = 'manipulation';
+    document.documentElement.style.pointerEvents = 'auto';
+    document.documentElement.style.touchAction = 'manipulation';
   })();
   </script>
   <style>
@@ -3080,7 +3215,7 @@
 
     // 切换视图
     function switchView(viewName) {
-      console.log('切换视图:', viewName);
+      console.log('🔄 移动端切换视图:', viewName);
       
       // 更新底部导航栏状态
       document.querySelectorAll('.mobile-nav-item').forEach(item => {
@@ -3130,10 +3265,14 @@
             initTraining();
             break;
         }
+        console.log('✅ 移动端视图切换成功:', viewName);
       } else {
-        console.warn('视图不存在:', viewName);
+        console.warn('⚠️ 移动端视图不存在:', viewName);
       }
     }
+    
+    // 确保switchView函数暴露到window对象
+    window.switchView = switchView;
 
     // 刷新数据
     function refreshData() {
