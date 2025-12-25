@@ -434,26 +434,68 @@
       forceFixAllButtons();
     }
     
-    // 延迟多次执行
-    setTimeout(forceFixAllButtons, 50);
+    // 延迟执行（只执行一次，避免频繁执行导致自动跳转）
     setTimeout(forceFixAllButtons, 100);
-    setTimeout(forceFixAllButtons, 500);
-    setTimeout(forceFixAllButtons, 1000);
-    setTimeout(forceFixAllButtons, 2000);
-    window.addEventListener('load', forceFixAllButtons);
+    window.addEventListener('load', function() {
+      setTimeout(forceFixAllButtons, 200);
+    });
     
     // 暴露到全局
     window.forceFixAllButtons = forceFixAllButtons;
     console.log('✅ [内嵌增强版] 移动端按钮点击修复脚本已加载');
     
-    // 添加定期检查机制（每3秒检查一次，确保新添加的按钮也能被修复）
-    setInterval(function() {
-      const unfixedButtons = document.querySelectorAll('.mobile-card:not([data-fixed="true"]), .mobile-nav-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
-      if (unfixedButtons.length > 0) {
-        console.log('🔧 [移动端] 发现未修复的按钮，执行修复...', unfixedButtons.length);
-        forceFixAllButtons();
+    // 移除定期检查机制，改用MutationObserver监听DOM变化，避免导致自动跳转
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(function(mutations) {
+        let hasNewButtons = false;
+        mutations.forEach(function(mutation) {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) { // Element node
+              if (node.classList && (
+                node.classList.contains('mobile-card') ||
+                node.classList.contains('mobile-nav-item') ||
+                node.classList.contains('btn') ||
+                node.tagName === 'BUTTON' ||
+                node.hasAttribute('data-view') ||
+                node.hasAttribute('data-action')
+              )) {
+                hasNewButtons = true;
+              }
+              // 检查子元素
+              if (node.querySelectorAll) {
+                const childButtons = node.querySelectorAll('.mobile-card, .mobile-nav-item, .btn, button, [data-view], [data-action]');
+                if (childButtons.length > 0) {
+                  hasNewButtons = true;
+                }
+              }
+            }
+          });
+        });
+        
+        if (hasNewButtons) {
+          console.log('🔧 [移动端] 检测到新按钮，执行修复...');
+          // 延迟执行，避免频繁执行
+          setTimeout(function() {
+            forceFixAllButtons();
+          }, 100);
+        }
+      });
+      
+      // 开始观察
+      if (document.body) {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+        });
       }
-    }, 3000);
+    }
     
     // 全局触摸事件处理（确保所有onclick都能响应触摸）
     document.addEventListener('touchend', function(e) {

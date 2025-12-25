@@ -205,14 +205,14 @@
         item.removeAttribute('disabled');
         
         // 确保子元素也可点击
-        newItem.querySelectorAll('*').forEach(child => {
+        item.querySelectorAll('*').forEach(child => {
           child.style.pointerEvents = 'auto';
           child.style.cursor = 'pointer';
         });
         
         // 绑定多种事件类型
-        const view = newItem.dataset.view;
-        const openFeedback = newItem.dataset.openFeedback;
+        const view = item.dataset.view;
+        const openFeedback = item.dataset.openFeedback;
         
         const handleButtonClick = function(e) {
           e.preventDefault();
@@ -265,31 +265,36 @@
             btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
             btn.removeAttribute('disabled');
             
-            // 如果是侧边栏按钮或其他重要按钮，使用克隆节点方法
+            // 直接设置onclick，不使用cloneNode避免DOM变化导致意外跳转
             if (btn.classList.contains('sidebar-item') || 
                 btn.id && (btn.id.startsWith('btn') || btn.id.includes('Button'))) {
-              const newBtn = btn.cloneNode(true);
-              const parent = btn.parentNode;
-              if (parent) {
-                parent.replaceChild(newBtn, btn);
-                newBtn.dataset.fixed = 'true';
-                newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+              // 标记为已修复
+              btn.dataset.fixed = 'true';
+              btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+              
+              // 绑定事件（只绑定一次，避免重复绑定）
+              if (!btn.dataset.clickBound) {
+                btn.dataset.clickBound = 'true';
                 
-                // 绑定事件
-                const view = newBtn.dataset.view;
-                const action = newBtn.dataset.action;
-                const openFeedback = newBtn.dataset.openFeedback;
+                const view = btn.dataset.view;
+                const action = btn.dataset.action;
+                const openFeedback = btn.dataset.openFeedback;
                 
                 const handleClick = function(e) {
+                  // 确保是用户真实点击，不是程序触发
+                  if (!e.isTrusted) {
+                    return;
+                  }
+                  
                   e.preventDefault();
                   e.stopPropagation();
                   e.stopImmediatePropagation();
                   
                   if (view && typeof window.switchView === 'function') {
-                    console.log('🔘 [修复函数] 点击按钮，切换视图:', view);
+                    console.log('🔘 [修复函数] 用户点击按钮，切换视图:', view);
                     window.switchView(view);
                   } else if (action) {
-                    console.log('🔘 [修复函数] 点击按钮，执行动作:', action);
+                    console.log('🔘 [修复函数] 用户点击按钮，执行动作:', action);
                     // 处理快捷入口按钮
                     if (action === 'addPigeon' && typeof window.switchView === 'function') {
                       window.switchView('createView');
@@ -301,7 +306,7 @@
                       window.switchView('analysisView');
                     }
                   } else if (openFeedback === 'true') {
-                    console.log('🔘 [修复函数] 点击反馈按钮');
+                    console.log('🔘 [修复函数] 用户点击反馈按钮');
                     const feedbackModal = document.getElementById('feedbackModal');
                     if (feedbackModal) {
                       feedbackModal.style.display = 'flex';
@@ -311,19 +316,11 @@
                   return false;
                 };
                 
-                ['click', 'mousedown', 'mouseup'].forEach(eventType => {
-                  newBtn.addEventListener(eventType, handleClick, { capture: true, passive: false });
-                });
-                
-                // 也绑定到子元素
-                newBtn.querySelectorAll('*').forEach(child => {
-                  ['click', 'mousedown', 'mouseup'].forEach(eventType => {
-                    child.addEventListener(eventType, handleClick, { capture: true, passive: false });
-                  });
-                });
+                // 只绑定click事件，避免重复触发
+                btn.onclick = handleClick;
               }
             } else {
-              // 其他按钮只标记，不克隆
+              // 其他按钮只标记，不绑定事件
               btn.dataset.fixed = 'true';
             }
           });
@@ -385,72 +382,44 @@
     // 立即设置全局事件委托（不等待DOM加载）
     setupGlobalEventDelegation();
     
-    // 添加定期检查机制（每10秒检查一次，确保新添加的按钮也能被修复）
-    // 注意：已移除频繁的setInterval，避免导致意外跳转
-    let fixCheckInterval = null;
-    function startFixCheckInterval() {
-      if (fixCheckInterval) {
-        clearInterval(fixCheckInterval);
-      }
-      fixCheckInterval = setInterval(function() {
-        const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
-        if (unfixedButtons.length > 0) {
-          console.log('🔧 发现未修复的按钮，执行修复...', unfixedButtons.length);
-          // 只在确实有未修复按钮时才执行修复，避免频繁执行
-          ultimateFixPC();
-        }
-      }, 10000); // 改为10秒检查一次，减少频繁执行
-    }
-    // 延迟启动，避免页面加载时频繁执行
-    setTimeout(startFixCheckInterval, 5000);
-    
-    // 在DOM加载后立即执行
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(ultimateFixPC, 50);
-        setTimeout(ultimateFixPC, 100);
-        setTimeout(ultimateFixPC, 300);
-        setTimeout(ultimateFixPC, 500);
-        setTimeout(ultimateFixPC, 1000);
-        setTimeout(ultimateFixPC, 2000);
-      });
-    } else {
-      setTimeout(ultimateFixPC, 50);
-      setTimeout(ultimateFixPC, 100);
-      setTimeout(ultimateFixPC, 300);
-      setTimeout(ultimateFixPC, 500);
-      setTimeout(ultimateFixPC, 1000);
-      setTimeout(ultimateFixPC, 2000);
-    }
-    
-    // 页面完全加载后再次执行
-    window.addEventListener('load', function() {
-      setTimeout(ultimateFixPC, 100);
-      setTimeout(ultimateFixPC, 500);
-    });
-    
-    // 监听DOM变化，自动修复新添加的按钮
+    // 移除定期检查机制，避免导致自动跳转
+    // 改为使用MutationObserver监听DOM变化，只在有新元素添加时才修复
     if (typeof MutationObserver !== 'undefined') {
       const observer = new MutationObserver(function(mutations) {
-        let shouldFix = false;
+        let hasNewButtons = false;
         mutations.forEach(function(mutation) {
-          if (mutation.addedNodes.length > 0) {
-            mutation.addedNodes.forEach(function(node) {
-              if (node.nodeType === 1) {
-                if (node.classList && (node.classList.contains('sidebar-item') || node.classList.contains('btn'))) {
-                  shouldFix = true;
-                } else if (node.querySelector && (node.querySelector('.sidebar-item') || node.querySelector('.btn'))) {
-                  shouldFix = true;
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeType === 1) { // Element node
+              if (node.classList && (
+                node.classList.contains('sidebar-item') ||
+                node.classList.contains('btn') ||
+                node.tagName === 'BUTTON' ||
+                node.hasAttribute('data-view') ||
+                node.hasAttribute('data-action')
+              )) {
+                hasNewButtons = true;
+              }
+              // 检查子元素
+              if (node.querySelectorAll) {
+                const childButtons = node.querySelectorAll('.sidebar-item, .btn, button, [data-view], [data-action]');
+                if (childButtons.length > 0) {
+                  hasNewButtons = true;
                 }
               }
-            });
-          }
+            }
+          });
         });
-        if (shouldFix) {
-          setTimeout(ultimateFixPC, 100);
+        
+        if (hasNewButtons) {
+          console.log('🔧 检测到新按钮，执行修复...');
+          // 延迟执行，避免频繁执行
+          setTimeout(function() {
+            ultimateFixPC();
+          }, 100);
         }
       });
       
+      // 开始观察
       if (document.body) {
         observer.observe(document.body, {
           childList: true,
@@ -458,15 +427,29 @@
         });
       } else {
         document.addEventListener('DOMContentLoaded', function() {
-          if (document.body) {
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true
-            });
-          }
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
         });
       }
     }
+    
+    // 在DOM加载后执行（只执行一次，避免频繁执行导致自动跳转）
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(ultimateFixPC, 100);
+      });
+    } else {
+      setTimeout(ultimateFixPC, 100);
+    }
+    
+    // 页面完全加载后执行一次
+    window.addEventListener('load', function() {
+      setTimeout(ultimateFixPC, 200);
+    });
+    
+    // 旧的MutationObserver已移除，使用上面定义的新的MutationObserver
     
     console.log('✅ 内嵌终极修复脚本已加载');
     console.log('✅ switchView函数已暴露到window:', typeof window.switchView === 'function');
