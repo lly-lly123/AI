@@ -185,8 +185,9 @@ async function initDefaultAdmin() {
 // 启动服务器（仅在非Vercel环境）
 if (!process.env.VERCEL) {
   const PORT = config.server.port || 3000;
-  app.listen(PORT, async () => {
-    logger.info(`服务器启动成功，端口: ${PORT}`);
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, async () => {
+    logger.info(`服务器启动成功，监听地址: ${HOST}:${PORT}`);
     logger.info(`环境: ${config.server.env}`);
     await initDefaultAdmin();
     try {
