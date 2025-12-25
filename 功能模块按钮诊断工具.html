@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>功能模块按钮诊断工具</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .diagnostic-item {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .warning { color: orange; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #1d4ed8; }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 功能模块按钮诊断工具</h1>
+  <p>请在手机上打开移动端页面，然后运行此诊断工具。</p>
+  
+  <div class="diagnostic-item">
+    <h2>1. 检查视图是否存在</h2>
+    <div id="viewCheck"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>2. 检查功能模块卡片</h2>
+    <div id="cardCheck"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>3. 检查事件绑定</h2>
+    <div id="eventCheck"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>4. 检查CSS样式</h2>
+    <div id="cssCheck"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>5. 检查覆盖层</h2>
+    <div id="overlayCheck"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>6. 手动测试</h2>
+    <button onclick="testCardClick('pedigree')">测试血统关系卡片</button>
+    <button onclick="testCardClick('breeding')">测试繁育配对卡片</button>
+    <button onclick="testCardClick('health')">测试健康管理卡片</button>
+    <button onclick="testCardClick('analysis')">测试智能分析卡片</button>
+    <button onclick="testCardClick('training')">测试训练模块卡片</button>
+    <div id="testResult"></div>
+  </div>
+  
+  <div class="diagnostic-item">
+    <h2>7. 一键修复</h2>
+    <button onclick="forceFix()" style="background: #10b981;">🔧 执行一键修复</button>
+    <div id="fixResult"></div>
+  </div>
+  
+  <script>
+    function checkViews() {
+      const views = ['pedigreeView', 'breedingView', 'healthView', 'analysisView', 'trainingView', 'moreView'];
+      const result = [];
+      
+      views.forEach(viewId => {
+        const view = document.getElementById(viewId);
+        if (view) {
+          result.push(`<span class="success">✅ ${viewId} 存在</span>`);
+        } else {
+          result.push(`<span class="error">❌ ${viewId} 不存在</span>`);
+        }
+      });
+      
+      document.getElementById('viewCheck').innerHTML = result.join('<br>');
+    }
+    
+    function checkCards() {
+      const moreView = document.getElementById('moreView');
+      if (!moreView) {
+        document.getElementById('cardCheck').innerHTML = '<span class="error">❌ moreView不存在</span>';
+        return;
+      }
+      
+      const cards = moreView.querySelectorAll('.mobile-card');
+      const result = [`找到 ${cards.length} 个卡片：<br>`];
+      
+      cards.forEach((card, index) => {
+        const hasDataView = card.hasAttribute('data-view');
+        const dataView = card.dataset.view;
+        const hasOnclick = card.hasAttribute('onclick');
+        const onclick = card.getAttribute('onclick')?.substring(0, 50) || '无';
+        
+        result.push(`
+          <strong>卡片 ${index + 1}:</strong><br>
+          - data-view: ${hasDataView ? `<span class="success">✅ ${dataView}</span>` : '<span class="error">❌ 无</span>'}<br>
+          - onclick: ${hasOnclick ? `<span class="warning">⚠️ ${onclick}...</span>` : '<span class="success">✅ 无（已移除）</span>'}<br>
+        `);
+      });
+      
+      document.getElementById('cardCheck').innerHTML = result.join('<br>');
+    }
+    
+    function checkEvents() {
+      const moreView = document.getElementById('moreView');
+      if (!moreView) {
+        document.getElementById('eventCheck').innerHTML = '<span class="error">❌ moreView不存在</span>';
+        return;
+      }
+      
+      const cards = moreView.querySelectorAll('.mobile-card');
+      const result = [];
+      
+      cards.forEach((card, index) => {
+        const hasTouchend = card.ontouchend !== null || card.getEventListeners ? '有' : '未知';
+        const hasClick = card.onclick !== null || card.getEventListeners ? '有' : '未知';
+        
+        result.push(`
+          <strong>卡片 ${index + 1}:</strong><br>
+          - ontouchend: ${hasTouchend}<br>
+          - onclick: ${hasClick}<br>
+        `);
+      });
+      
+      document.getElementById('eventCheck').innerHTML = result.join('<br>');
+    }
+    
+    function checkCSS() {
+      const moreView = document.getElementById('moreView');
+      if (!moreView) {
+        document.getElementById('cssCheck').innerHTML = '<span class="error">❌ moreView不存在</span>';
+        return;
+      }
+      
+      const cards = moreView.querySelectorAll('.mobile-card');
+      const result = [];
+      
+      cards.forEach((card, index) => {
+        const style = window.getComputedStyle(card);
+        const pointerEvents = style.pointerEvents;
+        const zIndex = style.zIndex;
+        const display = style.display;
+        const position = style.position;
+        
+        result.push(`
+          <strong>卡片 ${index + 1}:</strong><br>
+          - pointer-events: ${pointerEvents} ${pointerEvents === 'auto' ? '<span class="success">✅</span>' : '<span class="error">❌</span>'}<br>
+          - z-index: ${zIndex}<br>
+          - display: ${display}<br>
+          - position: ${position}<br>
+        `);
+      });
+      
+      document.getElementById('cssCheck').innerHTML = result.join('<br>');
+    }
+    
+    function checkOverlays() {
+      const overlays = document.querySelectorAll('.sidebar-overlay, .loading-overlay, .modal-backdrop, .overlay');
+      const result = [];
+      
+      if (overlays.length === 0) {
+        result.push('<span class="success">✅ 未发现覆盖层</span>');
+      } else {
+        overlays.forEach(overlay => {
+          const style = window.getComputedStyle(overlay);
+          const display = style.display;
+          const zIndex = style.zIndex;
+          const pointerEvents = style.pointerEvents;
+          
+          if (display !== 'none' && pointerEvents !== 'none') {
+            result.push(`<span class="error">❌ 发现覆盖层: ${overlay.className}, display: ${display}, z-index: ${zIndex}</span>`);
+          } else {
+            result.push(`<span class="success">✅ 覆盖层已隐藏: ${overlay.className}</span>`);
+          }
+        });
+      }
+      
+      document.getElementById('overlayCheck').innerHTML = result.join('<br>');
+    }
+    
+    function testCardClick(viewName) {
+      const viewId = viewName + 'View';
+      const targetView = document.getElementById(viewId);
+      
+      if (!targetView) {
+        document.getElementById('testResult').innerHTML = `<span class="error">❌ 视图不存在: ${viewId}</span>`;
+        return;
+      }
+      
+      try {
+        // 隐藏所有视图
+        document.querySelectorAll('.mobile-view').forEach(v => v.style.display = 'none');
+        // 显示目标视图
+        targetView.style.display = 'block';
+        document.getElementById('testResult').innerHTML = `<span class="success">✅✅✅ 手动切换成功: ${viewName}</span>`;
+      } catch (err) {
+        document.getElementById('testResult').innerHTML = `<span class="error">❌ 切换失败: ${err.message}</span>`;
+      }
+    }
+    
+    function forceFix() {
+      const moreView = document.getElementById('moreView');
+      if (!moreView) {
+        document.getElementById('fixResult').innerHTML = '<span class="error">❌ moreView不存在</span>';
+        return;
+      }
+      
+      const cards = moreView.querySelectorAll('.mobile-card');
+      let fixed = 0;
+      
+      cards.forEach((card, index) => {
+        // 强制设置样式
+        card.style.cssText = `
+          pointer-events: auto !important;
+          touch-action: manipulation !important;
+          z-index: 99999 !important;
+          position: relative !important;
+          cursor: pointer !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -webkit-tap-highlight-color: rgba(37, 99, 235, 0.5) !important;
+        `;
+        
+        // 绑定事件
+        if (card.dataset.view) {
+          const viewName = card.dataset.view;
+          const handler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const viewId = viewName + 'View';
+            const targetView = document.getElementById(viewId);
+            if (targetView) {
+              document.querySelectorAll('.mobile-view').forEach(v => v.style.display = 'none');
+              targetView.style.display = 'block';
+              console.log('✅ 一键修复切换成功:', viewName);
+            }
+          };
+          
+          card.ontouchend = handler;
+          card.onclick = handler;
+          fixed++;
+        }
+      });
+      
+      document.getElementById('fixResult').innerHTML = `<span class="success">✅ 已修复 ${fixed} 个卡片</span>`;
+    }
+    
+    // 页面加载时自动运行所有检查
+    window.addEventListener('load', function() {
+      checkViews();
+      checkCards();
+      checkEvents();
+      checkCSS();
+      checkOverlays();
+    });
+  </script>
+</body>
+</html>
+
