@@ -13,6 +13,19 @@ RUN npm ci --only=production
 # 复制后端代码
 COPY backend/ ./
 
+# 复制前端文件（包括 mobile.html, index.html 等）
+COPY mobile.html ./
+COPY index.html ./
+COPY admin.html ./
+COPY app.html ./
+
+# 复制前端资源目录
+COPY js/ ./js/
+COPY css/ ./css/
+COPY picker/ ./picker/
+COPY img/ ./img/
+COPY fonts/ ./fonts/
+
 # 创建日志目录
 RUN mkdir -p logs
 
