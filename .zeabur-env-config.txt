@@ -6,9 +6,38 @@
 PORT=3000
 NODE_ENV=production
 
-# Supabase配置（必需）- 请从 https://supabase.com 获取
-# SUPABASE_URL=https://xxx.supabase.co
-# SUPABASE_ANON_KEY=your-anon-key
+# ============================================================================
+# AI服务配置（重要：请区分两个不同的API Key）
+# ============================================================================
+# 
+# 选项1：智谱AI - Evo智能助手使用（名称：智鸽）
+# 获取地址：https://open.bigmodel.cn/
+# 注册后获取API Key，配置后即可使用，无需VPN
+# 用途：主站Evo智能助手使用
+ZHIPU_API_KEY_EVO=你的Evo_API_Key
+
+# 选项2：智谱AI - 中枢管家使用（名称：智鸽·中枢管家）
+# 获取地址：https://open.bigmodel.cn/
+# 注册后获取API Key，配置后即可使用，无需VPN
+# 用途：后台中枢管家系统使用
+ZHIPU_API_KEY_ADMIN=你的中枢管家_API_Key
+
+# 兼容性：如果只配置了ZHIPU_API_KEY，Evo会使用它（不推荐，建议明确区分）
+# ZHIPU_API_KEY=你的API_Key
+
+# AI模型选择（可选，默认auto自动选择）
+# auto: 自动选择可用的AI服务（优先国内服务）
+# zhipu: 强制使用智谱AI
+# qwen: 强制使用通义千问
 AI_MODEL=auto
+
+# ============================================================================
+# 其他配置
+# ============================================================================
 API_KEY=6ed04e0834817cfe8da1da6d7003959f
 LOG_LEVEL=info
+
+# Supabase配置（推荐，用于数据持久化）- 请从 https://supabase.com 获取
+# SUPABASE_URL=https://xxx.supabase.co
+# SUPABASE_ANON_KEY=your-anon-key
+# SUPABASE_STORAGE_BUCKET=files

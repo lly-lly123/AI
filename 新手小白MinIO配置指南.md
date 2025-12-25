@@ -173,3 +173,9 @@ MinIO Bucket: pigeonai
 
 **现在就可以运行脚本开始配置了！**
 
+
+
+
+
+
+

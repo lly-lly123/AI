@@ -227,3 +227,9 @@ SUPABASE_STORAGE_BUCKET=files
 
 **总结：MinIO软件永久免费，但实际容量取决于部署平台。要实现1TB容量，建议自建服务器或使用付费服务。**
 
+
+
+
+
+
+

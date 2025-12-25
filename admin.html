@@ -3677,7 +3677,74 @@
               <p class="muted" style="text-align:center;padding:40px;">暂无训练记录</p>
             </div>
           </div>
+          
+          <!-- 智能分析与总结 -->
+          <div class="card" style="margin-top: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin:0;">🤖 智能分析与总结</h3>
+            </div>
+            <div id="trainingAnalysisContainerAdmin">
+              <p class="muted">暂无分析数据，请先添加训练记录</p>
+            </div>
+          </div>
+          
+          <!-- 历史分析与总结表格 -->
+          <div class="card" style="margin-top: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin:0;">📊 历史分析与总结</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="trainingAnalysisSearchAdmin" placeholder="搜索鸽子名字或足环号..." 
+                       style="padding: 8px 12px; border-radius: 6px; border: 1px solid #E5E7EB; font-size: 13px; width: 200px;"
+                       oninput="filterTrainingAnalysisAdmin()" />
+              </div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table id="trainingAnalysisTableAdmin" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <thead>
+                  <tr style="background: #f9fafb; border-bottom: 2px solid #E5E7EB;">
+                    <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #1f2937;">鸽子</th>
+                    <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #1f2937;">足环号</th>
+                    <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #1f2937;">最新分析日期</th>
+                    <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #1f2937;">训练次数</th>
+                    <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #1f2937;">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="trainingAnalysisTableBodyAdmin">
+                  <tr>
+                    <td colspan="5" style="padding: 40px; text-align: center; color: #6b7280;">暂无分析数据</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
+        
+        <!-- 训练分析与总结详情模态框 -->
+        <div id="trainingAnalysisDetailModalAdmin" class="modal" style="display:none;">
+          <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+              <h2 id="trainingAnalysisDetailTitleAdmin">训练分析与总结</h2>
+              <button class="modal-close" onclick="closeTrainingAnalysisDetailModalAdmin()">✕</button>
+            </div>
+            <div class="modal-body">
+              <!-- 最新分析与总结 -->
+              <div class="card" style="margin-bottom: 24px;">
+                <h4 style="margin:0 0 16px;color:#1f2937;">📈 最新分析与总结</h4>
+                <div id="trainingAnalysisLatestAdmin" style="padding: 16px; background: #f9fafb; border-radius: 8px;">
+                  <p class="muted">暂无最新分析</p>
+                </div>
+              </div>
+              
+              <!-- 历史分析与总结 -->
+              <div class="card">
+                <h4 style="margin:0 0 16px;color:#1f2937;">📚 历史分析与总结</h4>
+                <div id="trainingAnalysisHistoryAdmin" style="max-height: 400px; overflow-y: auto;">
+                  <p class="muted">暂无历史分析</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- 能力综合分析 -->
         <section id="qualificationView" class="card" style="display:none;">
@@ -20505,6 +20572,581 @@
         }
       }, 2000);
     }
+    
+    // ========================================
+    // 🤖 训练智能分析与总结功能（后台）
+    // ========================================
+    
+    const TRAINING_ANALYSIS_STORAGE_KEY_ADMIN = 'pigeon_training_analysis_v1';
+    let trainingAnalysisRecordsAdmin = [];
+    
+    // 加载训练分析记录
+    function loadTrainingAnalysisAdmin() {
+      try {
+        const raw = localStorage.getItem(TRAINING_ANALYSIS_STORAGE_KEY_ADMIN);
+        if (raw) trainingAnalysisRecordsAdmin = JSON.parse(raw);
+        else trainingAnalysisRecordsAdmin = [];
+      } catch (e) {
+        console.error('加载训练分析记录失败:', e);
+        trainingAnalysisRecordsAdmin = [];
+      }
+    }
+    
+    // 保存训练分析记录
+    function saveTrainingAnalysisAdmin() {
+      try {
+        localStorage.setItem(TRAINING_ANALYSIS_STORAGE_KEY_ADMIN, JSON.stringify(trainingAnalysisRecordsAdmin));
+      } catch (e) {
+        console.error('保存训练分析记录失败:', e);
+      }
+    }
+    
+    // 分析训练记录（调用AI）- 后台版本
+    async function analyzeTrainingRecordAdmin(trainingRecord) {
+      try {
+        // 获取鸽子信息（需要从API或localStorage获取）
+        let pigeon = null;
+        try {
+          const pigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1') || '[]');
+          pigeon = pigeons.find(p => p.id === trainingRecord.pigeonId);
+        } catch (e) {
+          console.warn('获取鸽子信息失败:', e);
+        }
+        
+        if (!pigeon) {
+          console.warn('鸽子不存在:', trainingRecord.pigeonId);
+          return;
+        }
+        
+        // 获取该鸽子的所有训练记录
+        const TRAINING_STORAGE_KEY = 'pigeon_training_records_v1';
+        let allTrainingRecords = [];
+        try {
+          const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
+          if (raw) allTrainingRecords = JSON.parse(raw);
+        } catch (e) {
+          console.error('加载训练记录失败:', e);
+        }
+        
+        const pigeonTrainings = allTrainingRecords
+          .filter(r => r.pigeonId === trainingRecord.pigeonId)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // 获取上一次训练记录
+        const previousTraining = pigeonTrainings.length > 1 ? pigeonTrainings[1] : null;
+        
+        // 获取比赛数据（用于对比）
+        let races = [];
+        try {
+          const RACES_STORAGE_KEY = 'pigeon_races';
+          const raw = localStorage.getItem(RACES_STORAGE_KEY);
+          if (raw) {
+            const data = JSON.parse(raw);
+            races = Array.isArray(data) ? data : [];
+          }
+        } catch (e) {
+          console.warn('加载比赛数据失败:', e);
+        }
+        const pigeonRaces = races.flatMap(race => 
+          (race.participants || []).filter(p => p.pigeonId === trainingRecord.pigeonId)
+            .map(p => ({ ...race, participant: p }))
+        );
+        
+        // 构建AI分析提示词（使用与PC端相同的函数）
+        const analysisPrompt = buildTrainingAnalysisPromptAdmin(
+          pigeon,
+          trainingRecord,
+          previousTraining,
+          pigeonTrainings,
+          pigeonRaces
+        );
+        
+        // 调用AI分析（使用与PC端相同的函数）
+        const analysisResult = await callAIForTrainingAnalysisAdmin(analysisPrompt);
+        
+        if (analysisResult) {
+          // 保存分析结果
+          const analysisRecord = {
+            id: 'analysis_' + Date.now(),
+            pigeonId: trainingRecord.pigeonId,
+            trainingRecordId: trainingRecord.id,
+            date: trainingRecord.date,
+            analysis: analysisResult.analysis,
+            summary: analysisResult.summary,
+            comparison: analysisResult.comparison,
+            suggestions: analysisResult.suggestions,
+            createdAt: new Date().toISOString()
+          };
+          
+          // 检查是否已有该鸽子的分析记录
+          const existingIndex = trainingAnalysisRecordsAdmin.findIndex(
+            a => a.pigeonId === trainingRecord.pigeonId
+          );
+          
+          if (existingIndex >= 0) {
+            // 更新现有记录，将新分析添加到历史记录
+            const existing = trainingAnalysisRecordsAdmin[existingIndex];
+            if (!existing.history) existing.history = [];
+            existing.history.unshift({
+              ...existing,
+              id: existing.id + '_history_' + Date.now()
+            });
+            // 更新最新分析
+            trainingAnalysisRecordsAdmin[existingIndex] = {
+              ...analysisRecord,
+              history: existing.history,
+              totalTrainings: pigeonTrainings.length
+            };
+          } else {
+            // 创建新记录
+            trainingAnalysisRecordsAdmin.push({
+              ...analysisRecord,
+              history: [],
+              totalTrainings: pigeonTrainings.length
+            });
+          }
+          
+          saveTrainingAnalysisAdmin();
+          renderTrainingAnalysisAdmin();
+          renderTrainingAnalysisTableAdmin();
+          
+          console.log('✅ 训练分析完成:', analysisRecord);
+        }
+      } catch (error) {
+        console.error('训练分析失败:', error);
+        alert('AI分析失败，请稍后重试');
+      }
+    }
+    
+    // 构建训练分析提示词 - 后台版本（与PC端相同）
+    function buildTrainingAnalysisPromptAdmin(pigeon, currentTraining, previousTraining, allTrainings, races) {
+      const avgSpeed = currentTraining.distance && currentTraining.duration 
+        ? (currentTraining.distance / (currentTraining.duration / 60)).toFixed(1) 
+        : '未知';
+      
+      let prompt = `请作为专业的信鸽训练分析师，对以下训练记录进行智能分析和总结：
+
+【鸽子信息】
+- 足环号：${pigeon.ring}
+- 名字：${pigeon.name || '未命名'}
+- 性别：${pigeon.gender || '未知'}
+- 类型：${pigeon.type || '未知'}
+
+【本次训练记录】
+- 训练日期：${currentTraining.date}
+- 训练距离：${currentTraining.distance}公里
+- 飞行时长：${currentTraining.duration}分钟
+- 平均速度：${avgSpeed}公里/小时
+- 天气：${currentTraining.weather || '未知'}
+- 温度：${currentTraining.temperature ? currentTraining.temperature + '℃' : '未知'}
+- 备注：${currentTraining.notes || '无'}
+
+【历史训练统计】
+- 总训练次数：${allTrainings.length}次
+- 平均训练距离：${(allTrainings.reduce((sum, t) => sum + (t.distance || 0), 0) / allTrainings.length).toFixed(1)}公里
+- 最大训练距离：${Math.max(...allTrainings.map(t => t.distance || 0))}公里
+- 最近10次训练平均速度：${calculateAvgSpeedAdmin(allTrainings.slice(0, 10))}公里/小时
+
+`;
+
+      if (previousTraining) {
+        const prevSpeed = previousTraining.distance && previousTraining.duration 
+          ? (previousTraining.distance / (previousTraining.duration / 60)).toFixed(1) 
+          : '未知';
+        const speedChange = prevSpeed !== '未知' && avgSpeed !== '未知' 
+          ? ((parseFloat(avgSpeed) - parseFloat(prevSpeed)) / parseFloat(prevSpeed) * 100).toFixed(1) 
+          : '0';
+        
+        prompt += `【与上次训练对比】
+- 上次训练日期：${previousTraining.date}
+- 上次训练距离：${previousTraining.distance}公里
+- 上次平均速度：${prevSpeed}公里/小时
+- 速度变化：${speedChange > 0 ? '+' : ''}${speedChange}%
+- 距离变化：${previousTraining.distance ? ((currentTraining.distance - previousTraining.distance) / previousTraining.distance * 100).toFixed(1) : '0'}%
+
+`;
+      }
+      
+      if (races.length > 0) {
+        const ranks = races.map(r => r.participant.rank || 999).filter(r => r !== 999);
+        prompt += `【比赛成绩对比】
+- 参赛次数：${races.length}次
+- 最佳名次：${ranks.length > 0 ? Math.min(...ranks) : '无'}
+- 平均名次：${ranks.length > 0 ? (ranks.reduce((sum, r) => sum + r, 0) / ranks.length).toFixed(1) : '无'}
+- 比赛平均距离：${(races.reduce((sum, r) => sum + (r.distance || 0), 0) / races.length).toFixed(1)}公里
+
+`;
+      }
+      
+      prompt += `请提供以下内容：
+1. **训练表现分析**：分析本次训练的表现，包括速度、耐力、状态等方面
+2. **总结**：对本次训练进行简要总结
+3. **进步与不足**：${previousTraining ? '对比上次训练，指出进步和不足' : '指出本次训练的亮点和需要改进的地方'}
+4. **建议**：给出针对性的训练建议，包括距离、强度、频率等方面的建议
+
+请以JSON格式返回，格式如下：
+{
+  "analysis": "详细的分析内容",
+  "summary": "简要总结",
+  "comparison": "与上次训练的对比分析",
+  "suggestions": "训练建议"
+}`;
+      
+      return prompt;
+    }
+    
+    // 计算平均速度 - 后台版本
+    function calculateAvgSpeedAdmin(trainings) {
+      if (!trainings || trainings.length === 0) return '0';
+      const speeds = trainings
+        .filter(t => t.distance && t.duration)
+        .map(t => t.distance / (t.duration / 60));
+      if (speeds.length === 0) return '0';
+      return (speeds.reduce((sum, s) => sum + s, 0) / speeds.length).toFixed(1);
+    }
+    
+    // 调用AI进行训练分析 - 后台版本
+    async function callAIForTrainingAnalysisAdmin(prompt) {
+      try {
+        const adminToken = localStorage.getItem('adminToken');
+        if (!adminToken) {
+          console.warn('⚠️ 管理员未登录，无法使用AI分析功能');
+          return {
+            analysis: 'AI分析功能需要管理员登录后使用',
+            summary: '无法生成分析',
+            comparison: '无法对比',
+            suggestions: '请先登录管理员账号'
+          };
+        }
+
+        // 优先使用后端API代理（推荐方式）
+        try {
+          const apiUrl = getApiUrl();
+          const response = await fetch(`${apiUrl}/ai/analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+              prompt: prompt,
+              context: {
+                system: '你是一个专业的信鸽训练分析师，擅长分析训练数据并提供专业建议。'
+              }
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data && result.data.content) {
+              return parseAIResponseAdmin(result.data.content);
+            }
+          }
+        } catch (apiError) {
+          console.warn('后端AI代理调用失败，尝试直接调用:', apiError);
+        }
+
+        // 备用方案：从后端获取API key后直接调用智谱API
+        try {
+          const apiUrl = getApiUrl();
+          const keyResponse = await fetch(`${apiUrl}/ai/api-key`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${adminToken}`
+            }
+          });
+
+          if (keyResponse.ok) {
+            const keyResult = await keyResponse.json();
+            if (keyResult.success && keyResult.data && keyResult.data.apiKey) {
+              const apiKey = keyResult.data.apiKey;
+              const model = keyResult.data.model || 'glm-4';
+
+              const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                  model: model,
+                  messages: [
+                    { role: 'system', content: '你是一个专业的信鸽训练分析师，擅长分析训练数据并提供专业建议。' },
+                    { role: 'user', content: prompt }
+                  ],
+                  temperature: 0.7,
+                  max_tokens: 2000
+                })
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                const content = data.choices?.[0]?.message?.content || '';
+                return parseAIResponseAdmin(content);
+              }
+            }
+          }
+        } catch (keyError) {
+          console.warn('获取API key失败:', keyError);
+        }
+
+        // 如果所有方法都失败，返回默认分析
+        return {
+          analysis: 'AI分析功能暂时不可用，请检查API配置',
+          summary: '无法生成分析',
+          comparison: '无法对比',
+          suggestions: '请确保已在Zeabur环境变量中配置ZHIPU_API_KEY_EVO或ZHIPU_API_KEY_ADMIN'
+        };
+      } catch (error) {
+        console.error('AI分析调用失败:', error);
+        throw error;
+      }
+    }
+    
+    // 解析AI响应 - 后台版本
+    function parseAIResponseAdmin(content) {
+      try {
+        // 尝试提取JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        // 如果不是JSON格式，返回文本内容
+        return {
+          analysis: content,
+          summary: content.substring(0, 100) + '...',
+          comparison: '无法解析对比信息',
+          suggestions: '请查看详细分析'
+        };
+      } catch (e) {
+        return {
+          analysis: content,
+          summary: content.substring(0, 100) + '...',
+          comparison: '无法解析对比信息',
+          suggestions: '请查看详细分析'
+        };
+      }
+    }
+    
+    // 渲染训练分析 - 后台版本
+    function renderTrainingAnalysisAdmin() {
+      const container = document.getElementById('trainingAnalysisContainerAdmin');
+      if (!container) return;
+      
+      if (trainingAnalysisRecordsAdmin.length === 0) {
+        container.innerHTML = '<p class="muted">暂无分析数据，请先添加训练记录</p>';
+        return;
+      }
+      
+      // 显示最新的几条分析
+      const latestAnalyses = trainingAnalysisRecordsAdmin
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 3);
+      
+      container.innerHTML = latestAnalyses.map(analysis => {
+        let pigeon = null;
+        try {
+          const pigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1') || '[]');
+          pigeon = pigeons.find(p => p.id === analysis.pigeonId);
+        } catch (e) {
+          console.warn('获取鸽子信息失败:', e);
+        }
+        
+        return `
+          <div class="card" style="margin-bottom: 16px; cursor: pointer;" onclick="showTrainingAnalysisDetailAdmin('${analysis.pigeonId}')">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h4 style="margin: 0; color: #1f2937;">${pigeon ? (pigeon.name || pigeon.ring) : '未知鸽子'}</h4>
+              <span style="font-size: 12px; color: #6b7280;">${analysis.date}</span>
+            </div>
+            <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
+              ${analysis.totalTrainings || 0}次训练
+            </div>
+            <div style="font-size: 14px; color: #374151; line-height: 1.6;">
+              ${analysis.summary || '暂无总结'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // 渲染训练分析表格 - 后台版本
+    function renderTrainingAnalysisTableAdmin(searchQuery = '') {
+      const tbody = document.getElementById('trainingAnalysisTableBodyAdmin');
+      if (!tbody) return;
+      
+      let filtered = trainingAnalysisRecordsAdmin;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = trainingAnalysisRecordsAdmin.filter(analysis => {
+          let pigeon = null;
+          try {
+            const pigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1') || '[]');
+            pigeon = pigeons.find(p => p.id === analysis.pigeonId);
+          } catch (e) {
+            return false;
+          }
+          if (!pigeon) return false;
+          return (pigeon.name && pigeon.name.toLowerCase().includes(query)) ||
+                 pigeon.ring.toLowerCase().includes(query);
+        });
+      }
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="padding: 40px; text-align: center; color: #6b7280;">
+              ${searchQuery ? '未找到匹配的分析记录' : '暂无分析数据'}
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = filtered.map(analysis => {
+        let pigeon = null;
+        try {
+          const pigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1') || '[]');
+          pigeon = pigeons.find(p => p.id === analysis.pigeonId);
+        } catch (e) {
+          console.warn('获取鸽子信息失败:', e);
+        }
+        
+        return `
+          <tr style="border-bottom: 1px solid #E5E7EB; cursor: pointer;" onclick="showTrainingAnalysisDetailAdmin('${analysis.pigeonId}')">
+            <td style="padding: 12px; font-size: 14px; color: #1f2937;">
+              ${pigeon ? (pigeon.name || '未命名') : '未知鸽子'}
+            </td>
+            <td style="padding: 12px; font-size: 13px; color: #6b7280;">${pigeon ? pigeon.ring : '—'}</td>
+            <td style="padding: 12px; font-size: 13px; color: #6b7280;">${analysis.date}</td>
+            <td style="padding: 12px; font-size: 13px; color: #6b7280;">${analysis.totalTrainings || 0}次</td>
+            <td style="padding: 12px;">
+              <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); showTrainingAnalysisDetailAdmin('${analysis.pigeonId}')">
+                查看详情
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // 搜索过滤 - 后台版本
+    function filterTrainingAnalysisAdmin() {
+      const searchInput = document.getElementById('trainingAnalysisSearchAdmin');
+      const query = searchInput ? searchInput.value.trim() : '';
+      renderTrainingAnalysisTableAdmin(query);
+    }
+    
+    // 显示训练分析详情 - 后台版本
+    function showTrainingAnalysisDetailAdmin(pigeonId) {
+      const analysis = trainingAnalysisRecordsAdmin.find(a => a.pigeonId === pigeonId);
+      if (!analysis) {
+        alert('未找到该鸽子的分析记录');
+        return;
+      }
+      
+      let pigeon = null;
+      try {
+        const pigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1') || '[]');
+        pigeon = pigeons.find(p => p.id === pigeonId);
+      } catch (e) {
+        console.warn('获取鸽子信息失败:', e);
+      }
+      
+      const modal = document.getElementById('trainingAnalysisDetailModalAdmin');
+      const title = document.getElementById('trainingAnalysisDetailTitleAdmin');
+      const latestDiv = document.getElementById('trainingAnalysisLatestAdmin');
+      const historyDiv = document.getElementById('trainingAnalysisHistoryAdmin');
+      
+      if (!modal || !title || !latestDiv || !historyDiv) return;
+      
+      title.textContent = `${pigeon ? (pigeon.name || pigeon.ring) : '未知鸽子'} - 训练分析与总结`;
+      
+      // 显示最新分析
+      latestDiv.innerHTML = `
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">分析日期：${analysis.date}</div>
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📊 训练表现分析</div>
+          <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
+            ${analysis.analysis || '暂无分析'}
+          </div>
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📝 总结</div>
+          <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
+            ${analysis.summary || '暂无总结'}
+          </div>
+          ${analysis.comparison ? `
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📈 进步与不足</div>
+            <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
+              ${analysis.comparison}
+            </div>
+          ` : ''}
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">💡 训练建议</div>
+          <div style="font-size: 13px; line-height: 1.6; color: #374151; white-space: pre-wrap;">
+            ${analysis.suggestions || '暂无建议'}
+          </div>
+        </div>
+      `;
+      
+      // 显示历史分析
+      if (analysis.history && analysis.history.length > 0) {
+        historyDiv.innerHTML = analysis.history.map((h, index) => `
+          <div class="card" style="margin-bottom: 12px; padding: 16px;">
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">历史分析 #${analysis.history.length - index} - ${h.date}</div>
+            <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 8px; white-space: pre-wrap;">
+              ${h.summary || '暂无总结'}
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="showHistoryAnalysisDetailAdmin('${h.id}')">
+              查看完整分析
+            </button>
+          </div>
+        `).join('');
+      } else {
+        historyDiv.innerHTML = '<p class="muted">暂无历史分析</p>';
+      }
+      
+      modal.style.display = 'flex';
+    }
+    
+    // 显示历史分析详情 - 后台版本
+    function showHistoryAnalysisDetailAdmin(historyId) {
+      // 在所有分析记录中查找历史记录
+      for (const analysis of trainingAnalysisRecordsAdmin) {
+        if (analysis.history) {
+          const historyItem = analysis.history.find(h => h.id === historyId);
+          if (historyItem) {
+            alert(`历史分析详情：\n\n日期：${historyItem.date}\n\n分析：${historyItem.analysis || '暂无'}\n\n总结：${historyItem.summary || '暂无'}\n\n对比：${historyItem.comparison || '暂无'}\n\n建议：${historyItem.suggestions || '暂无'}`);
+            return;
+          }
+        }
+      }
+      alert('未找到该历史分析记录');
+    }
+    
+    // 关闭训练分析详情模态框 - 后台版本
+    function closeTrainingAnalysisDetailModalAdmin() {
+      const modal = document.getElementById('trainingAnalysisDetailModalAdmin');
+      if (modal) modal.style.display = 'none';
+    }
+    
+    // 初始化训练分析（在训练模块显示时调用）
+    function initTrainingAnalysisAdmin() {
+      loadTrainingAnalysisAdmin();
+      renderTrainingAnalysisAdmin();
+      renderTrainingAnalysisTableAdmin();
+    }
+    
+    // 在切换到训练模块时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      // 监听训练模块标签页切换
+      const trainingTab = document.querySelector('[data-tab="trainingView"]');
+      if (trainingTab) {
+        trainingTab.addEventListener('click', function() {
+          setTimeout(() => {
+            initTrainingAnalysisAdmin();
+          }, 100);
+        });
+      }
+    });
+    
   </script>
 </body>
 </html>

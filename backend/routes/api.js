@@ -8,6 +8,8 @@ const adminService = require('../services/adminService');
 const storageService = require('../services/storageService');
 const aiService = require('../services/aiService');
 const fileStorageService = require('../services/fileStorageService');
+const storageConfigAnalyzer = require('../services/storageConfigAnalyzer');
+const sharingAnalyzer = require('../services/sharingAnalyzer');
 const logger = require('../utils/logger');
 const config = require('../config/config');
 const {
@@ -2258,6 +2260,75 @@ router.post('/admin/ai-settings', authenticate, requireAdmin, async (req, res) =
     res.status(500).json({
       success: false,
       error: error.message || '保存AI设置失败'
+    });
+  }
+});
+
+/**
+ * 获取AI API Key（前端使用，用于AI分析功能）
+ * GET /api/ai/api-key
+ * 返回环境变量中配置的API key，供前端直接调用智谱API使用
+ */
+router.get('/ai/api-key', authenticate, async (req, res) => {
+  try {
+    const config = require('../config/config');
+    const saved = await storageService.read('ai_settings') || {};
+    
+    // 优先使用环境变量中的API key，其次使用保存的配置
+    const apiKey = config.ai?.zhipuApiKey || saved.zhipuApiKeyEvo || '';
+    const apiKeyAdmin = config.ai?.zhipuApiKeyAdmin || saved.zhipuApiKeyAdmin || '';
+    
+    // 返回可用的API key（优先Evo的key，如果没有则使用Admin的key）
+    const availableApiKey = apiKey || apiKeyAdmin;
+    
+    res.json({
+      success: true,
+      data: {
+        apiKey: availableApiKey,
+        model: saved.model || config.ai?.model || 'glm-4',
+        available: !!availableApiKey
+      }
+    });
+  } catch (error) {
+    logger.error('获取AI API Key失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取AI API Key失败'
+    });
+  }
+});
+
+/**
+ * 调用AI进行分析（后端代理，前端调用）
+ * POST /api/ai/analyze
+ * Body: { prompt: string, context?: object }
+ */
+router.post('/ai/analyze', authenticate, async (req, res) => {
+  try {
+    const { prompt, context = {} } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少prompt参数'
+      });
+    }
+    
+    // 使用后端AI服务进行分析
+    const result = await aiService.chat(prompt, [], context);
+    
+    res.json({
+      success: true,
+      data: {
+        content: result.content || result,
+        usage: result.usage || {}
+      }
+    });
+  } catch (error) {
+    logger.error('AI分析失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'AI分析失败'
     });
   }
 });
@@ -4803,6 +4874,224 @@ router.get('/storage/status', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || '获取存储服务状态失败'
+    });
+  }
+});
+
+/**
+ * 云端存储配置AI分析
+ * GET /api/storage/config/analyze
+ * 需要认证（管理员）
+ */
+router.get('/storage/config/analyze', authenticate, async (req, res) => {
+  try {
+    const result = await storageConfigAnalyzer.comprehensiveAnalysis();
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    logger.error('存储配置分析失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '存储配置分析失败'
+    });
+  }
+});
+
+/**
+ * 用户数据共享设置AI分析
+ * GET /api/sharing/analyze/:userId
+ * 需要认证
+ */
+router.get('/sharing/analyze/:userId', authenticate, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // 只能查看自己的数据，除非是管理员
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: '无权访问其他用户的共享设置'
+      });
+    }
+
+    const result = await sharingAnalyzer.analyzeUserSharing(userId);
+    
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    logger.error('共享设置分析失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '共享设置分析失败'
+    });
+  }
+});
+
+/**
+ * 所有用户共享设置AI分析（管理员）
+ * GET /api/admin/sharing/analyze
+ * 需要认证（管理员）
+ */
+router.get('/admin/sharing/analyze', authenticate, async (req, res) => {
+  try {
+    // 检查管理员权限
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: '需要管理员权限'
+      });
+    }
+
+    const result = await sharingAnalyzer.analyzeAllUsersSharing();
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    logger.error('所有用户共享设置分析失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '共享设置分析失败'
+    });
+  }
+});
+
+/**
+ * 获取所有用户数据总结（管理员）- 调用云端用户数据进行总结
+ * GET /api/admin/users/data/summary
+ */
+router.get('/admin/users/data/summary', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const userDataList = await storageService.read('user_data') || [];
+    const users = await storageService.read('users') || [];
+    
+    // 汇总所有用户数据
+    const summary = {
+      totalUsers: userDataList.length,
+      totalPigeons: 0,
+      totalRaces: 0,
+      totalTrainingRecords: 0,
+      totalHealthRecords: 0,
+      totalPairings: 0,
+      totalQualificationRecords: 0,
+      users: [],
+      sharingStats: {
+        private: 0,
+        shared: 0,
+        public: 0
+      },
+      dataGrowth: {
+        last7Days: 0,
+        last30Days: 0
+      }
+    };
+
+    // 统计每个用户的数据
+    for (const userData of userDataList) {
+      const user = users.find(u => u.id === userData.userId);
+      const data = userData.data || {};
+      
+      const pigeonsCount = (data.pigeons || []).length;
+      const racesCount = (data.races || []).length;
+      const trainingCount = (data.trainingRecords || []).length;
+      const healthCount = (data.healthRecords || []).length;
+      const pairingsCount = (data.pairings || []).length;
+      const qualificationCount = (data.qualificationRecords || []).length;
+
+      summary.totalPigeons += pigeonsCount;
+      summary.totalRaces += racesCount;
+      summary.totalTrainingRecords += trainingCount;
+      summary.totalHealthRecords += healthCount;
+      summary.totalPairings += pairingsCount;
+      summary.totalQualificationRecords += qualificationCount;
+
+      // 统计共享设置
+      const visibility = userData.sharing?.visibility || 'private';
+      summary.sharingStats[visibility] = (summary.sharingStats[visibility] || 0) + 1;
+
+      // 统计数据增长
+      if (userData.updatedAt) {
+        const updatedAt = new Date(userData.updatedAt);
+        const now = new Date();
+        const daysDiff = Math.floor((now - updatedAt) / (1000 * 60 * 60 * 24));
+        if (daysDiff <= 7) summary.dataGrowth.last7Days++;
+        if (daysDiff <= 30) summary.dataGrowth.last30Days++;
+      }
+
+      summary.users.push({
+        userId: userData.userId,
+        username: user?.username || '未知',
+        email: user?.email || '',
+        pigeonsCount,
+        racesCount,
+        trainingCount,
+        healthCount,
+        pairingsCount,
+        qualificationCount,
+        visibility,
+        updatedAt: userData.updatedAt,
+        createdAt: userData.createdAt
+      });
+    }
+
+    // 使用AI进行总结分析
+    let aiSummary = null;
+    try {
+      const prompt = `请分析以下用户数据统计信息，提供专业的总结和建议：
+
+总用户数: ${summary.totalUsers}
+总鸽子数: ${summary.totalPigeons}
+总比赛数: ${summary.totalRaces}
+总训练记录: ${summary.totalTrainingRecords}
+总健康记录: ${summary.totalHealthRecords}
+总配对记录: ${summary.totalPairings}
+总能力分析记录: ${summary.totalQualificationRecords}
+
+共享设置统计:
+- 私有: ${summary.sharingStats.private}
+- 共享: ${summary.sharingStats.shared}
+- 公开: ${summary.sharingStats.public}
+
+数据增长:
+- 最近7天活跃用户: ${summary.dataGrowth.last7Days}
+- 最近30天活跃用户: ${summary.dataGrowth.last30Days}
+
+请提供：
+1. 数据概览总结（100字以内）
+2. 3-5条关键发现
+3. 3-5条改进建议`;
+
+      const aiResult = await aiService.chat(prompt, [], {});
+      if (aiResult && aiResult.content) {
+        aiSummary = aiResult.content;
+      }
+    } catch (aiError) {
+      logger.warn('AI总结生成失败:', aiError);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        summary,
+        aiSummary: aiSummary || 'AI总结暂时不可用',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error('获取用户数据总结失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取用户数据总结失败'
     });
   }
 });

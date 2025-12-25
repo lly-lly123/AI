@@ -235,3 +235,9 @@ curl -X GET http://your-minio-service.zeabur.app:9000/minio/admin/v3/info \
 
 **总结：在Zeabur免费版上，MinIO实际可用容量约为 5-20GB，不是1TB。要实现1TB容量，建议自建服务器或使用付费服务。**
 
+
+
+
+
+
+
