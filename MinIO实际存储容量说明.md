@@ -243,3 +243,7 @@ curl -X GET http://your-minio-service.zeabur.app:9000/minio/admin/v3/info \
 
 
 
+
+
+
+

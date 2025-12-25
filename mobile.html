@@ -34,11 +34,126 @@
     }
   </script>
   -->
-  <!-- 通用按钮点击修复脚本（最高优先级，内嵌确保执行） -->
+  
+  <!-- 🔧 移动端按钮点击终极修复脚本（独立文件 - 最高优先级） -->
+  <script src="js/mobile-button-click-fix.js"></script>
+  
+  <!-- 🔧 移动端按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
   <script>
   (function() {
     'use strict';
-    console.log('🔧 [内嵌] 开始移动端按钮点击修复...');
+    console.log('🔧 [内嵌增强版] 开始移动端按钮点击终极修复...');
+    
+    // 立即创建switchView函数（确保在所有脚本之前可用）
+    if (typeof window.switchView !== 'function') {
+      window.switchView = function(viewName) {
+        console.log('🔄 [移动端] 切换视图:', viewName);
+        document.querySelectorAll('.mobile-view').forEach(v => {
+          v.style.display = 'none';
+        });
+        const targetView = document.getElementById(viewName + 'View') || document.getElementById(viewName);
+        if (targetView) {
+          targetView.style.display = 'block';
+          console.log('✅ [移动端] 视图切换成功:', viewName);
+        } else {
+          console.warn('⚠️ [移动端] 视图不存在:', viewName);
+        }
+      };
+      console.log('✅ [移动端] switchView函数已创建');
+    }
+    
+    // 全局事件委托 - 移动端专用（最高优先级）
+    function setupMobileGlobalEventDelegation() {
+      console.log('🔧 [移动端] 设置全局事件委托...');
+      
+      function findButtonElement(element) {
+        let current = element;
+        let maxDepth = 10;
+        while (current && maxDepth-- > 0) {
+          if (current.classList) {
+            if (current.classList.contains('mobile-card') ||
+                current.classList.contains('mobile-nav-item') ||
+                current.classList.contains('mobile-tab') ||
+                current.classList.contains('btn') ||
+                current.classList.contains('mobile-quick-link-btn') ||
+                current.id && current.id.startsWith('btn')) {
+              return current;
+            }
+          }
+          current = current.parentElement;
+        }
+        return null;
+      }
+      
+      function handleMobileClick(e) {
+        const button = findButtonElement(e.target);
+        if (!button) return;
+        
+        if (button.classList.contains('mobile-card')) {
+          const view = button.dataset.view;
+          const onclickAttr = button.getAttribute('onclick');
+          const openFeedback = button.dataset.openFeedback;
+          
+          if (view) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🔘 [移动端全局委托] 点击卡片，切换视图:', view);
+            if (typeof window.switchView === 'function') {
+              window.switchView(view);
+            }
+            return false;
+          } else if (onclickAttr) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            try {
+              eval(onclickAttr);
+              console.log('🔘 [移动端全局委托] 执行onclick');
+            } catch (err) {
+              console.error('❌ 执行onclick失败:', err);
+            }
+            return false;
+          } else if (openFeedback === 'true') {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🔘 [移动端全局委托] 点击反馈按钮');
+            const feedbackModal = document.getElementById('feedbackModal');
+            if (feedbackModal) {
+              feedbackModal.style.display = 'flex';
+            }
+            return false;
+          }
+        }
+        
+        if (button.classList.contains('mobile-nav-item')) {
+          const view = button.dataset.view;
+          if (view) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🔘 [移动端全局委托] 点击导航按钮:', view);
+            if (typeof window.switchView === 'function') {
+              window.switchView(view);
+            }
+            return false;
+          }
+        }
+      }
+      
+      ['click', 'touchend', 'touchstart'].forEach(eventType => {
+        document.addEventListener(eventType, handleMobileClick, { 
+          capture: true, 
+          passive: false 
+        });
+      });
+      
+      console.log('✅ [移动端] 全局事件委托已设置');
+    }
+    
+    // 立即设置全局事件委托
+    setupMobileGlobalEventDelegation();
     
     function forceFixAllButtons() {
       // 1. 强制移除所有可能阻止点击的覆盖层
@@ -323,7 +438,16 @@
     
     // 暴露到全局
     window.forceFixAllButtons = forceFixAllButtons;
-    console.log('✅ [内嵌] 移动端按钮点击修复脚本已加载');
+    console.log('✅ [内嵌增强版] 移动端按钮点击修复脚本已加载');
+    
+    // 添加定期检查机制（每3秒检查一次，确保新添加的按钮也能被修复）
+    setInterval(function() {
+      const unfixedButtons = document.querySelectorAll('.mobile-card:not([data-fixed="true"]), .mobile-nav-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
+      if (unfixedButtons.length > 0) {
+        console.log('🔧 [移动端] 发现未修复的按钮，执行修复...', unfixedButtons.length);
+        forceFixAllButtons();
+      }
+    }, 3000);
     
     // 全局触摸事件处理（确保所有onclick都能响应触摸）
     document.addEventListener('touchend', function(e) {

@@ -15,8 +15,197 @@
   <!-- admin-auth.js reference for检测脚本 -->
   <!-- 模块5：配置面板处理函数 -->
   <script src="js/admin-config-panels.js"></script>
-  <!-- 通用按钮点击修复脚本（最高优先级） -->
-  <script src="通用按钮点击修复.js"></script>
+  
+  <!-- 🔧 后台按钮点击终极修复脚本（独立文件 - 最高优先级） -->
+  <script src="js/admin-button-click-fix.js"></script>
+  
+  <!-- 🔧 后台按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
+  <script>
+    console.log('🔧 [后台] 开始按钮点击终极修复...');
+    
+    // 立即创建必要的函数
+    (function() {
+      // 确保所有按钮可点击的全局函数
+      function ultimateFixAdmin() {
+        console.log('🔧 [后台] 执行终极修复...');
+        
+        // 1. 移除所有覆盖层
+        document.querySelectorAll('.sidebar-overlay:not(.active), .loading-overlay, .modal-backdrop:not(.active), .overlay').forEach(el => {
+          el.style.cssText += 'display: none !important; pointer-events: none !important; z-index: -1 !important;';
+        });
+        
+        // 2. 确保body和html可点击
+        if (document.body) {
+          document.body.style.pointerEvents = 'auto';
+        }
+        if (document.documentElement) {
+          document.documentElement.style.pointerEvents = 'auto';
+        }
+        
+        // 3. 修复所有按钮
+        const allButtons = document.querySelectorAll('button, .btn, .sidebar-item, [role="button"], [onclick], [data-action]');
+        allButtons.forEach(btn => {
+          if (btn.dataset.fixed !== 'true') {
+            btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+            btn.removeAttribute('disabled');
+            btn.dataset.fixed = 'true';
+          }
+        });
+        
+        // 4. 修复侧边栏按钮
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+          if (item.dataset.fixed !== 'true') {
+            const newItem = item.cloneNode(true);
+            const parent = item.parentNode;
+            if (parent) {
+              parent.replaceChild(newItem, item);
+            }
+            newItem.dataset.fixed = 'true';
+            newItem.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+            
+            // 绑定点击事件
+            const view = newItem.dataset.view;
+            if (view) {
+              ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+                newItem.addEventListener(eventType, function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  console.log('🔘 [后台] 点击侧边栏按钮:', view);
+                  // 切换视图逻辑
+                  document.querySelectorAll('.content-section').forEach(section => {
+                    section.style.display = 'none';
+                  });
+                  const targetSection = document.getElementById(view);
+                  if (targetSection) {
+                    targetSection.style.display = 'block';
+                  }
+                  // 更新active状态
+                  document.querySelectorAll('.sidebar-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.view === view);
+                  });
+                  return false;
+                }, { capture: true, passive: false });
+              });
+            }
+          }
+        });
+        
+        console.log('✅ [后台] 终极修复已执行');
+      }
+      
+      // 全局事件委托
+      function setupAdminGlobalEventDelegation() {
+        console.log('🔧 [后台] 设置全局事件委托...');
+        
+        function findButtonElement(element) {
+          let current = element;
+          let maxDepth = 10;
+          while (current && maxDepth-- > 0) {
+            if (current.classList) {
+              if (current.classList.contains('sidebar-item') ||
+                  current.classList.contains('btn') ||
+                  current.id && current.id.startsWith('btn')) {
+                return current;
+              }
+            }
+            current = current.parentElement;
+          }
+          return null;
+        }
+        
+        function handleAdminClick(e) {
+          const button = findButtonElement(e.target);
+          if (!button) return;
+          
+          if (button.classList.contains('sidebar-item')) {
+            const view = button.dataset.view;
+            if (view) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              console.log('🔘 [后台全局委托] 点击侧边栏按钮:', view);
+              document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+              });
+              const targetSection = document.getElementById(view);
+              if (targetSection) {
+                targetSection.style.display = 'block';
+              }
+              document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.view === view);
+              });
+              return false;
+            }
+          }
+        }
+        
+        ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+          document.addEventListener(eventType, handleAdminClick, { 
+            capture: true, 
+            passive: false 
+          });
+        });
+        
+        console.log('✅ [后台] 全局事件委托已设置');
+      }
+      
+      // 立即设置全局事件委托
+      setupAdminGlobalEventDelegation();
+      
+      // 暴露到window
+      window.ultimateFixAdmin = ultimateFixAdmin;
+      
+      // 在DOM加载后执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(ultimateFixAdmin, 50);
+          setTimeout(ultimateFixAdmin, 100);
+          setTimeout(ultimateFixAdmin, 500);
+          setTimeout(ultimateFixAdmin, 1000);
+        });
+      } else {
+        setTimeout(ultimateFixAdmin, 50);
+        setTimeout(ultimateFixAdmin, 100);
+        setTimeout(ultimateFixAdmin, 500);
+        setTimeout(ultimateFixAdmin, 1000);
+      }
+      
+      // 定期检查（每3秒）
+      setInterval(function() {
+        const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
+        if (unfixedButtons.length > 0) {
+          console.log('🔧 [后台] 发现未修复的按钮，执行修复...', unfixedButtons.length);
+          ultimateFixAdmin();
+        }
+      }, 3000);
+      
+      // 添加全局CSS修复
+      if (!document.getElementById('admin-button-fix-styles')) {
+        const style = document.createElement('style');
+        style.id = 'admin-button-fix-styles';
+        style.textContent = `
+          .sidebar-item, .btn, button, [role="button"], [onclick], [data-action] {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+          }
+          .sidebar-item {
+            z-index: 99999 !important;
+            position: relative !important;
+          }
+          body, html {
+            pointer-events: auto !important;
+          }
+        `;
+        document.head.appendChild(style);
+        console.log('✅ [后台] 全局CSS修复样式已添加');
+      }
+      
+      console.log('✅ [后台] 按钮点击修复脚本已加载');
+    })();
+  </script>
   
   <!-- 密码显示功能（必须在head中提前定义，确保全局可用） -->
   <script>

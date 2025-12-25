@@ -10,6 +10,474 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- 模块1：设备自动识别与无感知跳转（独立封装，不破坏原有逻辑） -->
   <script src="js/device-detect.js"></script>
+  
+  <!-- 🔧 按钮点击终极修复脚本（独立文件 - 最高优先级） -->
+  <script src="js/button-click-fix.js"></script>
+  
+  <!-- 🧪 按钮点击自动化测试脚本（开发环境） -->
+  <script src="js/button-click-test.js"></script>
+  
+  <!-- 🔧 PC端按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
+  <script>
+    console.log('🔧 开始PC端点击问题终极修复（内嵌版 - 增强版）...');
+    
+    // 立即创建switchView函数（确保在所有脚本之前可用）
+    (function() {
+      if (typeof window.switchView !== 'function') {
+        window.switchView = function(viewName) {
+          console.log('🔄 切换视图:', viewName);
+          
+          // 隐藏所有视图
+          const viewIds = ['homeView', 'dashboardView', 'listView', 'pedigreeView', 'statsView', 
+                           'raceView', 'breedingView', 'healthView', 'analysisView', 'trainingView', 
+                           'qualificationView', 'createView', 'detailView'];
+          viewIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+          
+          // 显示目标视图
+          const targetView = document.getElementById(viewName);
+          if (targetView) {
+            targetView.style.display = '';
+            // 更新侧边栏激活状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+              item.classList.toggle('active', item.dataset.view === viewName);
+            });
+            console.log('✅ 视图切换成功:', viewName);
+          } else {
+            console.warn('⚠️ 视图不存在:', viewName);
+          }
+        };
+        console.log('✅ switchView函数已创建');
+      } else {
+        console.log('✅ switchView函数已存在');
+      }
+    })();
+    
+    // 全局事件委托 - 作为最后的备用方案（最高优先级）
+    function setupGlobalEventDelegation() {
+      console.log('🔧 设置全局事件委托...');
+      
+      // 查找最近的按钮元素（包括父元素）
+      function findButtonElement(element) {
+        let current = element;
+        let maxDepth = 10; // 防止无限循环
+        while (current && maxDepth-- > 0) {
+          // 检查是否是按钮元素
+          if (current.classList) {
+            if (current.classList.contains('sidebar-item') ||
+                current.classList.contains('btn') ||
+                current.classList.contains('quick-link-btn') ||
+                current.id && current.id.startsWith('btn')) {
+              return current;
+            }
+          }
+          current = current.parentElement;
+        }
+        return null;
+      }
+      
+      // 处理点击事件
+      function handleClick(e) {
+        const button = findButtonElement(e.target);
+        if (!button) return;
+        
+        // 检查是否是侧边栏按钮
+        if (button.classList.contains('sidebar-item')) {
+          const view = button.dataset.view;
+          const openFeedback = button.dataset.openFeedback;
+          
+          if (view) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🔘 [全局委托] 点击侧边栏按钮:', view);
+            if (typeof window.switchView === 'function') {
+              window.switchView(view);
+            }
+            return false;
+          } else if (openFeedback === 'true') {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🔘 [全局委托] 点击反馈按钮');
+            const feedbackModal = document.getElementById('feedbackModal');
+            if (feedbackModal) {
+              feedbackModal.style.display = 'flex';
+            }
+            return false;
+          }
+        }
+        
+        // 检查是否是其他按钮
+        if (button.id === 'btnGoCreate') {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log('🔘 [全局委托] 点击新增鸽子按钮');
+          if (typeof window.switchView === 'function') {
+            window.switchView('createView');
+          }
+          return false;
+        }
+        
+        if (button.id === 'btnUserAvatar') {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log('🔘 [全局委托] 点击账户按钮');
+          const userInfoModal = document.getElementById('userInfoModal');
+          if (userInfoModal) {
+            userInfoModal.style.display = 'flex';
+          }
+          return false;
+        }
+        
+        if (button.id === 'btnSettings') {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log('🔘 [全局委托] 点击设置按钮');
+          const settingsModal = document.getElementById('settingsModal');
+          if (settingsModal) {
+            settingsModal.style.display = 'flex';
+          }
+          return false;
+        }
+      }
+      
+      // 绑定多种事件类型（确保所有情况都能捕获）
+      const events = ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend'];
+      events.forEach(eventType => {
+        document.addEventListener(eventType, handleClick, { 
+          capture: true, 
+          passive: false 
+        });
+      });
+      
+      console.log('✅ 全局事件委托已设置');
+    }
+    
+    // 终极修复函数（在DOM加载后执行）
+    function ultimateFixPC() {
+      console.log('🔧 执行终极修复...');
+      
+      // 1. 移除所有可能阻止点击的覆盖层
+      document.querySelectorAll('.sidebar-overlay:not(.active), .loading-overlay, .modal-backdrop:not(.active), .overlay').forEach(el => {
+        el.style.cssText += 'display: none !important; pointer-events: none !important; z-index: -1 !important;';
+      });
+      
+      // 2. 确保body和html可点击
+      if (document.body) {
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.cursor = 'default';
+      }
+      if (document.documentElement) {
+        document.documentElement.style.pointerEvents = 'auto';
+      }
+      
+      // 3. 强制修复所有侧边栏按钮
+      document.querySelectorAll('.sidebar-item').forEach((item, index) => {
+        // 如果已经修复过（有data-fixed属性），跳过
+        if (item.dataset.fixed === 'true') {
+          return;
+        }
+        
+        // 移除所有旧的事件监听器（通过克隆节点）
+        const newItem = item.cloneNode(true);
+        const parent = item.parentNode;
+        if (parent) {
+          parent.replaceChild(newItem, item);
+        }
+        
+        // 标记为已修复
+        newItem.dataset.fixed = 'true';
+        
+        // 设置样式确保可点击（使用cssText一次性设置所有样式）
+        newItem.style.cssText = `
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 99999 !important;
+          position: relative !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+        `;
+        newItem.removeAttribute('disabled');
+        
+        // 确保子元素也可点击
+        newItem.querySelectorAll('*').forEach(child => {
+          child.style.pointerEvents = 'auto';
+          child.style.cursor = 'pointer';
+        });
+        
+        // 绑定多种事件类型
+        const view = newItem.dataset.view;
+        const openFeedback = newItem.dataset.openFeedback;
+        
+        const handleButtonClick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
+          if (view) {
+            console.log('🔘 [直接绑定] 点击侧边栏按钮:', view);
+            if (typeof window.switchView === 'function') {
+              window.switchView(view);
+            }
+          } else if (openFeedback === 'true') {
+            console.log('🔘 [直接绑定] 点击反馈按钮');
+            const feedbackModal = document.getElementById('feedbackModal');
+            if (feedbackModal) {
+              feedbackModal.style.display = 'flex';
+            }
+          }
+          return false;
+        };
+        
+        // 绑定多种事件
+        ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+          newItem.addEventListener(eventType, handleButtonClick, { 
+            capture: true, 
+            passive: false 
+          });
+        });
+        
+        // 也绑定到子元素（确保点击图标或文字也能触发）
+        newItem.querySelectorAll('span, div').forEach(child => {
+          ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+            child.addEventListener(eventType, handleButtonClick, { 
+              capture: true, 
+              passive: false 
+            });
+          });
+        });
+      });
+      
+      // 4. 修复所有按钮（包括快捷入口、视图切换等）
+      const allButtonSelectors = [
+        '.sidebar-item',
+        '.quick-link-btn',
+        '.btn',
+        'button',
+        '[data-view]',
+        '[data-action]',
+        '[onclick]'
+      ];
+      
+      allButtonSelectors.forEach(selector => {
+        try {
+          document.querySelectorAll(selector).forEach(btn => {
+            // 跳过已经修复的按钮
+            if (btn.dataset.fixed === 'true') return;
+            
+            // 跳过某些特殊按钮（如模态框关闭按钮，它们可能有自己的处理）
+            if (btn.classList.contains('modal-close') || 
+                btn.classList.contains('announcement-modal-close')) {
+              return;
+            }
+            
+            // 确保按钮可点击
+            btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+            btn.removeAttribute('disabled');
+            
+            // 如果是侧边栏按钮或其他重要按钮，使用克隆节点方法
+            if (btn.classList.contains('sidebar-item') || 
+                btn.id && (btn.id.startsWith('btn') || btn.id.includes('Button'))) {
+              const newBtn = btn.cloneNode(true);
+              const parent = btn.parentNode;
+              if (parent) {
+                parent.replaceChild(newBtn, btn);
+                newBtn.dataset.fixed = 'true';
+                newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+                
+                // 绑定事件
+                const view = newBtn.dataset.view;
+                const action = newBtn.dataset.action;
+                const openFeedback = newBtn.dataset.openFeedback;
+                
+                const handleClick = function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  
+                  if (view && typeof window.switchView === 'function') {
+                    console.log('🔘 [修复函数] 点击按钮，切换视图:', view);
+                    window.switchView(view);
+                  } else if (action) {
+                    console.log('🔘 [修复函数] 点击按钮，执行动作:', action);
+                    // 处理快捷入口按钮
+                    if (action === 'addPigeon' && typeof window.switchView === 'function') {
+                      window.switchView('createView');
+                    } else if (action === 'addRace' && typeof window.switchView === 'function') {
+                      window.switchView('raceView');
+                    } else if (action === 'breeding' && typeof window.switchView === 'function') {
+                      window.switchView('breedingView');
+                    } else if (action === 'analysis' && typeof window.switchView === 'function') {
+                      window.switchView('analysisView');
+                    }
+                  } else if (openFeedback === 'true') {
+                    console.log('🔘 [修复函数] 点击反馈按钮');
+                    const feedbackModal = document.getElementById('feedbackModal');
+                    if (feedbackModal) {
+                      feedbackModal.style.display = 'flex';
+                    }
+                  }
+                  
+                  return false;
+                };
+                
+                ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+                  newBtn.addEventListener(eventType, handleClick, { capture: true, passive: false });
+                });
+                
+                // 也绑定到子元素
+                newBtn.querySelectorAll('*').forEach(child => {
+                  ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+                    child.addEventListener(eventType, handleClick, { capture: true, passive: false });
+                  });
+                });
+              }
+            } else {
+              // 其他按钮只标记，不克隆
+              btn.dataset.fixed = 'true';
+            }
+          });
+        } catch (e) {
+          console.warn('修复按钮时出错:', selector, e);
+        }
+      });
+      
+      // 5. 添加全局CSS修复（确保所有按钮样式正确）
+      if (!document.getElementById('button-fix-styles')) {
+        const style = document.createElement('style');
+        style.id = 'button-fix-styles';
+        style.textContent = `
+          /* 强制所有按钮可点击 */
+          .sidebar-item,
+          .sidebar-item *,
+          .btn,
+          button,
+          .quick-link-btn,
+          [data-view],
+          [data-action] {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+          }
+          
+          /* 确保侧边栏按钮在最上层 */
+          .sidebar-item {
+            z-index: 99999 !important;
+            position: relative !important;
+          }
+          
+          /* 移除可能阻止点击的覆盖层 */
+          .sidebar-overlay:not(.active),
+          .loading-overlay:not(.active),
+          .modal-backdrop:not(.active),
+          .overlay:not(.active) {
+            display: none !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+          }
+          
+          /* 确保body可点击 */
+          body, html {
+            pointer-events: auto !important;
+          }
+        `;
+        document.head.appendChild(style);
+        console.log('✅ 全局CSS修复样式已添加');
+      }
+      
+      console.log('✅ 内嵌终极修复脚本已执行');
+    }
+    
+    // 暴露到window对象
+    window.ultimateFixPC = ultimateFixPC;
+    
+    // 立即设置全局事件委托（不等待DOM加载）
+    setupGlobalEventDelegation();
+    
+    // 添加定期检查机制（每3秒检查一次，确保新添加的按钮也能被修复）
+    setInterval(function() {
+      const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
+      if (unfixedButtons.length > 0) {
+        console.log('🔧 发现未修复的按钮，执行修复...', unfixedButtons.length);
+        ultimateFixPC();
+      }
+    }, 3000);
+    
+    // 在DOM加载后立即执行
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(ultimateFixPC, 50);
+        setTimeout(ultimateFixPC, 100);
+        setTimeout(ultimateFixPC, 300);
+        setTimeout(ultimateFixPC, 500);
+        setTimeout(ultimateFixPC, 1000);
+        setTimeout(ultimateFixPC, 2000);
+      });
+    } else {
+      setTimeout(ultimateFixPC, 50);
+      setTimeout(ultimateFixPC, 100);
+      setTimeout(ultimateFixPC, 300);
+      setTimeout(ultimateFixPC, 500);
+      setTimeout(ultimateFixPC, 1000);
+      setTimeout(ultimateFixPC, 2000);
+    }
+    
+    // 页面完全加载后再次执行
+    window.addEventListener('load', function() {
+      setTimeout(ultimateFixPC, 100);
+      setTimeout(ultimateFixPC, 500);
+    });
+    
+    // 监听DOM变化，自动修复新添加的按钮
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(function(mutations) {
+        let shouldFix = false;
+        mutations.forEach(function(mutation) {
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) {
+                if (node.classList && (node.classList.contains('sidebar-item') || node.classList.contains('btn'))) {
+                  shouldFix = true;
+                } else if (node.querySelector && (node.querySelector('.sidebar-item') || node.querySelector('.btn'))) {
+                  shouldFix = true;
+                }
+              }
+            });
+          }
+        });
+        if (shouldFix) {
+          setTimeout(ultimateFixPC, 100);
+        }
+      });
+      
+      if (document.body) {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          if (document.body) {
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true
+            });
+          }
+        });
+      }
+    }
+    
+    console.log('✅ 内嵌终极修复脚本已加载');
+    console.log('✅ switchView函数已暴露到window:', typeof window.switchView === 'function');
+    console.log('✅ 全局事件委托已设置');
+  </script>
 
   <style>
     /* ==========================================
@@ -9548,10 +10016,9 @@
     };
   }
 
-  // 3. 修复所有按钮的点击事件（优化版 - 避免重复执行）
+  // 3. 修复所有按钮的点击事件（优化版 - 与内嵌脚本协同工作）
   let isFixing = false;
   let fixTimeout = null;
-  const fixedButtons = new WeakSet();
   
   function fixAllButtonClicks() {
     // 防止重复执行
@@ -9568,71 +10035,121 @@
     isFixing = true;
     
     try {
-      // 修复侧边栏按钮 - 不使用cloneNode，直接添加事件监听器
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        // 如果已经修复过，跳过
-        if (fixedButtons.has(item)) {
-          return;
+      // 1. 确保switchView函数存在
+      if (typeof window.switchView !== 'function') {
+        window.switchView = function(viewName) {
+          console.log('🔄 切换视图:', viewName);
+          const viewIds = ['homeView', 'dashboardView', 'listView', 'pedigreeView', 'statsView', 
+                           'raceView', 'breedingView', 'healthView', 'analysisView', 'trainingView', 
+                           'qualificationView', 'createView', 'detailView'];
+          viewIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+          const targetView = document.getElementById(viewName);
+          if (targetView) {
+            targetView.style.display = '';
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+              item.classList.toggle('active', item.dataset.view === viewName);
+            });
+            console.log('✅ 视图切换成功:', viewName);
+          }
+        };
+      }
+      
+      // 2. 移除所有覆盖层
+      document.querySelectorAll('.sidebar-overlay:not(.active), .loading-overlay, .modal-backdrop:not(.active), .overlay').forEach(el => {
+        el.style.cssText += 'display: none !important; pointer-events: none !important; z-index: -1 !important;';
+      });
+      
+      // 3. 确保body可点击
+      document.body.style.pointerEvents = 'auto';
+      document.documentElement.style.pointerEvents = 'auto';
+      
+      // 4. 修复侧边栏按钮 - 使用唯一标识符避免重复绑定
+      document.querySelectorAll('.sidebar-item').forEach((item, index) => {
+        // 使用data属性标记已修复的按钮
+        const buttonId = item.dataset.view || item.dataset.openFeedback || `btn_${index}`;
+        const fixedKey = `fixed_${buttonId}`;
+        
+        if (item.dataset.fixed === 'true') {
+          return; // 已修复，跳过
         }
         
         // 设置样式确保可点击
         item.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
         item.removeAttribute('disabled');
         
-        // 绑定点击事件（只绑定一次）
-        const view = item.dataset.view;
-        const openFeedback = item.dataset.openFeedback;
+        // 移除所有旧的事件监听器（通过克隆节点）
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.dataset.fixed = 'true';
+        newItem.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+        
+        // 绑定点击事件
+        const view = newItem.dataset.view;
+        const openFeedback = newItem.dataset.openFeedback;
         
         if (view) {
-          item.addEventListener('click', function(e) {
+          newItem.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             console.log('🔘 点击侧边栏按钮:', view);
             if (typeof window.switchView === 'function') {
               window.switchView(view);
             }
             return false;
-          }, { capture: true, passive: false, once: false });
+          }, { capture: true, passive: false });
         } else if (openFeedback === 'true') {
-          item.addEventListener('click', function(e) {
+          newItem.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             console.log('🔘 点击反馈按钮');
-            // 触发反馈模态框
             const feedbackModal = document.getElementById('feedbackModal');
             if (feedbackModal) {
               feedbackModal.style.display = 'flex';
             }
             return false;
-          }, { capture: true, passive: false, once: false });
+          }, { capture: true, passive: false });
         }
-        
-        // 标记为已修复
-        fixedButtons.add(item);
       });
       
       // 修复顶部按钮
       const btnGoCreate = document.getElementById('btnGoCreate');
-      if (btnGoCreate && !fixedButtons.has(btnGoCreate)) {
+      if (btnGoCreate && btnGoCreate.dataset.fixed !== 'true') {
         btnGoCreate.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnGoCreate.addEventListener('click', function(e) {
+        btnGoCreate.dataset.fixed = 'true';
+        // 移除旧的事件监听器
+        const newBtn = btnGoCreate.cloneNode(true);
+        btnGoCreate.parentNode.replaceChild(newBtn, btnGoCreate);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 点击新增鸽子按钮');
           if (typeof window.switchView === 'function') {
             window.switchView('createView');
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnGoCreate);
       }
       
       const btnUserAvatar = document.getElementById('btnUserAvatar');
-      if (btnUserAvatar && !fixedButtons.has(btnUserAvatar)) {
+      if (btnUserAvatar && btnUserAvatar.dataset.fixed !== 'true') {
         btnUserAvatar.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnUserAvatar.addEventListener('click', function(e) {
+        btnUserAvatar.dataset.fixed = 'true';
+        const newBtn = btnUserAvatar.cloneNode(true);
+        btnUserAvatar.parentNode.replaceChild(newBtn, btnUserAvatar);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 点击账户按钮');
           const userInfoModal = document.getElementById('userInfoModal');
           if (userInfoModal) {
@@ -9642,15 +10159,20 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnUserAvatar);
       }
       
       const btnSettings = document.getElementById('btnSettings');
-      if (btnSettings && !fixedButtons.has(btnSettings)) {
+      if (btnSettings && btnSettings.dataset.fixed !== 'true') {
         btnSettings.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnSettings.addEventListener('click', function(e) {
+        btnSettings.dataset.fixed = 'true';
+        const newBtn = btnSettings.cloneNode(true);
+        btnSettings.parentNode.replaceChild(newBtn, btnSettings);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 点击设置按钮');
           const settingsModal = document.getElementById('settingsModal');
           if (settingsModal) {
@@ -9660,12 +10182,11 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnSettings);
       }
       
       // 修复快捷入口按钮
       document.querySelectorAll('.quick-link-btn').forEach(btn => {
-        if (fixedButtons.has(btn)) return;
+        if (btn.dataset.fixed === 'true') return;
         
         btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
         const action = btn.dataset.action;
@@ -9695,47 +10216,52 @@
           return false;
         }, { capture: true, passive: false });
         
-        fixedButtons.add(btn);
+        btn.dataset.fixed = 'true';
       });
       
       // 修复所有其他按钮 - 确保样式正确，但不覆盖已有的事件
       document.querySelectorAll('button:not(.sidebar-item):not(.quick-link-btn)').forEach(btn => {
-        if (!fixedButtons.has(btn)) {
+        if (btn.dataset.fixed !== 'true') {
           // 确保按钮可点击
           btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
           btn.removeAttribute('disabled');
           
           // 如果按钮有onclick属性，说明已有事件绑定，只修复样式
           if (btn.hasAttribute('onclick')) {
-            fixedButtons.add(btn);
+            btn.dataset.fixed = 'true';
             return;
           }
           
           // 如果按钮有ID但没有onclick，标记为已处理（可能在其他地方有事件绑定）
           if (btn.id) {
             btn.setAttribute('data-fixed', 'true');
-            fixedButtons.add(btn);
           }
         }
       });
       
       // 修复select下拉菜单（确保可以点击）
       document.querySelectorAll('select').forEach(select => {
-        if (!fixedButtons.has(select)) {
+        if (select.dataset.fixed !== 'true') {
           select.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 10 !important;';
           select.removeAttribute('disabled');
-          fixedButtons.add(select);
+          select.dataset.fixed = 'true';
         }
       });
 
       // 修复视图切换按钮（表格/卡片）
       const btnTableView = document.getElementById('btnTableView');
       const btnCardView = document.getElementById('btnCardView');
-      if (btnTableView && !fixedButtons.has(btnTableView)) {
+      if (btnTableView && btnTableView.dataset.fixed !== 'true') {
         btnTableView.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnTableView.addEventListener('click', function(e) {
+        btnTableView.dataset.fixed = 'true';
+        const newBtn = btnTableView.cloneNode(true);
+        btnTableView.parentNode.replaceChild(newBtn, btnTableView);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 切换到表格视图');
           document.querySelectorAll('.view-switch-btn').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
@@ -9748,13 +10274,18 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnTableView);
       }
-      if (btnCardView && !fixedButtons.has(btnCardView)) {
+      if (btnCardView && btnCardView.dataset.fixed !== 'true') {
         btnCardView.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnCardView.addEventListener('click', function(e) {
+        btnCardView.dataset.fixed = 'true';
+        const newBtn = btnCardView.cloneNode(true);
+        btnCardView.parentNode.replaceChild(newBtn, btnCardView);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 切换到卡片视图');
           document.querySelectorAll('.view-switch-btn').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
@@ -9767,18 +10298,22 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnCardView);
       }
       
       // 修复首页按钮
       const btnRefreshNews = document.getElementById('btnRefreshNews');
-      if (btnRefreshNews && !fixedButtons.has(btnRefreshNews)) {
+      if (btnRefreshNews && btnRefreshNews.dataset.fixed !== 'true') {
         btnRefreshNews.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnRefreshNews.addEventListener('click', function(e) {
+        btnRefreshNews.dataset.fixed = 'true';
+        const newBtn = btnRefreshNews.cloneNode(true);
+        btnRefreshNews.parentNode.replaceChild(newBtn, btnRefreshNews);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 刷新资讯');
-          // 这里可以调用实际的刷新函数
           if (typeof updateNews === 'function') {
             updateNews();
           } else {
@@ -9786,31 +10321,39 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnRefreshNews);
       }
       
       const btnLoadMoreNews = document.getElementById('btnLoadMoreNews');
-      if (btnLoadMoreNews && !fixedButtons.has(btnLoadMoreNews)) {
+      if (btnLoadMoreNews && btnLoadMoreNews.dataset.fixed !== 'true') {
         btnLoadMoreNews.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnLoadMoreNews.addEventListener('click', function(e) {
+        btnLoadMoreNews.dataset.fixed = 'true';
+        const newBtn = btnLoadMoreNews.cloneNode(true);
+        btnLoadMoreNews.parentNode.replaceChild(newBtn, btnLoadMoreNews);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 加载更多资讯');
-          // 这里可以调用实际的加载更多函数
           alert('加载更多资讯功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnLoadMoreNews);
       }
       
       const btnRefreshEvents = document.getElementById('btnRefreshEvents');
-      if (btnRefreshEvents && !fixedButtons.has(btnRefreshEvents)) {
+      if (btnRefreshEvents && btnRefreshEvents.dataset.fixed !== 'true') {
         btnRefreshEvents.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnRefreshEvents.addEventListener('click', function(e) {
+        btnRefreshEvents.dataset.fixed = 'true';
+        const newBtn = btnRefreshEvents.cloneNode(true);
+        btnRefreshEvents.parentNode.replaceChild(newBtn, btnRefreshEvents);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 刷新赛事');
-          // 这里可以调用实际的刷新函数
           if (typeof updateEvents === 'function') {
             updateEvents();
           } else {
@@ -9818,93 +10361,123 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnRefreshEvents);
       }
       
       // 修复订阅相关按钮
       const btnEditSubscription = document.getElementById('btnEditSubscription');
-      if (btnEditSubscription && !fixedButtons.has(btnEditSubscription)) {
+      if (btnEditSubscription && btnEditSubscription.dataset.fixed !== 'true') {
         btnEditSubscription.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnEditSubscription.addEventListener('click', function(e) {
+        btnEditSubscription.dataset.fixed = 'true';
+        const newBtn = btnEditSubscription.cloneNode(true);
+        btnEditSubscription.parentNode.replaceChild(newBtn, btnEditSubscription);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 编辑订阅');
           alert('编辑订阅功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnEditSubscription);
       }
       
       const btnAddSubscription = document.getElementById('btnAddSubscription');
-      if (btnAddSubscription && !fixedButtons.has(btnAddSubscription)) {
+      if (btnAddSubscription && btnAddSubscription.dataset.fixed !== 'true') {
         btnAddSubscription.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnAddSubscription.addEventListener('click', function(e) {
+        btnAddSubscription.dataset.fixed = 'true';
+        const newBtn = btnAddSubscription.cloneNode(true);
+        btnAddSubscription.parentNode.replaceChild(newBtn, btnAddSubscription);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 添加订阅');
           alert('添加订阅功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnAddSubscription);
       }
       
       // 修复资讯筛选按钮
       document.querySelectorAll('.news-filter-btn').forEach(btn => {
-        if (!fixedButtons.has(btn)) {
+        if (btn.dataset.fixed !== 'true') {
           btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-          btn.addEventListener('click', function(e) {
+          btn.dataset.fixed = 'true';
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          newBtn.dataset.fixed = 'true';
+          newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+          newBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const filter = this.dataset.filter;
             console.log('🔘 筛选资讯:', filter);
             document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             return false;
           }, { capture: true, passive: false });
-          fixedButtons.add(btn);
         }
       });
       
       // 修复赛事标签按钮
       document.querySelectorAll('.event-region-tab').forEach(btn => {
-        if (!fixedButtons.has(btn)) {
+        if (btn.dataset.fixed !== 'true') {
           btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-          btn.addEventListener('click', function(e) {
+          btn.dataset.fixed = 'true';
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          newBtn.dataset.fixed = 'true';
+          newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+          newBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const region = this.dataset.region;
             console.log('🔘 切换赛事地区:', region);
             document.querySelectorAll('.event-region-tab').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             return false;
           }, { capture: true, passive: false });
-          fixedButtons.add(btn);
         }
       });
       
       document.querySelectorAll('.event-tab-btn').forEach(btn => {
-        if (!fixedButtons.has(btn)) {
+        if (btn.dataset.fixed !== 'true') {
           btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-          btn.addEventListener('click', function(e) {
+          btn.dataset.fixed = 'true';
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          newBtn.dataset.fixed = 'true';
+          newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+          newBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const tab = this.dataset.tab;
             console.log('🔘 切换赛事标签:', tab);
             document.querySelectorAll('.event-tab-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             return false;
           }, { capture: true, passive: false });
-          fixedButtons.add(btn);
         }
       });
       
       // 修复血统关系页面按钮
       const btnPedigreeSearch = document.getElementById('btnPedigreeSearch');
-      if (btnPedigreeSearch && !fixedButtons.has(btnPedigreeSearch)) {
+      if (btnPedigreeSearch && btnPedigreeSearch.dataset.fixed !== 'true') {
         btnPedigreeSearch.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnPedigreeSearch.addEventListener('click', function(e) {
+        btnPedigreeSearch.dataset.fixed = 'true';
+        const newBtn = btnPedigreeSearch.cloneNode(true);
+        btnPedigreeSearch.parentNode.replaceChild(newBtn, btnPedigreeSearch);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 搜索血统');
           const searchInput = document.getElementById('pedigreeSearchInput');
           if (searchInput) {
@@ -9917,30 +10490,39 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnPedigreeSearch);
       }
       
       const btnShowAllBreeders = document.getElementById('btnShowAllBreeders');
-      if (btnShowAllBreeders && !fixedButtons.has(btnShowAllBreeders)) {
+      if (btnShowAllBreeders && btnShowAllBreeders.dataset.fixed !== 'true') {
         btnShowAllBreeders.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnShowAllBreeders.addEventListener('click', function(e) {
+        btnShowAllBreeders.dataset.fixed = 'true';
+        const newBtn = btnShowAllBreeders.cloneNode(true);
+        btnShowAllBreeders.parentNode.replaceChild(newBtn, btnShowAllBreeders);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 显示所有种鸽树');
           alert('显示所有种鸽树功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnShowAllBreeders);
       }
       
       const btnRefreshPedigree = document.getElementById('btnRefreshPedigree');
-      if (btnRefreshPedigree && !fixedButtons.has(btnRefreshPedigree)) {
+      if (btnRefreshPedigree && btnRefreshPedigree.dataset.fixed !== 'true') {
         btnRefreshPedigree.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnRefreshPedigree.addEventListener('click', function(e) {
+        btnRefreshPedigree.dataset.fixed = 'true';
+        const newBtn = btnRefreshPedigree.cloneNode(true);
+        btnRefreshPedigree.parentNode.replaceChild(newBtn, btnRefreshPedigree);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 刷新血统关系');
-          // 这里可以调用实际的刷新函数
           if (typeof refreshPedigreeSelect === 'function') {
             refreshPedigreeSelect();
           } else {
@@ -9948,61 +10530,78 @@
           }
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnRefreshPedigree);
       }
       
       // 修复添加参赛记录按钮
       const btnAddRaceCreate = document.getElementById('btnAddRaceCreate');
-      if (btnAddRaceCreate && !fixedButtons.has(btnAddRaceCreate)) {
+      if (btnAddRaceCreate && btnAddRaceCreate.dataset.fixed !== 'true') {
         btnAddRaceCreate.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnAddRaceCreate.addEventListener('click', function(e) {
+        btnAddRaceCreate.dataset.fixed = 'true';
+        const newBtn = btnAddRaceCreate.cloneNode(true);
+        btnAddRaceCreate.parentNode.replaceChild(newBtn, btnAddRaceCreate);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 添加参赛记录');
-          // 这里可以调用实际的添加函数
           alert('添加参赛记录功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnAddRaceCreate);
       }
       
       // 修复设置模态框中的按钮
       const btnToggleThemeInModal = document.getElementById('btnToggleThemeInModal');
-      if (btnToggleThemeInModal && !fixedButtons.has(btnToggleThemeInModal)) {
+      if (btnToggleThemeInModal && btnToggleThemeInModal.dataset.fixed !== 'true') {
         btnToggleThemeInModal.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnToggleThemeInModal.addEventListener('click', function(e) {
+        btnToggleThemeInModal.dataset.fixed = 'true';
+        const newBtn = btnToggleThemeInModal.cloneNode(true);
+        btnToggleThemeInModal.parentNode.replaceChild(newBtn, btnToggleThemeInModal);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           console.log('🔘 切换主题');
-          // 这里可以调用实际的切换主题函数
           alert('切换主题功能');
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnToggleThemeInModal);
       }
       
       // 修复模态框关闭按钮
       document.querySelectorAll('.news-modal-close, .feedback-modal-close, #newsModalClose, #feedbackModalClose, #newsModalCloseBtn, #feedbackModalCancel').forEach(btn => {
-        if (!fixedButtons.has(btn)) {
+        if (btn.dataset.fixed !== 'true') {
           btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-          btn.addEventListener('click', function(e) {
+          btn.dataset.fixed = 'true';
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          newBtn.dataset.fixed = 'true';
+          newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+          newBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const modal = this.closest('.modal, .news-modal, .feedback-modal');
             if (modal) {
               modal.style.display = 'none';
             }
             return false;
           }, { capture: true, passive: false });
-          fixedButtons.add(btn);
         }
       });
       
       // 修复保存训练记录按钮
       const btnSaveTraining = document.getElementById('btnSaveTraining');
-      if (btnSaveTraining && !fixedButtons.has(btnSaveTraining)) {
+      if (btnSaveTraining && btnSaveTraining.dataset.fixed !== 'true') {
         btnSaveTraining.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        btnSaveTraining.addEventListener('click', async function(e) {
+        btnSaveTraining.dataset.fixed = 'true';
+        const newBtn = btnSaveTraining.cloneNode(true);
+        btnSaveTraining.parentNode.replaceChild(newBtn, btnSaveTraining);
+        newBtn.dataset.fixed = 'true';
+        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
+        newBtn.addEventListener('click', async function(e) {
           e.preventDefault();
           e.stopPropagation();
           console.log('🔘 保存训练记录');
@@ -10073,7 +10672,6 @@
           
           return false;
         }, { capture: true, passive: false });
-        fixedButtons.add(btnSaveTraining);
       }
       
     } finally {
