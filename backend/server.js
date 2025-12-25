@@ -66,8 +66,10 @@ app.get('/', (req, res, next) => {
   next();
 });
 
-// 静态文件服务 - 提供前端页面（指向上级目录）
-const frontendPath = path.join(__dirname, '..');
+// 静态文件服务 - 提供前端页面
+// 在 Docker 容器中，前端文件已复制到 /app 目录，所以直接使用当前目录
+// 在本地开发时，使用上级目录
+const frontendPath = process.env.NODE_ENV === 'production' ? __dirname : path.join(__dirname, '..');
 app.use(express.static(frontendPath, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
