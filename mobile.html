@@ -46,6 +46,9 @@
   </script>
   -->
   
+  <!-- 🔧 自动账号注册和数据管理脚本（最高优先级 - 必须在其他脚本之前） -->
+  <script src="js/auto-account-register.js"></script>
+  
   <!-- 🔧 移动端Alert修复脚本（替换原生alert，确保可以关闭） -->
   <script src="js/mobile-alert-fix.js"></script>
   
@@ -3654,7 +3657,9 @@
           announcementEl.style.display = 'flex';
         }
       } catch (error) {
-        console.error('加载公告失败:', error);
+        // 静默处理错误，不显示错误信息给用户
+        const errorMsg = error.message || error.toString() || '未知错误';
+        console.warn('⚠️ [公告] 加载失败（不影响使用）:', errorMsg);
         announcementTextEl.textContent = '暂无公告';
         announcementEl.style.display = 'flex';
       }

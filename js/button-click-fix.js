@@ -323,44 +323,65 @@
     }
     
     // 使用MutationObserver监听DOM变化，确保新添加的按钮也能被修复
-    const observer = new MutationObserver(function(mutations) {
-      let shouldRefix = false;
-      mutations.forEach(function(mutation) {
-        if (mutation.addedNodes.length > 0) {
-          mutation.addedNodes.forEach(function(node) {
-            if (node.nodeType === 1) { // Element node
-              if (node.classList && (
-                node.classList.contains('sidebar-item') ||
-                node.classList.contains('quick-link-btn') ||
-                node.id === 'btnGoCreate' ||
-                node.id === 'btnUserAvatar' ||
-                node.id === 'btnSettings'
-              )) {
-                shouldRefix = true;
-              } else if (node.querySelector && (
-                node.querySelector('.sidebar-item') ||
-                node.querySelector('.quick-link-btn') ||
-                node.querySelector('#btnGoCreate') ||
-                node.querySelector('#btnUserAvatar') ||
-                node.querySelector('#btnSettings')
-              )) {
-                shouldRefix = true;
+    function setupMutationObserver() {
+      // 确保document.body存在
+      if (!document.body) {
+        // 如果body还不存在，等待DOM加载完成
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupMutationObserver);
+        } else {
+          // 如果已经加载完成但body还不存在，延迟重试
+          setTimeout(setupMutationObserver, 100);
+        }
+        return;
+      }
+      
+      const observer = new MutationObserver(function(mutations) {
+        let shouldRefix = false;
+        mutations.forEach(function(mutation) {
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) { // Element node
+                if (node.classList && (
+                  node.classList.contains('sidebar-item') ||
+                  node.classList.contains('quick-link-btn') ||
+                  node.id === 'btnGoCreate' ||
+                  node.id === 'btnUserAvatar' ||
+                  node.id === 'btnSettings'
+                )) {
+                  shouldRefix = true;
+                } else if (node.querySelector && (
+                  node.querySelector('.sidebar-item') ||
+                  node.querySelector('.quick-link-btn') ||
+                  node.querySelector('#btnGoCreate') ||
+                  node.querySelector('#btnUserAvatar') ||
+                  node.querySelector('#btnSettings')
+                )) {
+                  shouldRefix = true;
+                }
               }
-            }
-          });
+            });
+          }
+        });
+        
+        if (shouldRefix) {
+          console.log('🔧 [终极修复] 检测到新按钮，重新修复...');
+          setTimeout(forceFixAllButtons, 100);
         }
       });
       
-      if (shouldRefix) {
-        console.log('🔧 [终极修复] 检测到新按钮，重新修复...');
-        setTimeout(forceFixAllButtons, 100);
+      try {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        console.log('✅ [终极修复] MutationObserver已设置');
+      } catch (error) {
+        console.warn('⚠️ [终极修复] MutationObserver设置失败:', error);
       }
-    });
+    }
     
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    setupMutationObserver();
     
     console.log('✅ [终极修复] 初始化完成');
   }
