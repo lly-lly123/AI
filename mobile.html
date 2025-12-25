@@ -146,34 +146,74 @@
         }
       });
       
-      // 3.1 特别修复移动端卡片点击
+      // 3.1 特别修复移动端卡片点击（增强版）
       const mobileCards = document.querySelectorAll('.mobile-card');
       mobileCards.forEach(card => {
         card.style.setProperty('pointer-events', 'auto', 'important');
         card.style.setProperty('touch-action', 'manipulation', 'important');
-        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.2)', 'important');
+        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.3)', 'important');
         card.style.setProperty('cursor', 'pointer', 'important');
         card.style.setProperty('position', 'relative', 'important');
-        card.style.setProperty('z-index', '5', 'important');
+        card.style.setProperty('z-index', '50', 'important');
+        card.style.setProperty('user-select', 'none', 'important');
+        card.style.setProperty('-webkit-user-select', 'none', 'important');
+        card.removeAttribute('disabled');
         
         // 如果卡片有onclick属性，确保触摸事件也能触发
         if (card.hasAttribute('onclick')) {
-          const onclickHandler = function(e) {
+          const onclickAttr = card.getAttribute('onclick');
+          
+          // 方法1: 直接绑定touchend事件
+          const touchendHandler = function(e) {
             e.preventDefault();
             e.stopPropagation();
-            const onclickAttr = card.getAttribute('onclick');
             if (onclickAttr) {
               try {
                 const func = new Function('event', onclickAttr);
                 func(e);
+                console.log('✅ 卡片touchend触发:', onclickAttr);
               } catch (err) {
-                console.warn('执行卡片onclick失败:', err);
+                console.error('❌ 执行卡片onclick失败:', err, onclickAttr);
+                // 备用方案：通过window调用
+                if (window.switchView && onclickAttr.includes('switchView')) {
+                  const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+                  if (match && match[1]) {
+                    window.switchView(match[1]);
+                  }
+                }
               }
             }
           };
-          card.addEventListener('touchend', onclickHandler, { passive: false, capture: true });
+          
+          // 方法2: 绑定click事件作为备用
+          const clickHandler = function(e) {
+            if (onclickAttr) {
+              try {
+                const func = new Function('event', onclickAttr);
+                func(e);
+                console.log('✅ 卡片click触发:', onclickAttr);
+              } catch (err) {
+                console.error('❌ 执行卡片click失败:', err);
+              }
+            }
+          };
+          
+          // 移除旧的事件监听器（如果存在）
+          card.removeEventListener('touchend', touchendHandler);
+          card.removeEventListener('click', clickHandler);
+          
+          // 添加新的事件监听器
+          card.addEventListener('touchend', touchendHandler, { passive: false, capture: true });
+          card.addEventListener('click', clickHandler, { passive: true, capture: true });
+          
+          // 确保onclick属性也工作
+          if (!card.onclick) {
+            card.onclick = clickHandler;
+          }
         }
       });
+      
+      console.log('✅ 已修复', mobileCards.length, '个移动端卡片');
       
       // 3.2 修复表格行点击
       const clickableRows = document.querySelectorAll('tr[onclick], td[onclick]');
@@ -3282,6 +3322,51 @@
       if (views[viewName]) {
         views[viewName].style.display = 'block';
         
+        // 重新绑定该视图中的所有按钮和卡片事件（确保新显示的视图按钮可用）
+        setTimeout(() => {
+          const viewCards = views[viewName].querySelectorAll('.mobile-card[onclick]');
+          viewCards.forEach(card => {
+            card.style.setProperty('pointer-events', 'auto', 'important');
+            card.style.setProperty('touch-action', 'manipulation', 'important');
+            card.style.setProperty('z-index', '50', 'important');
+            card.style.setProperty('position', 'relative', 'important');
+            
+            const onclickAttr = card.getAttribute('onclick');
+            if (onclickAttr) {
+              const handler = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  const func = new Function('event', onclickAttr);
+                  func(e);
+                  console.log('✅ 视图内卡片点击:', onclickAttr);
+                } catch (err) {
+                  console.error('❌ 执行失败:', err);
+                  if (window.switchView && onclickAttr.includes('switchView')) {
+                    const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+                    if (match && match[1]) {
+                      window.switchView(match[1]);
+                    }
+                  }
+                }
+              };
+              card.removeEventListener('touchend', handler);
+              card.addEventListener('touchend', handler, { passive: false, capture: true });
+            }
+          });
+          
+          // 也修复视图内的按钮
+          const viewButtons = views[viewName].querySelectorAll('button[onclick], .btn[onclick]');
+          viewButtons.forEach(btn => {
+            btn.style.setProperty('pointer-events', 'auto', 'important');
+            btn.style.setProperty('touch-action', 'manipulation', 'important');
+            btn.style.setProperty('z-index', '100', 'important');
+            btn.removeAttribute('disabled');
+          });
+          
+          console.log('✅ 已重新绑定视图', viewName, '中的', viewCards.length, '个卡片和', viewButtons.length, '个按钮');
+        }, 50);
+        
         // 根据视图执行特定操作
         switch(viewName) {
           case 'home':
@@ -3554,7 +3639,10 @@
               clickable.classList.contains('clickable') || 
               clickable.dataset.clickable === 'true' ||
               clickable.tagName === 'BUTTON' ||
-              (clickable.classList && (clickable.classList.contains('btn') || clickable.classList.contains('mobile-nav-item') || clickable.classList.contains('mobile-tab'))) ||
+              (clickable.classList && (clickable.classList.contains('btn') || 
+                                      clickable.classList.contains('mobile-nav-item') || 
+                                      clickable.classList.contains('mobile-tab') ||
+                                      clickable.classList.contains('mobile-card'))) ||
               (clickable.tagName === 'A' && clickable.hasAttribute('onclick'))) {
             // 确保元素可点击
             clickable.style.pointerEvents = 'auto';
@@ -3563,6 +3651,68 @@
             break;
           }
           clickable = clickable.parentElement;
+        }
+      }, { passive: true, capture: true });
+      
+      // 专门处理mobile-card的触摸事件
+      document.body.addEventListener('touchend', function(e) {
+        const target = e.target;
+        // 查找最近的mobile-card父元素
+        let card = target;
+        while (card && card !== document.body) {
+          if (card.classList && card.classList.contains('mobile-card') && card.hasAttribute('onclick')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 获取onclick属性
+            const onclickAttr = card.getAttribute('onclick');
+            if (onclickAttr) {
+              try {
+                // 直接执行onclick代码
+                const func = new Function('event', onclickAttr);
+                func(e);
+                console.log('✅ 卡片点击已触发:', onclickAttr);
+              } catch (err) {
+                console.error('❌ 执行卡片onclick失败:', err, onclickAttr);
+                // 如果直接执行失败，尝试通过window调用
+                if (window.switchView && onclickAttr.includes('switchView')) {
+                  const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+                  if (match && match[1]) {
+                    window.switchView(match[1]);
+                    console.log('✅ 通过window.switchView调用:', match[1]);
+                  }
+                }
+              }
+            }
+            break;
+          }
+          card = card.parentElement;
+        }
+      }, { passive: false, capture: true });
+      
+      // 也处理click事件作为备用
+      document.body.addEventListener('click', function(e) {
+        const target = e.target;
+        let card = target;
+        while (card && card !== document.body) {
+          if (card.classList && card.classList.contains('mobile-card') && card.hasAttribute('onclick')) {
+            const onclickAttr = card.getAttribute('onclick');
+            if (onclickAttr && !card.dataset.clickHandled) {
+              card.dataset.clickHandled = 'true';
+              try {
+                const func = new Function('event', onclickAttr);
+                func(e);
+                console.log('✅ 卡片click事件已触发:', onclickAttr);
+              } catch (err) {
+                console.error('❌ 执行卡片click失败:', err);
+              }
+              setTimeout(() => {
+                delete card.dataset.clickHandled;
+              }, 100);
+            }
+            break;
+          }
+          card = card.parentElement;
         }
       }, { passive: true, capture: true });
       
