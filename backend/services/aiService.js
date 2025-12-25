@@ -185,31 +185,35 @@ class AIService {
       functionGuidesSection = `\n\n## 系统功能使用说明\n\n${guides.substring(0, Math.min(guides.length, 8000))}\n\n（功能说明已加载，请结合这些说明回答用户问题）`;
     }
     
-    return `你是 Evo，一个专业的信鸽管理智能助手。你的身份和特点：
+    return `你是 Evo，智鸽（PigeonAI）信鸽管理系统的智能助手。
 
-1. **身份**：Evo 智能助手，专门为信鸽爱好者提供专业服务
-2. **专业领域**：
-   - 信鸽信息管理和查询
-   - 训练数据分析
-   - 血统关系分析
-   - 比赛成绩统计
-   - 信鸽健康管理建议
+**核心要求**：
+1. 回答必须简洁、直接，控制在100字以内（除非用户明确要求详细说明）
+2. 所有回答必须围绕本网站的功能和数据展开，不要提供无关信息
+3. 只回答与信鸽管理、本系统功能相关的问题
 
-3. **对话风格**：
-   - 友好、专业、耐心
-   - 使用简洁明了的语言
-   - 提供实用的建议和帮助
-   - 适当使用表情符号让对话更生动
-   - 结合系统功能使用说明回答用户问题
+**专业领域**（仅限以下范围）：
+- 信鸽信息管理和查询
+- 训练数据分析
+- 血统关系分析
+- 比赛成绩统计
+- 信鸽健康管理建议
+- 系统功能使用方法
 
-4. **当前系统信息**：
-   - 总鸽子数：${context.totalPigeons || 0}
-   - 在世鸽子：${context.alivePigeons || 0}
-   - 种鸽数量：${context.breeders || 0}
+**对话风格**：
+- 简洁明了，直接回答核心问题
+- 避免冗长解释，只提供必要信息
+- 适当使用表情符号（1-2个即可）
+- 如果不了解或超出范围，直接说明"这是本系统范围外的问题"
 
-5. **重要**：当用户询问如何使用某个功能时，请参考系统功能使用说明，提供详细、准确的指导。${functionGuidesSection}
+**当前系统数据**：
+- 总鸽子数：${context.totalPigeons || 0}
+- 在世鸽子：${context.alivePigeons || 0}
+- 种鸽数量：${context.breeders || 0}
 
-请始终以 Evo 的身份回答用户的问题，保持专业和友好的态度。`;
+**功能说明**（仅在用户询问功能使用时提供）：${functionGuidesSection}
+
+**重要**：回答要简洁，围绕网站功能，不超过100字。`;
   }
 
   /**
@@ -376,7 +380,7 @@ class AIService {
         model: 'glm-4',
         messages: messages,
         temperature: 0.7,
-        max_tokens: 512
+        max_tokens: 256  // 减少token数，使回答更简洁
       },
       {
         headers: {
@@ -405,7 +409,7 @@ class AIService {
         },
         parameters: {
           temperature: 0.7,
-          max_tokens: 512
+          max_tokens: 256  // 减少token数，使回答更简洁
         }
       },
       {
@@ -433,7 +437,7 @@ class AIService {
           model: 'gpt-3.5-turbo',
           messages: messages,
           temperature: 0.7,
-          max_tokens: 512
+          max_tokens: 256  // 减少token数，使回答更简洁
         },
         {
           headers: {
@@ -513,13 +517,14 @@ class AIService {
   /**
    * 格式化消息为Chat API格式（用于智谱AI、通义千问等）
    */
-  formatMessagesForChatAPI(question, history = [], context = {}) {
+  async formatMessagesForChatAPI(question, history = [], context = {}) {
     const messages = [];
     
-    // 添加系统提示
+    // 添加系统提示（异步）
+    const systemPrompt = await this.buildSystemPrompt(context);
     messages.push({
       role: 'system',
-      content: this.buildSystemPrompt(context)
+      content: systemPrompt
     });
     
     // 添加历史对话（最多保留最近10轮）

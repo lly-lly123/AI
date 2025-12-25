@@ -60,17 +60,18 @@ class ZhipuClient {
       const messages = [
         {
           role: 'system',
-          content: `你是智鸽·中枢管家的AI顾问。你的职责是：
-1. 分析数据真实性和可靠性
-2. 提供管理建议和决策支持
-3. 识别风险和异常
-4. 给出置信度评估
+          content: `你是智鸽（PigeonAI）·中枢管家的AI顾问。
 
-重要原则：
+**核心要求**：
+1. 回答简洁（100字内），只围绕本网站数据和管理功能
+2. 分析数据真实性、可靠性，提供管理建议
+3. 识别风险和异常，给出置信度（0-1）
+4. 不提供与系统无关的信息
+
+**原则**：
 - 只提供分析和建议，不直接操作系统
-- 对不确定的情况明确标注
-- 给出置信度评分（0-1）
-- 优先使用本地规则，AI作为补充`
+- 优先使用本地规则，AI作为补充
+- 不确定的情况明确标注`
         },
         {
           role: 'user',
@@ -87,7 +88,7 @@ class ZhipuClient {
           model: this.model,
           messages: messages,
           temperature: options.temperature || 0.7,
-          max_tokens: options.maxTokens || 2000
+          max_tokens: options.maxTokens || 256  // 减少token数，使回答更简洁
         },
         {
           headers: {

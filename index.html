@@ -14,8 +14,14 @@
   <!-- 🔧 按钮点击终极修复脚本（独立文件 - 最高优先级） -->
   <script src="js/button-click-fix.js"></script>
   
+  <!-- 🔄 PC端数据同步修复脚本（监听localStorage变化，自动刷新数据） -->
+  <script src="js/pc-data-sync-fix.js"></script>
+  
   <!-- 🧪 按钮点击自动化测试脚本（开发环境） -->
   <script src="js/button-click-test.js"></script>
+  
+  <!-- 🧪 全面功能测试脚本（模拟用户使用环境） -->
+  <script src="js/comprehensive-test.js"></script>
   
   <!-- 🔧 PC端按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
   <script>
@@ -184,18 +190,11 @@
           return;
         }
         
-        // 移除所有旧的事件监听器（通过克隆节点）
-        const newItem = item.cloneNode(true);
-        const parent = item.parentNode;
-        if (parent) {
-          parent.replaceChild(newItem, item);
-        }
-        
-        // 标记为已修复
-        newItem.dataset.fixed = 'true';
+        // 标记为已修复（不使用cloneNode，避免DOM变化导致意外事件）
+        item.dataset.fixed = 'true';
         
         // 设置样式确保可点击（使用cssText一次性设置所有样式）
-        newItem.style.cssText = `
+        item.style.cssText = `
           pointer-events: auto !important;
           cursor: pointer !important;
           z-index: 99999 !important;
@@ -203,7 +202,7 @@
           user-select: none !important;
           -webkit-user-select: none !important;
         `;
-        newItem.removeAttribute('disabled');
+        item.removeAttribute('disabled');
         
         // 确保子元素也可点击
         newItem.querySelectorAll('*').forEach(child => {
@@ -235,23 +234,8 @@
           return false;
         };
         
-        // 绑定多种事件
-        ['click', 'mousedown', 'mouseup'].forEach(eventType => {
-          newItem.addEventListener(eventType, handleButtonClick, { 
-            capture: true, 
-            passive: false 
-          });
-        });
-        
-        // 也绑定到子元素（确保点击图标或文字也能触发）
-        newItem.querySelectorAll('span, div').forEach(child => {
-          ['click', 'mousedown', 'mouseup'].forEach(eventType => {
-            child.addEventListener(eventType, handleButtonClick, { 
-              capture: true, 
-              passive: false 
-            });
-          });
-        });
+        // 直接设置onclick，不使用addEventListener避免重复绑定
+        item.onclick = handleButtonClick;
       });
       
       // 4. 修复所有按钮（包括快捷入口、视图切换等）
@@ -401,14 +385,24 @@
     // 立即设置全局事件委托（不等待DOM加载）
     setupGlobalEventDelegation();
     
-    // 添加定期检查机制（每3秒检查一次，确保新添加的按钮也能被修复）
-    setInterval(function() {
-      const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
-      if (unfixedButtons.length > 0) {
-        console.log('🔧 发现未修复的按钮，执行修复...', unfixedButtons.length);
-        ultimateFixPC();
+    // 添加定期检查机制（每10秒检查一次，确保新添加的按钮也能被修复）
+    // 注意：已移除频繁的setInterval，避免导致意外跳转
+    let fixCheckInterval = null;
+    function startFixCheckInterval() {
+      if (fixCheckInterval) {
+        clearInterval(fixCheckInterval);
       }
-    }, 3000);
+      fixCheckInterval = setInterval(function() {
+        const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
+        if (unfixedButtons.length > 0) {
+          console.log('🔧 发现未修复的按钮，执行修复...', unfixedButtons.length);
+          // 只在确实有未修复按钮时才执行修复，避免频繁执行
+          ultimateFixPC();
+        }
+      }, 10000); // 改为10秒检查一次，减少频繁执行
+    }
+    // 延迟启动，避免页面加载时频繁执行
+    setTimeout(startFixCheckInterval, 5000);
     
     // 在DOM加载后立即执行
     if (document.readyState === 'loading') {
@@ -10080,39 +10074,46 @@
         item.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
         item.removeAttribute('disabled');
         
-        // 移除所有旧的事件监听器（通过克隆节点）
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
-        newItem.dataset.fixed = 'true';
-        newItem.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+        // 标记为已修复，避免重复处理
+        item.dataset.fixed = 'true';
         
-        // 绑定点击事件
-        const view = newItem.dataset.view;
-        const openFeedback = newItem.dataset.openFeedback;
+        // 直接绑定onclick，不使用addEventListener避免重复绑定
+        const view = item.dataset.view;
+        const openFeedback = item.dataset.openFeedback;
         
         if (view) {
-          newItem.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('🔘 点击侧边栏按钮:', view);
-            if (typeof window.switchView === 'function') {
-              window.switchView(view);
-            }
-            return false;
-          }, { capture: true, passive: false });
+          // 只在onclick未设置时才设置
+          if (!item.onclick) {
+            item.onclick = function(e) {
+              if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+              }
+              console.log('🔘 点击侧边栏按钮:', view);
+              if (typeof window.switchView === 'function') {
+                window.switchView(view);
+              }
+              return false;
+            };
+          }
         } else if (openFeedback === 'true') {
-          newItem.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('🔘 点击反馈按钮');
-            const feedbackModal = document.getElementById('feedbackModal');
-            if (feedbackModal) {
-              feedbackModal.style.display = 'flex';
-            }
-            return false;
-          }, { capture: true, passive: false });
+          // 只在onclick未设置时才设置
+          if (!item.onclick) {
+            item.onclick = function(e) {
+              if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+              }
+              console.log('🔘 点击反馈按钮');
+              const feedbackModal = document.getElementById('feedbackModal');
+              if (feedbackModal) {
+                feedbackModal.style.display = 'flex';
+              }
+              return false;
+            };
+          }
         }
       });
       
@@ -10121,67 +10122,69 @@
       if (btnGoCreate && btnGoCreate.dataset.fixed !== 'true') {
         btnGoCreate.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
         btnGoCreate.dataset.fixed = 'true';
-        // 移除旧的事件监听器
-        const newBtn = btnGoCreate.cloneNode(true);
-        btnGoCreate.parentNode.replaceChild(newBtn, btnGoCreate);
-        newBtn.dataset.fixed = 'true';
-        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        newBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          console.log('🔘 点击新增鸽子按钮');
-          if (typeof window.switchView === 'function') {
-            window.switchView('createView');
-          }
-          return false;
-        }, { capture: true, passive: false });
+        // 不使用cloneNode，直接设置onclick
+        if (!btnGoCreate.onclick) {
+          btnGoCreate.onclick = function(e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            }
+            console.log('🔘 点击新增鸽子按钮');
+            if (typeof window.switchView === 'function') {
+              window.switchView('createView');
+            }
+            return false;
+          };
+        }
       }
       
       const btnUserAvatar = document.getElementById('btnUserAvatar');
       if (btnUserAvatar && btnUserAvatar.dataset.fixed !== 'true') {
         btnUserAvatar.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
         btnUserAvatar.dataset.fixed = 'true';
-        const newBtn = btnUserAvatar.cloneNode(true);
-        btnUserAvatar.parentNode.replaceChild(newBtn, btnUserAvatar);
-        newBtn.dataset.fixed = 'true';
-        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        newBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          console.log('🔘 点击账户按钮');
-          const userInfoModal = document.getElementById('userInfoModal');
-          if (userInfoModal) {
-            userInfoModal.style.display = 'flex';
-          } else if (typeof showUserInfoModal === 'function') {
-            showUserInfoModal();
-          }
-          return false;
-        }, { capture: true, passive: false });
+        // 不使用cloneNode，直接设置onclick
+        if (!btnUserAvatar.onclick) {
+          btnUserAvatar.onclick = function(e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            }
+            console.log('🔘 点击账户按钮');
+            const userInfoModal = document.getElementById('userInfoModal');
+            if (userInfoModal) {
+              userInfoModal.style.display = 'flex';
+            } else if (typeof showUserInfoModal === 'function') {
+              showUserInfoModal();
+            }
+            return false;
+          };
+        }
       }
       
       const btnSettings = document.getElementById('btnSettings');
       if (btnSettings && btnSettings.dataset.fixed !== 'true') {
         btnSettings.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
         btnSettings.dataset.fixed = 'true';
-        const newBtn = btnSettings.cloneNode(true);
-        btnSettings.parentNode.replaceChild(newBtn, btnSettings);
-        newBtn.dataset.fixed = 'true';
-        newBtn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important;';
-        newBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          console.log('🔘 点击设置按钮');
-          const settingsModal = document.getElementById('settingsModal');
-          if (settingsModal) {
-            settingsModal.style.display = 'flex';
-          } else if (typeof showSettingsModal === 'function') {
-            showSettingsModal();
-          }
-          return false;
-        }, { capture: true, passive: false });
+        // 不使用cloneNode，直接设置onclick
+        if (!btnSettings.onclick) {
+          btnSettings.onclick = function(e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            }
+            console.log('🔘 点击设置按钮');
+            const settingsModal = document.getElementById('settingsModal');
+            if (settingsModal) {
+              settingsModal.style.display = 'flex';
+            } else if (typeof showSettingsModal === 'function') {
+              showSettingsModal();
+            }
+            return false;
+          };
+        }
       }
       
       // 修复快捷入口按钮
@@ -11037,11 +11040,11 @@
               body: JSON.stringify({
                 model: model,
                 messages: [
-                  { role: 'system', content: '你是一个专业的信鸽训练分析师，擅长分析训练数据并提供专业建议。' },
+                  { role: 'system', content: '你是智鸽（PigeonAI）系统的训练分析师。回答要简洁（100字内），只围绕本系统的训练数据和分析功能，不要提供无关信息。' },
                   { role: 'user', content: prompt }
                 ],
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 256  // 减少token数，使回答更简洁
               })
             });
 

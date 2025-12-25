@@ -35,8 +35,14 @@
   </script>
   -->
   
+  <!-- 🔧 移动端Alert修复脚本（替换原生alert，确保可以关闭） -->
+  <script src="js/mobile-alert-fix.js"></script>
+  
   <!-- 🔧 移动端按钮点击终极修复脚本（独立文件 - 最高优先级） -->
   <script src="js/mobile-button-click-fix.js"></script>
+  
+  <!-- 🧪 全面功能测试脚本（模拟用户使用环境） -->
+  <script src="js/comprehensive-test.js"></script>
   
   <!-- 🔧 移动端按钮点击问题终极修复脚本（内嵌版 - 立即执行 - 备用） -->
   <script>
@@ -7360,10 +7366,26 @@
         return;
       }
 
+      // 同步到云端
+      try {
+        await autoSyncUserData({ force: true });
+        console.log('✅ 数据已同步到云端');
+      } catch (e) {
+        console.warn('⚠️ 同步到云端失败:', e);
+      }
+      
       alert('保存成功，已生成档案。');
       closeCreatePigeonModal();
       refreshList();
       refreshDashboard();
+      
+      // 触发storage事件，通知其他标签页
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEY,
+        newValue: JSON.stringify(pigeons),
+        oldValue: null,
+        storageArea: localStorage
+      }));
     }
 
     // 加载比赛数据（使用与PC端相同的存储键）
