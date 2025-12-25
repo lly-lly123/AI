@@ -1,0 +1,10 @@
+
+# ==========================================
+# MinIO配置（文件存储）
+# ==========================================
+MINIO_ENDPOINT=minio.zeabur.internal
+MINIO_ACCESS_KEY=minio
+MINIO_SECRET_KEY=QR74290MYh36pOiKtenwoDXdk8qz1bI5
+MINIO_BUCKET=zeabur
+MINIO_USE_SSL=false
+

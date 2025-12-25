@@ -199,6 +199,34 @@ class AuthService {
   }
 
   /**
+   * 管理员重置用户密码（不需要原密码）
+   */
+  async adminResetPassword(userId, newPassword) {
+    try {
+      const user = await storageService.find('users', u => u.id === userId);
+
+      if (!user) {
+        throw new Error('用户不存在');
+      }
+
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('新密码长度至少为6位');
+      }
+
+      await storageService.update('users', user.id, {
+        password: this.hashPassword(newPassword),
+        passwordChangedAt: new Date().toISOString()
+      });
+
+      logger.info('管理员重置用户密码', { userId, username: user.username });
+      return { success: true, message: '密码重置成功' };
+    } catch (error) {
+      logger.error('管理员重置密码失败', error);
+      throw error;
+    }
+  }
+
+  /**
    * 记录登录尝试
    */
   async logLoginAttempt(username, success, reason) {

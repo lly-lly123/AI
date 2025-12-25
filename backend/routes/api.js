@@ -763,6 +763,36 @@ router.put('/admin/users/:id/role', authenticate, requireAdmin, async (req, res)
 });
 
 /**
+ * 管理员重置用户密码
+ * PUT /api/admin/users/:id/password
+ */
+router.put('/admin/users/:id/password', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: '新密码长度至少为6位'
+      });
+    }
+    
+    await authService.adminResetPassword(id, newPassword);
+    res.json({
+      success: true,
+      message: '密码重置成功'
+    });
+  } catch (error) {
+    logger.error('管理员重置密码失败', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || '重置密码失败'
+    });
+  }
+});
+
+/**
  * 获取鸽子数据统计
  * GET /api/admin/pigeons/stats
  */
