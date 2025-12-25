@@ -1954,6 +1954,81 @@
     }
     
     console.log('✅ [终极修复] 功能模块按钮修复脚本已加载');
+    
+    // 额外的全局事件监听（作为最后保障）
+    document.addEventListener('DOMContentLoaded', function() {
+      // 在body上添加全局点击监听
+      document.body.addEventListener('click', function(e) {
+        let target = e.target;
+        let card = null;
+        
+        // 向上查找mobile-card
+        while (target && target !== document.body) {
+          if (target.classList && target.classList.contains('mobile-card')) {
+            card = target;
+            break;
+          }
+          target = target.parentElement;
+        }
+        
+        if (card && card.dataset.view) {
+          console.log('🌐 [全局监听] 检测到卡片点击:', card.dataset.view);
+          try {
+            const viewId = card.dataset.view + 'View';
+            const targetView = document.getElementById(viewId);
+            if (targetView) {
+              document.querySelectorAll('.mobile-view').forEach(v => v.style.display = 'none');
+              targetView.style.display = 'block';
+              console.log('✅✅✅ [全局监听] 视图切换成功:', card.dataset.view);
+              
+              if (window.switchView && typeof window.switchView === 'function') {
+                window.switchView(card.dataset.view);
+              }
+            }
+          } catch (err) {
+            console.error('❌ [全局监听] 切换失败:', err);
+          }
+        }
+      }, { passive: true, capture: true });
+      
+      // 也在body上添加touchend监听
+      document.body.addEventListener('touchend', function(e) {
+        let target = e.target;
+        let card = null;
+        
+        while (target && target !== document.body) {
+          if (target.classList && target.classList.contains('mobile-card')) {
+            card = target;
+            break;
+          }
+          target = target.parentElement;
+        }
+        
+        if (card && card.dataset.view) {
+          console.log('🌐 [全局touchend] 检测到卡片点击:', card.dataset.view);
+          e.preventDefault();
+          e.stopPropagation();
+          
+          try {
+            const viewId = card.dataset.view + 'View';
+            const targetView = document.getElementById(viewId);
+            if (targetView) {
+              document.querySelectorAll('.mobile-view').forEach(v => v.style.display = 'none');
+              targetView.style.display = 'block';
+              console.log('✅✅✅ [全局touchend] 视图切换成功:', card.dataset.view);
+              
+              if (window.switchView && typeof window.switchView === 'function') {
+                window.switchView(card.dataset.view);
+              }
+            }
+          } catch (err) {
+            console.error('❌ [全局touchend] 切换失败:', err);
+          }
+        }
+      }, { passive: false, capture: true });
+      
+      console.log('✅ [全局监听] 已添加body级别的全局事件监听');
+    });
   })();
   </script>
 </head>
