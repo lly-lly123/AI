@@ -3216,6 +3216,7 @@
       });
       renderNews();
     }
+    window.switchNewsRegion = switchNewsRegion;
 
     // 切换资讯筛选
     function switchNewsFilter(filter) {
@@ -3225,6 +3226,7 @@
       });
       renderNews();
     }
+    window.switchNewsFilter = switchNewsFilter;
 
     // 切换赛事标签
     function switchEventTab(tab) {
@@ -3234,6 +3236,7 @@
       });
       renderEvents();
     }
+    window.switchEventTab = switchEventTab;
 
     // 视图对象
     const views = {
@@ -3566,10 +3569,99 @@
       console.log('✅ 事件委托已设置');
     }
 
+    // 全局错误处理和函数暴露
+    (function() {
+      // 全局错误捕获
+      window.addEventListener('error', function(e) {
+        console.error('❌ 全局错误:', e.error, e.message, e.filename, e.lineno);
+        // 在移动端显示错误信息（如果有vConsole）
+        if (window.vConsole) {
+          console.error('错误详情:', {
+            message: e.message,
+            filename: e.filename,
+            lineno: e.lineno,
+            colno: e.colno,
+            error: e.error
+          });
+        }
+      });
+      
+      // 捕获未处理的Promise错误
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('❌ 未处理的Promise错误:', e.reason);
+      });
+      
+      // 暴露所有关键函数到window对象（确保部署环境可用）
+      function exposeFunctionsToWindow() {
+        // 视图切换相关
+        if (typeof switchView === 'function') window.switchView = switchView;
+        if (typeof switchNewsRegion === 'function') window.switchNewsRegion = switchNewsRegion;
+        if (typeof switchNewsFilter === 'function') window.switchNewsFilter = switchNewsFilter;
+        if (typeof switchEventTab === 'function') window.switchEventTab = switchEventTab;
+        if (typeof switchPigeonView === 'function') window.switchPigeonView = switchPigeonView;
+        if (typeof switchRaceTab === 'function') window.switchRaceTab = switchRaceTab;
+        
+        // 导航相关
+        if (typeof goToCreatePigeon === 'function') window.goToCreatePigeon = goToCreatePigeon;
+        if (typeof goToAddRace === 'function') window.goToAddRace = goToAddRace;
+        if (typeof viewPigeonDetail === 'function') window.viewPigeonDetail = viewPigeonDetail;
+        if (typeof backToList === 'function') window.backToList = backToList;
+        
+        // 模态框相关
+        if (typeof showUserInfoModal === 'function') window.showUserInfoModal = showUserInfoModal;
+        if (typeof showSettingsModal === 'function') window.showSettingsModal = showSettingsModal;
+        if (typeof showAddHealthRecord === 'function') window.showAddHealthRecord = showAddHealthRecord;
+        if (typeof showAddTrainingRecord === 'function') window.showAddTrainingRecord = showAddTrainingRecord;
+        if (typeof showDataStats === 'function') window.showDataStats = showDataStats;
+        if (typeof showApiConfigModal === 'function') window.showApiConfigModal = showApiConfigModal;
+        
+        // 数据操作相关
+        if (typeof refreshList === 'function') window.refreshList = refreshList;
+        if (typeof refreshData === 'function') window.refreshData = refreshData;
+        if (typeof loadData === 'function') window.loadData = loadData;
+        
+        // 其他功能
+        if (typeof viewNews === 'function') window.viewNews = viewNews;
+        if (typeof viewEvent === 'function') window.viewEvent = viewEvent;
+        if (typeof runMobileFullAnalysis === 'function') window.runMobileFullAnalysis = runMobileFullAnalysis;
+        if (typeof analyzeQualificationMobile === 'function') window.analyzeQualificationMobile = analyzeQualificationMobile;
+        
+        console.log('✅ 关键函数已暴露到window对象');
+      }
+      
+      // 立即执行一次
+      exposeFunctionsToWindow();
+      
+      // 在DOMContentLoaded时再次执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', exposeFunctionsToWindow);
+      }
+      
+      // 延迟执行确保所有函数都已定义
+      setTimeout(exposeFunctionsToWindow, 100);
+      setTimeout(exposeFunctionsToWindow, 500);
+      setTimeout(exposeFunctionsToWindow, 1000);
+    })();
+
     document.addEventListener('DOMContentLoaded', function() {
       // 初始化全局API URL
       initGlobalApiUrl();
       setupEventDelegation();
+      
+      // 再次暴露所有函数
+      if (typeof switchView === 'function') window.switchView = switchView;
+      if (typeof goToCreatePigeon === 'function') window.goToCreatePigeon = goToCreatePigeon;
+      if (typeof goToAddRace === 'function') window.goToAddRace = goToAddRace;
+      if (typeof viewPigeonDetail === 'function') window.viewPigeonDetail = viewPigeonDetail;
+      if (typeof switchNewsRegion === 'function') window.switchNewsRegion = switchNewsRegion;
+      if (typeof switchNewsFilter === 'function') window.switchNewsFilter = switchNewsFilter;
+      if (typeof switchEventTab === 'function') window.switchEventTab = switchEventTab;
+      if (typeof switchPigeonView === 'function') window.switchPigeonView = switchPigeonView;
+      if (typeof switchRaceTab === 'function') window.switchRaceTab = switchRaceTab;
+      if (typeof showAddHealthRecord === 'function') window.showAddHealthRecord = showAddHealthRecord;
+      if (typeof showAddTrainingRecord === 'function') window.showAddTrainingRecord = showAddTrainingRecord;
+      
+      console.log('✅ DOMContentLoaded: 函数暴露完成');
       
       const feedbackTriggers = document.querySelectorAll('[data-open-feedback]');
       const handleFeedbackSubmit = async function() {
@@ -5085,6 +5177,7 @@
       // 重新渲染列表
       refreshList();
     }
+    window.switchPigeonView = switchPigeonView;
     
     // 刷新鸽子列表
     function refreshList() {
@@ -5229,6 +5322,7 @@
       renderMobileDetail();
       switchView('detail');
     }
+    window.viewPigeonDetail = viewPigeonDetail;
 
     // 渲染移动端详情
     function renderMobileDetail() {
@@ -6213,6 +6307,7 @@
       document.getElementById('createPigeonModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
+    window.goToCreatePigeon = goToCreatePigeon;
 
     // 关闭创建鸽子模态框
     function closeCreatePigeonModal() {
@@ -6647,6 +6742,7 @@
         renderRaceStats();
       }
     }
+    window.switchRaceTab = switchRaceTab;
 
     // 渲染成绩统计
     function renderRaceStats() {
@@ -6904,6 +7000,7 @@
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
+    window.goToAddRace = goToAddRace;
 
     // 关闭比赛模态框
     function closeRaceModal() {
@@ -8102,6 +8199,7 @@
       document.getElementById('healthRecordDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('healthRecordModal').style.display = 'flex';
     }
+    window.showAddHealthRecord = showAddHealthRecord;
     
     function closeHealthRecordModal() {
       const modal = document.getElementById('healthRecordModal');
@@ -8382,6 +8480,7 @@
       document.getElementById('trainingRecordDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('trainingRecordModal').style.display = 'flex';
     }
+    window.showAddTrainingRecord = showAddTrainingRecord;
     
     function closeTrainingRecordModal() {
       const modal = document.getElementById('trainingRecordModal');
