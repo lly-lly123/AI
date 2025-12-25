@@ -284,6 +284,11 @@
         
         // 创建最简单直接的事件处理函数（不依赖任何外部函数）
         const handleCardClick = function(e) {
+          // 确保是用户真实点击，不是程序触发
+          if (!e.isTrusted) {
+            return;
+          }
+          
           // 不阻止事件，让onclick属性自然执行
           const clickedCard = e.currentTarget || card;
           
@@ -291,7 +296,7 @@
           if (clickedCard.onclick && typeof clickedCard.onclick === 'function') {
             try {
               clickedCard.onclick(e);
-              console.log('✅ 卡片onclick函数执行');
+              console.log('✅ 用户点击，卡片onclick函数执行');
             } catch (err) {
               console.error('❌ 执行onclick函数失败:', err);
             }
@@ -362,12 +367,18 @@
           handleCardClick(e);
         }, { passive: true, capture: true });
         
-        // 确保onclick属性也工作（直接赋值）
+        // 确保onclick属性也工作（直接赋值，只响应真实用户点击）
         if (card.getAttribute('onclick')) {
           const originalOnclick = card.getAttribute('onclick');
           card.onclick = function(e) {
+            // 确保是用户真实点击，不是程序触发
+            if (!e.isTrusted) {
+              return;
+            }
+            
             try {
               eval(originalOnclick);
+              console.log('✅ 用户点击，onclick执行');
             } catch (err) {
               console.error('❌ onclick执行失败:', err);
             }
@@ -1959,7 +1970,12 @@
         
         // 创建最简单直接的事件处理函数
         const directClick = function(e) {
-          console.log('🎯 [终极修复] 卡片', card.dataset.cardIndex || (index + 1), '被点击，data-view:', card.dataset.view);
+          // 确保是用户真实点击，不是程序触发
+          if (!e.isTrusted) {
+            return;
+          }
+          
+          console.log('🎯 [终极修复] 用户点击卡片', card.dataset.cardIndex || (index + 1), '，data-view:', card.dataset.view);
           
           // 如果有data-view属性，直接切换视图
           if (card.dataset.view) {
@@ -2143,8 +2159,13 @@
     
     // 额外的全局事件监听（作为最后保障）
     document.addEventListener('DOMContentLoaded', function() {
-      // 在body上添加全局点击监听
+      // 在body上添加全局点击监听（只响应真实用户点击）
       document.body.addEventListener('click', function(e) {
+        // 确保是用户真实点击，不是程序触发
+        if (!e.isTrusted) {
+          return;
+        }
+        
         let target = e.target;
         let card = null;
         
@@ -2158,7 +2179,7 @@
         }
         
         if (card && card.dataset.view) {
-          console.log('🌐 [全局监听] 检测到卡片点击:', card.dataset.view);
+          console.log('🌐 [全局监听] 用户点击卡片:', card.dataset.view);
           try {
             const viewId = card.dataset.view + 'View';
             const targetView = document.getElementById(viewId);
@@ -2177,8 +2198,13 @@
         }
       }, { passive: true, capture: true });
       
-      // 也在body上添加touchend监听
+      // 也在body上添加touchend监听（只响应真实用户触摸）
       document.body.addEventListener('touchend', function(e) {
+        // 确保是用户真实触摸，不是程序触发
+        if (!e.isTrusted) {
+          return;
+        }
+        
         let target = e.target;
         let card = null;
         
@@ -2191,7 +2217,7 @@
         }
         
         if (card && card.dataset.view) {
-          console.log('🌐 [全局touchend] 检测到卡片点击:', card.dataset.view);
+          console.log('🌐 [全局touchend] 用户触摸卡片:', card.dataset.view);
           e.preventDefault();
           e.stopPropagation();
           
@@ -3854,6 +3880,11 @@
             if (card.dataset.view) {
               const viewName = card.dataset.view;
               const handler = function(e) {
+                // 确保是用户真实点击，不是程序触发
+                if (!e.isTrusted) {
+                  return;
+                }
+                
                 e.preventDefault();
                 e.stopPropagation();
                 try {
@@ -3861,7 +3892,7 @@
                   if (v) {
                     document.querySelectorAll('.mobile-view').forEach(el => el.style.display = 'none');
                     v.style.display = 'block';
-                    console.log('✅ 通过data-view切换:', viewName);
+                    console.log('✅ 用户点击，通过data-view切换:', viewName);
                     // 调用switchView以触发其他逻辑
                     if (window.switchView) {
                       window.switchView(viewName);
@@ -4204,8 +4235,13 @@
         }
       }, { passive: true, capture: true });
       
-      // 专门处理mobile-card的触摸事件
+      // 专门处理mobile-card的触摸事件（只响应真实用户触摸）
       document.body.addEventListener('touchend', function(e) {
+        // 确保是用户真实触摸，不是程序触发
+        if (!e.isTrusted) {
+          return;
+        }
+        
         const target = e.target;
         // 查找最近的mobile-card父元素
         let card = target;
@@ -4221,7 +4257,7 @@
                 // 直接执行onclick代码
                 const func = new Function('event', onclickAttr);
                 func(e);
-                console.log('✅ 卡片点击已触发:', onclickAttr);
+                console.log('✅ 用户触摸卡片，已触发:', onclickAttr);
               } catch (err) {
                 console.error('❌ 执行卡片onclick失败:', err, onclickAttr);
                 // 如果直接执行失败，尝试通过window调用
@@ -4240,8 +4276,13 @@
         }
       }, { passive: false, capture: true });
       
-      // 也处理click事件作为备用（最简单直接版）
+      // 也处理click事件作为备用（只响应真实用户点击）
       document.body.addEventListener('click', function(e) {
+        // 确保是用户真实点击，不是程序触发
+        if (!e.isTrusted) {
+          return;
+        }
+        
         const target = e.target;
         let card = target;
         while (card && card !== document.body) {
@@ -4257,7 +4298,7 @@
                     v.style.display = 'none';
                   });
                   targetView.style.display = 'block';
-                  console.log('✅ click事件切换视图:', viewName);
+                  console.log('✅ 用户点击，切换视图:', viewName);
                   
                   if (window.switchView && typeof window.switchView === 'function') {
                     window.switchView(viewName);
@@ -4275,7 +4316,7 @@
               card.dataset.clickHandled = 'true';
               try {
                 eval(onclickAttr);
-                console.log('✅ click执行onclick');
+                console.log('✅ 用户点击，执行onclick');
               } catch (err) {
                 console.error('❌ click执行onclick失败:', err);
               }
