@@ -146,70 +146,97 @@
         }
       });
       
-      // 3.1 特别修复移动端卡片点击（增强版）
+      // 3.1 特别修复移动端卡片点击（终极增强版）
       const mobileCards = document.querySelectorAll('.mobile-card');
       mobileCards.forEach(card => {
         card.style.setProperty('pointer-events', 'auto', 'important');
         card.style.setProperty('touch-action', 'manipulation', 'important');
-        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.3)', 'important');
+        card.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.4)', 'important');
         card.style.setProperty('cursor', 'pointer', 'important');
         card.style.setProperty('position', 'relative', 'important');
-        card.style.setProperty('z-index', '50', 'important');
+        card.style.setProperty('z-index', '100', 'important');
         card.style.setProperty('user-select', 'none', 'important');
         card.style.setProperty('-webkit-user-select', 'none', 'important');
         card.removeAttribute('disabled');
         
-        // 如果卡片有onclick属性，确保触摸事件也能触发
-        if (card.hasAttribute('onclick')) {
-          const onclickAttr = card.getAttribute('onclick');
+        // 创建统一的事件处理函数
+        const handleCardClick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
           
-          // 方法1: 直接绑定touchend事件
-          const touchendHandler = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (onclickAttr) {
-              try {
-                const func = new Function('event', onclickAttr);
-                func(e);
-                console.log('✅ 卡片touchend触发:', onclickAttr);
-              } catch (err) {
-                console.error('❌ 执行卡片onclick失败:', err, onclickAttr);
-                // 备用方案：通过window调用
-                if (window.switchView && onclickAttr.includes('switchView')) {
-                  const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
-                  if (match && match[1]) {
-                    window.switchView(match[1]);
-                  }
+          // 方法1: 优先使用data-view属性（最可靠）
+          if (card.dataset.view && window.switchView) {
+            try {
+              window.switchView(card.dataset.view);
+              console.log('✅ 卡片点击（data-view）:', card.dataset.view);
+              return;
+            } catch (err) {
+              console.error('❌ switchView调用失败:', err);
+            }
+          }
+          
+          // 方法2: 如果有onclick属性，执行它
+          const onclickAttr = card.getAttribute('onclick');
+          if (onclickAttr) {
+            try {
+              const func = new Function('event', onclickAttr);
+              func(e);
+              console.log('✅ 卡片点击（onclick）:', onclickAttr);
+              return;
+            } catch (err) {
+              console.error('❌ 执行卡片onclick失败:', err, onclickAttr);
+              // 备用方案：通过window调用
+              if (window.switchView && onclickAttr.includes('switchView')) {
+                const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+                if (match && match[1]) {
+                  window.switchView(match[1]);
+                  console.log('✅ 通过window.switchView调用:', match[1]);
+                  return;
                 }
               }
             }
-          };
+          }
           
-          // 方法2: 绑定click事件作为备用
-          const clickHandler = function(e) {
-            if (onclickAttr) {
-              try {
-                const func = new Function('event', onclickAttr);
-                func(e);
-                console.log('✅ 卡片click触发:', onclickAttr);
-              } catch (err) {
-                console.error('❌ 执行卡片click失败:', err);
-              }
+          // 方法3: 如果有data-open-feedback属性
+          if (card.dataset.openFeedback === 'true') {
+            const feedbackTriggers = document.querySelectorAll('[data-open-feedback]');
+            if (feedbackTriggers.length > 0) {
+              const event = new Event('click');
+              feedbackTriggers[0].dispatchEvent(event);
+              console.log('✅ 触发反馈功能');
+              return;
             }
-          };
+          }
+        };
+        
+        // 移除所有旧的事件监听器（通过克隆节点）
+        const newCard = card.cloneNode(true);
+        card.parentNode.replaceChild(newCard, card);
+        const freshCard = card.parentNode.querySelector('.mobile-card[data-view="' + (card.dataset.view || '') + '"]') || 
+                         card.parentNode.querySelector('.mobile-card[onclick*="' + (card.getAttribute('onclick') || '').substring(0, 20) + '"]') ||
+                         card.parentNode.lastElementChild;
+        
+        if (freshCard) {
+          // 重新应用样式
+          freshCard.style.setProperty('pointer-events', 'auto', 'important');
+          freshCard.style.setProperty('touch-action', 'manipulation', 'important');
+          freshCard.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.4)', 'important');
+          freshCard.style.setProperty('cursor', 'pointer', 'important');
+          freshCard.style.setProperty('position', 'relative', 'important');
+          freshCard.style.setProperty('z-index', '100', 'important');
+          freshCard.style.setProperty('user-select', 'none', 'important');
+          freshCard.style.setProperty('-webkit-user-select', 'none', 'important');
+          freshCard.removeAttribute('disabled');
           
-          // 移除旧的事件监听器（如果存在）
-          card.removeEventListener('touchend', touchendHandler);
-          card.removeEventListener('click', clickHandler);
-          
-          // 添加新的事件监听器
-          card.addEventListener('touchend', touchendHandler, { passive: false, capture: true });
-          card.addEventListener('click', clickHandler, { passive: true, capture: true });
+          // 绑定新的事件监听器
+          freshCard.addEventListener('touchend', handleCardClick, { passive: false, capture: true });
+          freshCard.addEventListener('click', handleCardClick, { passive: false, capture: true });
+          freshCard.addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+          }, { passive: true, capture: true });
           
           // 确保onclick属性也工作
-          if (!card.onclick) {
-            card.onclick = clickHandler;
-          }
+          freshCard.onclick = handleCardClick;
         }
       });
       
@@ -2020,23 +2047,23 @@
           <h2 class="mobile-section-title">⚙️ 更多功能</h2>
         </div>
         <div class="mobile-list">
-          <div class="mobile-card" onclick="switchView('pedigree')">
+          <div class="mobile-card" data-view="pedigree" onclick="if(window.switchView){window.switchView('pedigree');}else{console.error('switchView未定义');}">
             <div class="mobile-card-title">🧬 血统关系</div>
             <div class="mobile-card-meta">查看血统树</div>
           </div>
-          <div class="mobile-card" onclick="switchView('breeding')">
+          <div class="mobile-card" data-view="breeding" onclick="if(window.switchView){window.switchView('breeding');}else{console.error('switchView未定义');}">
             <div class="mobile-card-title">💕 繁育配对</div>
             <div class="mobile-card-meta">配对评估和管理</div>
           </div>
-          <div class="mobile-card" onclick="switchView('health')">
+          <div class="mobile-card" data-view="health" onclick="if(window.switchView){window.switchView('health');}else{console.error('switchView未定义');}">
             <div class="mobile-card-title">🩺 健康管理</div>
             <div class="mobile-card-meta">健康记录和提醒</div>
           </div>
-          <div class="mobile-card" onclick="switchView('analysis')">
+          <div class="mobile-card" data-view="analysis" onclick="if(window.switchView){window.switchView('analysis');}else{console.error('switchView未定义');}">
             <div class="mobile-card-title">🧠 智能分析</div>
             <div class="mobile-card-meta">AI智能分析</div>
           </div>
-          <div class="mobile-card" onclick="switchView('training')">
+          <div class="mobile-card" data-view="training" onclick="if(window.switchView){window.switchView('training');}else{console.error('switchView未定义');}">
             <div class="mobile-card-title">🏃 训练模块</div>
             <div class="mobile-card-meta">训练记录和分析</div>
           </div>
@@ -3690,31 +3717,60 @@
         }
       }, { passive: false, capture: true });
       
-      // 也处理click事件作为备用
+      // 也处理click事件作为备用（增强版）
       document.body.addEventListener('click', function(e) {
         const target = e.target;
         let card = target;
         while (card && card !== document.body) {
-          if (card.classList && card.classList.contains('mobile-card') && card.hasAttribute('onclick')) {
+          if (card.classList && card.classList.contains('mobile-card')) {
+            // 方法1: 如果有data-view属性，直接调用switchView
+            if (card.dataset.view && window.switchView) {
+              try {
+                e.preventDefault();
+                e.stopPropagation();
+                window.switchView(card.dataset.view);
+                console.log('✅ 卡片click（data-view）:', card.dataset.view);
+                return;
+              } catch (err) {
+                console.error('❌ switchView调用失败:', err);
+              }
+            }
+            
+            // 方法2: 如果有onclick属性，执行它
             const onclickAttr = card.getAttribute('onclick');
             if (onclickAttr && !card.dataset.clickHandled) {
               card.dataset.clickHandled = 'true';
               try {
+                e.preventDefault();
+                e.stopPropagation();
                 const func = new Function('event', onclickAttr);
                 func(e);
-                console.log('✅ 卡片click事件已触发:', onclickAttr);
+                console.log('✅ 卡片click（onclick）:', onclickAttr);
               } catch (err) {
                 console.error('❌ 执行卡片click失败:', err);
               }
               setTimeout(() => {
                 delete card.dataset.clickHandled;
               }, 100);
+              return;
             }
+            
+            // 方法3: 如果有data-open-feedback属性
+            if (card.dataset.openFeedback === 'true') {
+              const feedbackTriggers = document.querySelectorAll('[data-open-feedback]');
+              if (feedbackTriggers.length > 0) {
+                const event = new Event('click');
+                feedbackTriggers[0].dispatchEvent(event);
+                console.log('✅ 触发反馈功能（click）');
+                return;
+              }
+            }
+            
             break;
           }
           card = card.parentElement;
         }
-      }, { passive: true, capture: true });
+      }, { passive: false, capture: true });
       
       console.log('✅ 事件委托已设置');
     }
