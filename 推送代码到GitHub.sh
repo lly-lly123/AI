@@ -1,47 +1,54 @@
 #!/bin/bash
 
-# 推送代码到 GitHub 仓库
-# 使用方法：./推送代码到GitHub.sh
+# 推送代码到GitHub脚本
+# VPN已连接时使用此脚本
 
-echo "🚀 开始推送代码到 GitHub..."
+echo "🚀 开始推送代码到GitHub..."
 echo ""
 
-cd "$(dirname "$0")"
+cd /Users/macbookair/Desktop/AI
 
-# 检查是否有未提交的更改
-if [ -n "$(git status -s)" ]; then
-    echo "⚠️  检测到未提交的更改，正在添加..."
-    git add -A
-    git commit -m "自动提交更改 - $(date '+%Y-%m-%d %H:%M:%S')"
-fi
+# 方法1：尝试使用代理推送（Telescope默认HTTP代理端口1191）
+echo "📡 方法1: 尝试使用代理推送..."
+git config http.proxy http://127.0.0.1:1191
+git config https.proxy http://127.0.0.1:1191
 
-# 显示当前状态
-echo "📊 当前 Git 状态："
-git status -sb
-echo ""
-
-# 尝试推送
-echo "📤 正在推送到 GitHub..."
 if git push -u origin main; then
-    echo ""
     echo "✅ 推送成功！"
-    echo "📝 提交信息："
-    git log --oneline -3
-else
-    echo ""
-    echo "❌ 推送失败，可能的原因："
-    echo "   1. 网络连接问题"
-    echo "   2. GitHub 访问受限"
-    echo "   3. 需要配置代理"
-    echo ""
-    echo "💡 建议："
-    echo "   - 检查网络连接"
-    echo "   - 稍后重试"
-    echo "   - 或使用 VPN/代理"
-    echo ""
-    echo "📋 本地提交记录（已准备好推送）："
-    git log --oneline -5
+    git config --unset http.proxy
+    git config --unset https.proxy
+    exit 0
 fi
 
+# 方法2：如果方法1失败，尝试临时禁用SSL验证
+echo ""
+echo "📡 方法2: 尝试临时禁用SSL验证..."
+git config --unset http.proxy
+git config --unset https.proxy
 
+if git -c http.sslVerify=false push -u origin main; then
+    echo "✅ 推送成功！"
+    exit 0
+fi
 
+# 方法3：尝试使用SSH方式（如果已配置SSH密钥）
+echo ""
+echo "📡 方法3: 尝试使用SSH方式..."
+git remote set-url origin git@github.com:lly-lly123/AI.git
+
+if git push -u origin main; then
+    echo "✅ 推送成功！"
+    exit 0
+fi
+
+# 如果所有方法都失败
+echo ""
+echo "❌ 所有推送方法都失败了"
+echo ""
+echo "请尝试以下手动操作："
+echo "1. 检查VPN连接是否正常"
+echo "2. 在终端中手动运行: git push -u origin main"
+echo "3. 如果还是失败，可以尝试："
+echo "   git -c http.sslVerify=false push -u origin main"
+echo ""
+exit 1

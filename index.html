@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- 模块1：设备自动识别与无感知跳转（独立封装，不破坏原有逻辑） -->
   <script src="js/device-detect.js"></script>
+  <!-- 通用按钮点击修复脚本（最高优先级） -->
+  <script src="通用按钮点击修复.js"></script>
 
   <style>
     /* ==========================================
@@ -21529,48 +21531,185 @@
   let cachedButtons = null;
   
   function initializeAllButtons() {
-    // 如果已经初始化过，直接返回
-    if (buttonsInitialized) {
-      return;
-    }
-    
     console.log('=== 开始初始化所有按钮事件 ===');
     
-    // 缓存按钮元素，避免重复查询
-    if (!cachedButtons) {
-      cachedButtons = document.querySelectorAll('button, .btn, .sidebar-item, .quick-link-btn, .view-switch-btn, .race-tab-btn, .event-tab-btn, .news-filter-btn');
-    }
-    
-    // 使用CSS类而不是内联样式，性能更好
+    // 强制添加全局CSS样式，确保所有按钮可点击
     if (!document.getElementById('button-styles')) {
       const style = document.createElement('style');
       style.id = 'button-styles';
       style.textContent = `
+        /* 强制所有按钮可点击 */
         button, .btn, .sidebar-item, .quick-link-btn, .view-switch-btn, 
-        .race-tab-btn, .event-tab-btn, .news-filter-btn {
+        .race-tab-btn, .event-tab-btn, .news-filter-btn, [role="button"],
+        .card-header button, .home-overview button, .home-content button {
           pointer-events: auto !important;
           cursor: pointer !important;
           user-select: none !important;
           -webkit-user-select: none !important;
+          position: relative !important;
+          z-index: 10 !important;
         }
-        .sidebar, .sidebar-menu, .main-content {
+        /* 确保容器可点击 */
+        .sidebar, .sidebar-menu, .main-content, .content-wrapper,
+        .home-section, .home-content, .home-overview {
           pointer-events: auto !important;
+        }
+        /* 确保没有覆盖层阻止点击 */
+        body, html {
+          pointer-events: auto !important;
+        }
+        /* 移除可能遮挡的覆盖层 */
+        .sidebar-overlay:not(.active) {
+          display: none !important;
+          pointer-events: none !important;
         }
       `;
       document.head.appendChild(style);
     }
     
-    console.log(`✓ 已设置 ${cachedButtons.length} 个按钮的点击样式`);
+    // 强制设置所有按钮的样式
+    const allButtons = document.querySelectorAll('button, .btn, .sidebar-item, .quick-link-btn, [role="button"]');
+    allButtons.forEach(btn => {
+      btn.style.pointerEvents = 'auto';
+      btn.style.cursor = 'pointer';
+      btn.style.position = 'relative';
+      btn.style.zIndex = '10';
+      if (!btn.hasAttribute('role')) {
+        btn.setAttribute('role', 'button');
+      }
+      if (!btn.hasAttribute('tabindex')) {
+        btn.setAttribute('tabindex', '0');
+      }
+    });
+    
+    // 确保侧边栏可点击
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    if (sidebar) {
+      sidebar.style.pointerEvents = 'auto';
+      sidebar.style.zIndex = '999';
+    }
+    if (sidebarMenu) {
+      sidebarMenu.style.pointerEvents = 'auto';
+    }
+    
+    // 确保主内容区可点击
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.style.pointerEvents = 'auto';
+    }
+    
+    console.log(`✓ 已强制设置 ${allButtons.length} 个按钮的点击样式`);
     console.log('=== 按钮初始化完成 ===');
     
     buttonsInitialized = true;
   }
+  
+  // 全局强制修复所有按钮点击问题（最高优先级）
+  function forceFixAllButtons() {
+    console.log('🔧 开始强制修复所有按钮...');
+    
+    // 1. 强制移除所有可能阻止点击的覆盖层
+    const overlays = document.querySelectorAll('.sidebar-overlay:not(.active), .loading-overlay, .modal-backdrop:not(.active)');
+    overlays.forEach(overlay => {
+      overlay.style.display = 'none';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '-1';
+    });
+    
+    // 2. 强制设置所有按钮可点击
+    const allClickableElements = document.querySelectorAll(`
+      button, .btn, .sidebar-item, .quick-link-btn, 
+      .view-switch-btn, .race-tab-btn, .event-tab-btn, 
+      .news-filter-btn, [role="button"], 
+      .card-header button, .home-overview button, 
+      .home-content button, a[onclick], .announcement-modal-close
+    `);
+    
+    allClickableElements.forEach(el => {
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'pointer';
+      el.style.position = 'relative';
+      el.style.zIndex = '10';
+      if (!el.hasAttribute('role') && el.tagName !== 'A') {
+        el.setAttribute('role', 'button');
+      }
+      if (!el.hasAttribute('tabindex')) {
+        el.setAttribute('tabindex', '0');
+      }
+    });
+    
+    // 3. 确保关键容器可点击
+    const containers = [
+      '.sidebar', '.sidebar-menu', '.main-content', 
+      '.content-wrapper', '.home-section', '.home-content',
+      'body', 'html'
+    ];
+    
+    containers.forEach(selector => {
+      const el = document.querySelector(selector);
+      if (el) {
+        el.style.pointerEvents = 'auto';
+      }
+    });
+    
+    // 4. 重新绑定所有侧边栏菜单项（确保事件绑定）
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => {
+      item.style.pointerEvents = 'auto';
+      item.style.cursor = 'pointer';
+      item.style.zIndex = '10';
+    });
+    
+    // 5. 重新绑定所有快捷入口按钮
+    const quickLinks = document.querySelectorAll('.quick-link-btn');
+    quickLinks.forEach(btn => {
+      btn.style.pointerEvents = 'auto';
+      btn.style.cursor = 'pointer';
+      btn.style.zIndex = '10';
+      // 确保事件已绑定（如果bindQuickLinkButtons函数存在，重新调用）
+      if (typeof bindQuickLinkButtons === 'function') {
+        // 移除bound标记，强制重新绑定
+        btn.dataset.bound = 'false';
+      }
+    });
+    // 重新绑定快捷入口按钮事件
+    if (typeof bindQuickLinkButtons === 'function') {
+      bindQuickLinkButtons();
+    }
+    
+    // 6. 重新绑定顶部按钮
+    const topButtons = document.querySelectorAll('#btnGoCreate, #btnAccount, #btnSettings');
+    topButtons.forEach(btn => {
+      if (btn) {
+        btn.style.pointerEvents = 'auto';
+        btn.style.cursor = 'pointer';
+        btn.style.zIndex = '10';
+      }
+    });
+    
+    console.log(`✅ 强制修复完成: ${allClickableElements.length} 个可点击元素`);
+  }
+  
+  // 立即执行强制修复（最高优先级）
+  forceFixAllButtons();
+  
+  // 延迟再次执行，确保DOM完全加载
+  setTimeout(forceFixAllButtons, 100);
+  setTimeout(forceFixAllButtons, 500);
+  setTimeout(forceFixAllButtons, 1000);
+  setTimeout(forceFixAllButtons, 2000);
+  
+  // 页面完全加载后再次执行
+  window.addEventListener('load', forceFixAllButtons);
   
   // 默认显示首页（延迟执行，确保所有视图都已初始化）
   setTimeout(() => {
     switchView('homeView');
     // 初始化所有按钮（只执行一次）
     initializeAllButtons();
+    // 再次强制修复
+    forceFixAllButtons();
   }, 100);
   
   console.log('%c🕊️ 智鸽｜PigeonAI v2.0', 'color: #2563eb; font-size: 16px; font-weight: bold;');
