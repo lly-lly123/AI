@@ -112,15 +112,20 @@
       });
       
       // 确保API URL格式正确（如果已经包含/api，不再重复添加）
-      let registerUrl = apiUrl;
-      if (!registerUrl.endsWith('/api/auth/register')) {
-        if (registerUrl.endsWith('/api')) {
-          registerUrl = registerUrl + '/auth/register';
-        } else if (registerUrl.endsWith('/')) {
-          registerUrl = registerUrl + 'api/auth/register';
-        } else {
-          registerUrl = registerUrl + '/api/auth/register';
-        }
+      let registerUrl = apiUrl.trim();
+      // 去掉尾部斜杠，统一处理
+      if (registerUrl.endsWith('/')) {
+        registerUrl = registerUrl.slice(0, -1);
+      }
+      // 如果URL已经包含目标路径，直接使用
+      if (registerUrl.endsWith('/api/auth/register')) {
+        // 已经是完整路径
+      } else if (registerUrl.endsWith('/api')) {
+        // 如果以/api结尾，直接拼接
+        registerUrl = registerUrl + '/auth/register';
+      } else {
+        // 否则添加/api前缀
+        registerUrl = registerUrl + '/api/auth/register';
       }
       
       console.log('🔧 [自动账号] 注册URL:', registerUrl);
@@ -162,15 +167,20 @@
         console.log('🔧 [自动账号] 尝试登录...');
         
         // 确保登录URL格式正确
-        let loginUrl = apiUrl;
-        if (!loginUrl.endsWith('/api/auth/login')) {
-          if (loginUrl.endsWith('/api')) {
-            loginUrl = loginUrl + '/auth/login';
-          } else if (loginUrl.endsWith('/')) {
-            loginUrl = loginUrl + 'api/auth/login';
-          } else {
-            loginUrl = loginUrl + '/api/auth/login';
-          }
+        let loginUrl = apiUrl.trim();
+        // 去掉尾部斜杠，统一处理
+        if (loginUrl.endsWith('/')) {
+          loginUrl = loginUrl.slice(0, -1);
+        }
+        // 如果URL已经包含目标路径，直接使用
+        if (loginUrl.endsWith('/api/auth/login')) {
+          // 已经是完整路径
+        } else if (loginUrl.endsWith('/api')) {
+          // 如果以/api结尾，直接拼接
+          loginUrl = loginUrl + '/auth/login';
+        } else {
+          // 否则添加/api前缀
+          loginUrl = loginUrl + '/api/auth/login';
         }
         
         console.log('🔧 [自动账号] 登录URL:', loginUrl);
@@ -287,8 +297,11 @@
   
   /**
    * 自动保存数据到本地和云端
+   * @returns {Promise<{local: boolean, cloud: boolean}>} 返回保存结果
    */
   async function autoSaveData(dataType, data) {
+    const result = { local: false, cloud: false };
+    
     try {
       // 1. 保存到本地（使用与页面一致的存储键名）
       let storageKey;
@@ -299,8 +312,14 @@
       } else {
         storageKey = `pigeon_${dataType}_v1`;
       }
-      localStorage.setItem(storageKey, JSON.stringify(data));
-      console.log(`✅ [自动保存] ${dataType}已保存到本地，键名: ${storageKey}`);
+      
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        result.local = true;
+        console.log(`✅ [自动保存] ${dataType}已保存到本地，键名: ${storageKey}，数量: ${Array.isArray(data) ? data.length : 'N/A'}`);
+      } catch (e) {
+        console.error(`❌ [自动保存] ${dataType}本地保存失败:`, e);
+      }
       
       // 2. 保存到云端
       const account = JSON.parse(localStorage.getItem(AUTO_ACCOUNT_KEY) || 'null');
@@ -309,12 +328,25 @@
         await autoRegisterAccount();
       }
       
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       if (token) {
         const apiUrl = getBackendApiUrl();
         
+        // 确保API URL格式正确
+        let saveUrl = apiUrl.trim();
+        if (saveUrl.endsWith('/')) {
+          saveUrl = saveUrl.slice(0, -1);
+        }
+        if (!saveUrl.endsWith('/api/user/data/' + dataType)) {
+          if (saveUrl.endsWith('/api')) {
+            saveUrl = saveUrl + '/user/data/' + dataType;
+          } else {
+            saveUrl = saveUrl + '/api/user/data/' + dataType;
+          }
+        }
+        
         try {
-          const response = await fetch(apiUrl + '/api/user/data/' + dataType, {
+          const response = await fetch(saveUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -326,21 +358,105 @@
           });
           
           if (response.ok) {
-            console.log(`✅ [自动保存] ${dataType}已保存到云端`);
+            const responseData = await response.json();
+            if (responseData.success) {
+              result.cloud = true;
+              console.log(`✅ [自动保存] ${dataType}已保存到云端，数量: ${Array.isArray(data) ? data.length : 'N/A'}`);
+            } else {
+              console.warn(`⚠️ [自动保存] ${dataType}云端保存失败:`, responseData.error || '未知错误');
+            }
           } else {
-            console.warn(`⚠️ [自动保存] ${dataType}云端保存失败:`, response.status);
+            console.warn(`⚠️ [自动保存] ${dataType}云端保存失败，状态码:`, response.status);
           }
         } catch (error) {
-          console.warn(`⚠️ [自动保存] ${dataType}云端保存异常:`, error);
+          console.warn(`⚠️ [自动保存] ${dataType}云端保存异常:`, error.message);
         }
+      } else {
+        console.warn(`⚠️ [自动保存] ${dataType}未找到token，跳过云端保存`);
       }
     } catch (error) {
       console.error(`❌ [自动保存] ${dataType}保存失败:`, error);
     }
+    
+    return result;
   }
   
   /**
-   * 自动调取数据（优先从云端，失败则使用本地）
+   * 检测数据上传状态
+   * @returns {Promise<{local: boolean, cloud: boolean, deviceId: string, account: object|null}>}
+   */
+  async function checkDataUploadStatus() {
+    const status = {
+      local: false,
+      cloud: false,
+      deviceId: null,
+      account: null,
+      token: null
+    };
+    
+    try {
+      // 检测设备ID
+      status.deviceId = getOrCreateDeviceId();
+      
+      // 检测账号
+      const accountStr = localStorage.getItem(AUTO_ACCOUNT_KEY);
+      if (accountStr) {
+        status.account = JSON.parse(accountStr);
+      }
+      
+      // 检测token
+      status.token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      // 检测本地数据
+      const localPigeons = localStorage.getItem('pigeon_manager_data_v1');
+      const localRaces = localStorage.getItem('pigeon_races_v1');
+      status.local = !!(localPigeons || localRaces);
+      
+      // 检测云端数据（如果有token）
+      if (status.token) {
+        try {
+          const apiUrl = getBackendApiUrl();
+          let checkUrl = apiUrl.trim();
+          if (checkUrl.endsWith('/')) {
+            checkUrl = checkUrl.slice(0, -1);
+          }
+          if (!checkUrl.endsWith('/api/user/data/full')) {
+            if (checkUrl.endsWith('/api')) {
+              checkUrl = checkUrl + '/user/data/full';
+            } else {
+              checkUrl = checkUrl + '/api/user/data/full';
+            }
+          }
+          
+          const response = await fetch(checkUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': 'Bearer ' + status.token
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              const hasCloudData = !!(result.data.pigeons?.length || result.data.races?.length);
+              status.cloud = hasCloudData;
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ [检测] 云端数据检测失败:', error.message);
+        }
+      }
+      
+      console.log('📊 [检测] 数据上传状态:', status);
+      return status;
+    } catch (error) {
+      console.error('❌ [检测] 数据上传状态检测失败:', error);
+      return status;
+    }
+  }
+  
+  /**
+   * 自动调取数据（优先从本地，然后从云端）
    */
   async function autoLoadData(dataType) {
     try {
@@ -353,15 +469,40 @@
       } else {
         storageKey = `pigeon_${dataType}_v1`;
       }
-      let data = null;
+      let localData = null;
+      let cloudData = null;
       
-      // 1. 尝试从云端加载
-      const token = localStorage.getItem('auth_token');
+      // 1. 优先从本地加载
+      const localDataStr = localStorage.getItem(storageKey);
+      if (localDataStr) {
+        try {
+          localData = JSON.parse(localDataStr);
+          console.log(`✅ [自动调取] ${dataType}已从本地加载，数量: ${Array.isArray(localData) ? localData.length : 'N/A'}`);
+        } catch (e) {
+          console.warn(`⚠️ [自动调取] ${dataType}本地数据解析失败:`, e);
+        }
+      }
+      
+      // 2. 然后从云端加载（用于同步和补充）
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       if (token) {
         const apiUrl = getBackendApiUrl();
         
+        // 确保API URL格式正确
+        let cloudUrl = apiUrl.trim();
+        if (cloudUrl.endsWith('/')) {
+          cloudUrl = cloudUrl.slice(0, -1);
+        }
+        if (!cloudUrl.endsWith('/api/user/data/' + dataType)) {
+          if (cloudUrl.endsWith('/api')) {
+            cloudUrl = cloudUrl + '/user/data/' + dataType;
+          } else {
+            cloudUrl = cloudUrl + '/api/user/data/' + dataType;
+          }
+        }
+        
         try {
-          const response = await fetch(apiUrl + '/api/user/data/' + dataType, {
+          const response = await fetch(cloudUrl, {
             method: 'GET',
             headers: {
               'Authorization': 'Bearer ' + token
@@ -371,28 +512,51 @@
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
-              data = result.data;
-              // 同步到本地
-              localStorage.setItem(storageKey, JSON.stringify(data));
-              console.log(`✅ [自动调取] ${dataType}已从云端加载并同步到本地`);
-              return data;
+              cloudData = result.data;
+              console.log(`✅ [自动调取] ${dataType}已从云端加载，数量: ${Array.isArray(cloudData) ? cloudData.length : 'N/A'}`);
             }
           }
         } catch (error) {
-          console.warn(`⚠️ [自动调取] ${dataType}云端加载失败，使用本地数据:`, error);
+          console.warn(`⚠️ [自动调取] ${dataType}云端加载失败:`, error.message);
         }
       }
       
-      // 2. 从本地加载
-      const localData = localStorage.getItem(storageKey);
-      if (localData) {
-        data = JSON.parse(localData);
-        console.log(`✅ [自动调取] ${dataType}已从本地加载`);
-        return data;
+      // 3. 数据合并策略：优先使用本地数据，云端数据作为补充
+      let finalData = null;
+      if (localData && Array.isArray(localData) && localData.length > 0) {
+        // 如果有本地数据，优先使用本地数据
+        finalData = localData;
+        
+        // 如果云端有数据，合并（本地优先，云端补充新数据）
+        if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+          const localIds = new Set(localData.map(item => item.id || item.ring || JSON.stringify(item)));
+          const newCloudItems = cloudData.filter(item => {
+            const id = item.id || item.ring || JSON.stringify(item);
+            return !localIds.has(id);
+          });
+          
+          if (newCloudItems.length > 0) {
+            finalData = [...localData, ...newCloudItems];
+            // 更新本地存储
+            localStorage.setItem(storageKey, JSON.stringify(finalData));
+            console.log(`✅ [自动调取] ${dataType}已合并本地和云端数据，新增 ${newCloudItems.length} 条`);
+          } else {
+            console.log(`ℹ️ [自动调取] ${dataType}本地数据已是最新，无需合并`);
+          }
+        }
+      } else if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+        // 如果本地没有数据，使用云端数据
+        finalData = cloudData;
+        // 同步到本地
+        localStorage.setItem(storageKey, JSON.stringify(finalData));
+        console.log(`✅ [自动调取] ${dataType}已从云端加载并同步到本地`);
+      } else {
+        // 都没有数据
+        finalData = [];
+        console.log(`ℹ️ [自动调取] ${dataType}暂无数据`);
       }
       
-      console.log(`ℹ️ [自动调取] ${dataType}暂无数据`);
-      return null;
+      return finalData;
     } catch (error) {
       console.error(`❌ [自动调取] ${dataType}加载失败:`, error);
       return null;
@@ -412,13 +576,26 @@
     }
     
     // 如果没有token，尝试登录
-    let token = localStorage.getItem('auth_token');
+    let token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (!token && account) {
       const deviceId = getOrCreateDeviceId();
       const apiUrl = getBackendApiUrl();
       
+      // 确保登录URL格式正确
+      let loginUrl = apiUrl.trim();
+      if (loginUrl.endsWith('/')) {
+        loginUrl = loginUrl.slice(0, -1);
+      }
+      if (!loginUrl.endsWith('/api/auth/login')) {
+        if (loginUrl.endsWith('/api')) {
+          loginUrl = loginUrl + '/auth/login';
+        } else {
+          loginUrl = loginUrl + '/api/auth/login';
+        }
+      }
+      
       try {
-        const loginResponse = await fetch(apiUrl + '/api/auth/login', {
+        const loginResponse = await fetch(loginUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -465,51 +642,29 @@
       }
     }
     
-    // 加载所有数据类型
+    // 加载所有数据类型（优先本地，然后云端）
     const dataTypes = ['pigeons', 'races', 'healthRecords', 'trainingRecords', 'pairings', 'qualificationRecords'];
     
+    console.log('🔧 [自动调取] 开始按优先级加载数据：1.本地 2.云端 3.合并');
+    
     for (const dataType of dataTypes) {
-      const data = await autoLoadData(dataType);
+      const data = await autoLoadData(dataType); // autoLoadData已经实现了优先本地、然后云端的逻辑
+      
       // 如果全局变量存在，更新它们
       if (typeof window !== 'undefined') {
         if (dataType === 'pigeons') {
-          if (window.pigeons) {
-            // 合并数据，优先使用云端数据
-            if (data && Array.isArray(data) && data.length > 0) {
-              window.pigeons = data;
-            } else if (!window.pigeons || window.pigeons.length === 0) {
-              // 如果全局变量为空，尝试从localStorage加载
-              const localData = localStorage.getItem('pigeon_manager_data_v1');
-              if (localData) {
-                try {
-                  window.pigeons = JSON.parse(localData);
-                  console.log('✅ [自动调取] 从localStorage恢复pigeons数据');
-                } catch (e) {
-                  console.warn('⚠️ [自动调取] 解析localStorage数据失败:', e);
-                }
-              }
-            }
-          } else {
-            // 如果全局变量不存在，创建它
-            window.pigeons = data || [];
+          if (data && Array.isArray(data) && data.length > 0) {
+            window.pigeons = data;
+            console.log(`✅ [自动调取] 已更新全局变量 window.pigeons，数量: ${data.length}`);
+          } else if (!window.pigeons) {
+            window.pigeons = [];
           }
         } else if (dataType === 'races') {
-          if (window.races) {
-            if (data && Array.isArray(data) && data.length > 0) {
-              window.races = data;
-            } else if (!window.races || window.races.length === 0) {
-              const localData = localStorage.getItem('pigeon_races_v1');
-              if (localData) {
-                try {
-                  window.races = JSON.parse(localData);
-                  console.log('✅ [自动调取] 从localStorage恢复races数据');
-                } catch (e) {
-                  console.warn('⚠️ [自动调取] 解析localStorage数据失败:', e);
-                }
-              }
-            }
-          } else {
-            window.races = data || [];
+          if (data && Array.isArray(data) && data.length > 0) {
+            window.races = data;
+            console.log(`✅ [自动调取] 已更新全局变量 window.races，数量: ${data.length}`);
+          } else if (!window.races) {
+            window.races = [];
           }
         }
         // 其他数据类型类似处理
@@ -555,13 +710,39 @@
    */
   async function init() {
     console.log('🔧 [自动账号] 初始化自动账号系统...');
+    console.log('🔧 [自动账号] 开始设备识别和自动登录流程...');
     
     // 等待页面加载完成
     const initFunction = async () => {
-      // 1. 自动注册账号
-      await autoRegisterAccount();
+      // 1. 识别设备信息
+      const deviceId = getOrCreateDeviceId();
+      const deviceInfo = getDeviceInfo();
+      console.log('✅ [自动账号] 设备识别完成:', {
+        deviceId: deviceId ? deviceId.substring(0, 8) + '...' : '未生成',
+        deviceType: deviceInfo.deviceType,
+        platform: deviceInfo.platform
+      });
       
-      // 2. 自动加载所有数据
+      // 2. 自动注册/登录账号
+      console.log('🔧 [自动账号] 开始自动注册/登录账号...');
+      const account = await autoRegisterAccount();
+      if (account) {
+        console.log('✅ [自动账号] 账号准备就绪:', account.username);
+      } else {
+        console.warn('⚠️ [自动账号] 账号注册/登录失败，将使用本地模式');
+      }
+      
+      // 3. 检测数据上传状态
+      const uploadStatus = await checkDataUploadStatus();
+      console.log('📊 [自动账号] 数据上传状态检测:', {
+        本地数据: uploadStatus.local ? '✅ 有数据' : '❌ 无数据',
+        云端数据: uploadStatus.cloud ? '✅ 有数据' : '❌ 无数据',
+        设备ID: uploadStatus.deviceId ? '✅ 已生成' : '❌ 未生成',
+        账号: uploadStatus.account ? '✅ 已登录' : '❌ 未登录'
+      });
+      
+      // 4. 自动加载所有数据（优先本地，然后云端）
+      console.log('🔧 [自动账号] 开始加载数据（优先本地，然后云端）...');
       await autoLoadAllData();
       
       // 3. 如果页面有loadFromStorage函数，也调用它（兼容现有代码）
@@ -656,6 +837,7 @@
     window.autoLoadAllData = autoLoadAllData;
     window.getOrCreateDeviceId = getOrCreateDeviceId;
     window.getDeviceInfo = getDeviceInfo;
+    window.checkDataUploadStatus = checkDataUploadStatus;
   }
   
   // 立即初始化

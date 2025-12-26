@@ -55,42 +55,12 @@
           }
         });
         
-        // 4. 修复侧边栏按钮
+        // 4. 修复侧边栏按钮样式（不绑定事件，事件由第6474行的监听器处理）
         document.querySelectorAll('.sidebar-item').forEach(item => {
           if (item.dataset.fixed !== 'true') {
-            const newItem = item.cloneNode(true);
-            const parent = item.parentNode;
-            if (parent) {
-              parent.replaceChild(newItem, item);
-            }
-            newItem.dataset.fixed = 'true';
-            newItem.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
-            
-            // 绑定点击事件
-            const view = newItem.dataset.view;
-            if (view) {
-              ['click', 'mousedown', 'mouseup'].forEach(eventType => {
-                newItem.addEventListener(eventType, function(e) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                  console.log('🔘 [后台] 点击侧边栏按钮:', view);
-                  // 切换视图逻辑
-                  document.querySelectorAll('.content-section').forEach(section => {
-                    section.style.display = 'none';
-                  });
-                  const targetSection = document.getElementById(view);
-                  if (targetSection) {
-                    targetSection.style.display = 'block';
-                  }
-                  // 更新active状态
-                  document.querySelectorAll('.sidebar-item').forEach(item => {
-                    item.classList.toggle('active', item.dataset.view === view);
-                  });
-                  return false;
-                }, { capture: true, passive: false });
-              });
-            }
+            item.dataset.fixed = 'true';
+            item.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+            // 不在这里绑定事件，避免与第6474行的事件监听器冲突
           }
         });
         
@@ -121,26 +91,13 @@
           const button = findButtonElement(e.target);
           if (!button) return;
           
+          // 不处理侧边栏按钮，由第6474行的专门监听器处理，避免重复触发
           if (button.classList.contains('sidebar-item')) {
-            const view = button.dataset.view;
-            if (view) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              console.log('🔘 [后台全局委托] 点击侧边栏按钮:', view);
-              document.querySelectorAll('.content-section').forEach(section => {
-                section.style.display = 'none';
-              });
-              const targetSection = document.getElementById(view);
-              if (targetSection) {
-                targetSection.style.display = 'block';
-              }
-              document.querySelectorAll('.sidebar-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.view === view);
-              });
-              return false;
-            }
+            // 侧边栏按钮由专门的监听器处理，这里不处理
+            return;
           }
+          
+          // 处理其他按钮（如果有的话）
         }
         
         ['click', 'mousedown', 'mouseup'].forEach(eventType => {
@@ -174,14 +131,19 @@
         setTimeout(ultimateFixAdmin, 1000);
       }
       
-      // 定期检查（每3秒）
+      // 定期检查（每5秒，降低频率避免干扰）
+      // 注意：这个定时器可能导致自动显示active状态，已降低频率
       setInterval(function() {
         const unfixedButtons = document.querySelectorAll('.sidebar-item:not([data-fixed="true"]), .btn:not([data-fixed="true"]), button:not([data-fixed="true"])');
         if (unfixedButtons.length > 0) {
           console.log('🔧 [后台] 发现未修复的按钮，执行修复...', unfixedButtons.length);
-          ultimateFixAdmin();
+          // 只修复按钮，不改变active状态
+          unfixedButtons.forEach(btn => {
+            btn.dataset.fixed = 'true';
+            btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
+          });
         }
-      }, 3000);
+      }, 5000);
       
       // 添加全局CSS修复
       if (!document.getElementById('admin-button-fix-styles')) {
@@ -6350,20 +6312,39 @@
       setTimeout(safeCheckAuth, 1000);
     }
     
-    // 侧边栏菜单切换
+    // 侧边栏菜单切换（确保只绑定一次，避免重复触发）
     document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.addEventListener('click', () => {
+      // 检查是否已经绑定过事件
+      if (item.dataset.clickHandlerBound === 'true') {
+        return; // 已经绑定过，跳过
+      }
+      item.dataset.clickHandlerBound = 'true'; // 标记已绑定
+      
+      item.addEventListener('click', function(e) {
+        // 防止事件冒泡和默认行为
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         const tabName = item.dataset.tab;
+        if (!tabName) {
+          console.warn('⚠️ 侧边栏菜单项缺少data-tab属性');
+          return;
+        }
+        
+        console.log('🔘 [侧边栏菜单] 点击:', tabName);
         
         // 如果点击的是Evo设置，加载AI信息
         if (tabName === 'evoSettings') {
           console.log('🔄 点击Evo设置菜单项，准备加载AI信息...');
           setTimeout(() => {
-            loadEvoAIModelInfo();
+            if (typeof loadEvoAIModelInfo === 'function') {
+              loadEvoAIModelInfo();
+            }
           }, 300);
         }
         
-        // 更新菜单状态
+        // 更新菜单状态（只更新一次，避免重复）
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
         

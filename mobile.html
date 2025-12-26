@@ -3961,21 +3961,33 @@
     }
     window.switchEventTab = switchEventTab;
 
-    // 视图对象
-    const views = {
-      home: document.getElementById('homeView'),
-      pigeons: document.getElementById('listView'),
-      races: document.getElementById('raceView'),
-      stats: document.getElementById('statsView'),
-      pedigree: document.getElementById('pedigreeView'),
-      breeding: document.getElementById('breedingView'),
-      health: document.getElementById('healthView'),
-      training: document.getElementById('trainingView'),
-      analysis: document.getElementById('analysisView'),
-      qualification: document.getElementById('qualificationView'),
-      dashboard: document.getElementById('dashboardView'),
-      more: document.getElementById('moreView')
-    };
+    // 视图对象（延迟初始化，确保DOM已加载）
+    const views = {};
+    
+    // 初始化视图对象（在DOM加载后调用）
+    function initViews() {
+      views.home = document.getElementById('homeView');
+      views.pigeons = document.getElementById('listView');
+      views.races = document.getElementById('raceView');
+      views.stats = document.getElementById('statsView');
+      views.pedigree = document.getElementById('pedigreeView');
+      views.breeding = document.getElementById('breedingView');
+      views.health = document.getElementById('healthView');
+      views.training = document.getElementById('trainingView');
+      views.analysis = document.getElementById('analysisView');
+      views.qualification = document.getElementById('qualificationView');
+      views.dashboard = document.getElementById('dashboardView');
+      views.more = document.getElementById('moreView');
+      console.log('✅ [移动端] 视图对象已初始化:', Object.keys(views).filter(k => views[k] !== null));
+    }
+    
+    // 立即尝试初始化（如果DOM已加载）
+    if (document.readyState === 'loading') {
+      // DOM还在加载，等待DOMContentLoaded
+    } else {
+      // DOM已加载，立即初始化
+      initViews();
+    }
 
     // 切换视图
     function switchView(viewName) {
@@ -4651,23 +4663,51 @@
         const hasLocalPigeons = !!localStorage.getItem('pigeon_manager_data_v1');
         const hasLocalRaces = !!localStorage.getItem('pigeon_races_v1');
 
-        // 如果本地已有核心数据，检查是否需要从云端同步更新
-        if (hasLocalPigeons && hasLocalRaces) {
-          console.log('ℹ️ [数据恢复] 本地已有数据，尝试从云端同步更新');
-          // 仍然尝试从云端加载，但不会覆盖本地数据（除非云端数据更新）
+        // 优先使用本地数据
+        if (hasLocalPigeons || hasLocalRaces) {
+          console.log('✅ [数据恢复] 本地已有数据，优先使用本地数据');
+          
+          // 从本地加载数据
+          if (hasLocalPigeons) {
+            const localPigeons = JSON.parse(localStorage.getItem('pigeon_manager_data_v1'));
+            if (Array.isArray(localPigeons) && localPigeons.length > 0) {
+              if (typeof window !== 'undefined' && window.pigeons) {
+                window.pigeons = localPigeons;
+              }
+              console.log('✅ [数据恢复] 已从本地恢复鸽子数据:', localPigeons.length, '条');
+            }
+          }
+          
+          if (hasLocalRaces) {
+            const localRaces = JSON.parse(localStorage.getItem('pigeon_races_v1'));
+            if (Array.isArray(localRaces) && localRaces.length > 0) {
+              if (typeof window !== 'undefined' && window.races) {
+                window.races = localRaces;
+              }
+              console.log('✅ [数据恢复] 已从本地恢复比赛数据:', localRaces.length, '条');
+            }
+          }
+          
+          // 然后从云端同步更新（补充新数据，不覆盖本地）
+          console.log('ℹ️ [数据恢复] 尝试从云端同步更新（补充新数据）');
         }
 
         const apiUrl = getBackendApiUrl();
         // 确保API URL格式正确
-        let fullDataUrl = apiUrl;
-        if (!fullDataUrl.endsWith('/user/data/full')) {
-          if (fullDataUrl.endsWith('/api')) {
-            fullDataUrl = fullDataUrl + '/user/data/full';
-          } else if (fullDataUrl.endsWith('/')) {
-            fullDataUrl = fullDataUrl + 'api/user/data/full';
-          } else {
-            fullDataUrl = fullDataUrl + '/api/user/data/full';
-          }
+        let fullDataUrl = apiUrl.trim();
+        // 去掉尾部斜杠，统一处理
+        if (fullDataUrl.endsWith('/')) {
+          fullDataUrl = fullDataUrl.slice(0, -1);
+        }
+        // 如果URL已经包含目标路径，直接使用
+        if (fullDataUrl.endsWith('/user/data/full')) {
+          // 已经是完整路径
+        } else if (fullDataUrl.endsWith('/api')) {
+          // 如果以/api结尾，直接拼接
+          fullDataUrl = fullDataUrl + '/user/data/full';
+        } else {
+          // 否则添加/api前缀
+          fullDataUrl = fullDataUrl + '/api/user/data/full';
         }
         
         console.log('🔧 [数据恢复] 尝试从云端恢复数据，URL:', fullDataUrl);
@@ -6052,9 +6092,32 @@
     
     // 初始化视图
     document.addEventListener('DOMContentLoaded', function() {
-      // 默认显示首页
-      if (views.home) {
-        views.home.style.display = 'block';
+      // 重新初始化视图对象（确保DOM已加载）
+      initViews();
+      
+      // 重新获取视图元素（确保DOM已加载）
+      const homeView = document.getElementById('homeView');
+      if (homeView) {
+        // 隐藏所有视图
+        document.querySelectorAll('.mobile-view').forEach(view => {
+          view.style.display = 'none';
+        });
+        // 显示首页
+        homeView.style.display = 'block';
+        console.log('✅ [移动端初始化] 首页视图已显示');
+      } else {
+        console.warn('⚠️ [移动端初始化] 未找到homeView元素');
+        // 延迟重试
+        setTimeout(() => {
+          const retryHomeView = document.getElementById('homeView');
+          if (retryHomeView) {
+            document.querySelectorAll('.mobile-view').forEach(view => {
+              view.style.display = 'none';
+            });
+            retryHomeView.style.display = 'block';
+            console.log('✅ [移动端初始化] 延迟重试：首页视图已显示');
+          }
+        }, 100);
       }
       // 初始化数据
       updateDate();
@@ -6087,6 +6150,25 @@
       setInterval(() => {
         updateMobileUserButton();
       }, 5000);
+      
+      // 兜底机制：确保首页视图显示（延迟检查）
+      setTimeout(() => {
+        const homeView = document.getElementById('homeView');
+        const allViews = document.querySelectorAll('.mobile-view');
+        const visibleViews = Array.from(allViews).filter(v => {
+          const style = window.getComputedStyle(v);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        });
+        
+        // 如果没有任何视图显示，强制显示首页
+        if (visibleViews.length === 0 && homeView) {
+          console.log('⚠️ [移动端初始化] 检测到所有视图都隐藏，强制显示首页');
+          allViews.forEach(v => v.style.display = 'none');
+          homeView.style.display = 'block';
+          homeView.style.visibility = 'visible';
+          homeView.style.opacity = '1';
+        }
+      }, 500);
       
       // 初始化智能搜索
       const mobileSearchInput = document.getElementById('mobileSmartSearchInput');
