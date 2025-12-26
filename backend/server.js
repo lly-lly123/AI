@@ -497,39 +497,43 @@ async function initDefaultAdmin() {
 
 // 启动服务器（仅在非Vercel环境）
 if (!process.env.VERCEL) {
-  const PORT = config.server.port || 3000;
-  const HOST = process.env.HOST || '0.0.0.0';
-  
-  // 在启动前输出关键信息（确保能看到）
-  // 使用 console.log 确保在 Zeabur 日志中可见
-  console.log('========================================');
-  console.log('🚀 服务器启动中...');
-  console.log('========================================');
-  console.log('启动信息:', {
-    workDir: process.cwd(),
-    __dirname: __dirname,
-    frontendPath: frontendPath,
-    indexPath: path.join(frontendPath, 'index.html'),
-    indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
-    port: PORT,
-    host: HOST
-  });
-  console.log('========================================');
-  
-  logger.info('========================================');
-  logger.info('🚀 服务器启动中...');
-  logger.info('========================================');
-  logger.info('启动信息', {
-    workDir: process.cwd(),
-    __dirname: __dirname,
-    frontendPath: frontendPath,
-    indexPath: path.join(frontendPath, 'index.html'),
-    indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
-  });
-  logger.info('========================================');
-  
-  // 创建服务器实例
-  const server = app.listen(PORT, HOST, () => {
+  try {
+    const PORT = config.server.port || 3000;
+    const HOST = process.env.HOST || '0.0.0.0';
+    
+    // 在启动前输出关键信息（确保能看到）
+    // 使用 console.log 确保在 Zeabur 日志中可见
+    console.log('========================================');
+    console.log('🚀 服务器启动中...');
+    console.log('========================================');
+    console.log('启动信息:', {
+      workDir: process.cwd(),
+      __dirname: __dirname,
+      frontendPath: frontendPath,
+      indexPath: path.join(frontendPath, 'index.html'),
+      indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
+      port: PORT,
+      host: HOST,
+      nodeEnv: process.env.NODE_ENV,
+      vercel: process.env.VERCEL
+    });
+    console.log('========================================');
+    
+    logger.info('========================================');
+    logger.info('🚀 服务器启动中...');
+    logger.info('========================================');
+    logger.info('启动信息', {
+      workDir: process.cwd(),
+      __dirname: __dirname,
+      frontendPath: frontendPath,
+      indexPath: path.join(frontendPath, 'index.html'),
+      indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+    });
+    logger.info('========================================');
+    
+    // 创建服务器实例
+    console.log(`准备启动服务器: ${HOST}:${PORT}`);
+    const server = app.listen(PORT, HOST, () => {
     // 使用 console.log 确保在 Zeabur 日志中可见
     console.log('========================================');
     console.log(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
@@ -610,6 +614,13 @@ if (!process.env.VERCEL) {
     logger.info('收到SIGINT信号，正在关闭服务器...');
     process.exit(0);
   });
+  } catch (error) {
+    // 捕获启动过程中的任何错误
+    console.error('❌ 服务器启动失败:', error);
+    console.error('错误堆栈:', error.stack);
+    logger.error('❌ 服务器启动失败', error);
+    process.exit(1);
+  }
 } else {
   (async () => {
     await initDefaultAdmin();
