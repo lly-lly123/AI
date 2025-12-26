@@ -7,6 +7,45 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- 🔧 Eruda 移动端调试工具（中文版） -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>
+    // 只在移动设备上初始化Eruda（等待DOM加载完成）
+    (function() {
+      function initEruda() {
+        if (/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+          if (typeof eruda !== 'undefined') {
+            eruda.init({
+              container: document.body,
+              tool: ['console', 'elements', 'network', 'resources', 'info', 'snippets'],
+              autoScale: true,
+              defaults: {
+                displaySize: 50,
+                transparency: 0.9,
+                theme: 'dark'
+              }
+            });
+            console.log('✅ Eruda调试工具已初始化（中文版）');
+          } else {
+            console.warn('⚠️ Eruda未加载，延迟初始化...');
+            setTimeout(initEruda, 100);
+          }
+        }
+      }
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initEruda);
+      } else {
+        // DOM已加载，但body可能还不存在，延迟一点
+        setTimeout(initEruda, 100);
+      }
+    })();
+  </script>
+  
+  <!-- 🔧 自动账号注册和数据管理脚本（最高优先级 - 必须在其他脚本之前） -->
+  <script src="js/auto-account-register.js"></script>
+  
   <style>
     * {
       box-sizing: border-box;
@@ -11191,9 +11230,6 @@
       justify-content: center;
     }
   </style>
-  
-  <!-- 自动账户注册和数据同步脚本 -->
-  <script src="js/auto-account-register.js"></script>
 </body>
 </html>
 

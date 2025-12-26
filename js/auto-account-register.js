@@ -811,11 +811,16 @@
       }
     };
     
+    // 确保在正确的时机执行初始化
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initFunction);
+    } else if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      // DOM已加载，延迟执行确保所有脚本都已加载
+      // 增加延迟时间，确保mobile.html中的函数都已定义
+      setTimeout(initFunction, 300);
     } else {
-      // 延迟一点执行，确保其他脚本已加载
-      setTimeout(initFunction, 100);
+      // 其他情况，延迟执行
+      setTimeout(initFunction, 300);
     }
     
     // 监听数据变化，自动保存
