@@ -99,7 +99,9 @@ class DataTruthValidator {
               aiAnalysis.issues || issues,
               sources
             );
-          } catch (e) {}
+          } catch (e) {
+            logger.warn('AI分析结果解析失败，使用默认结果', e.message);
+          }
         }
       }
 

@@ -9081,9 +9081,39 @@
 
 <script>
   // 简单内存数据结构，使用 localStorage 做本地持久化
+  // 修复问题10：统一存储键名，确保所有地方使用相同的键名
   const STORAGE_KEY = 'pigeon_manager_data_v1';
   const USED_NAMES_KEY = 'pigeon_used_names_v1';
   const OWNER_REGION_PAIRS_KEY = 'pigeon_owner_region_pairs_v1';
+  const HEALTH_RECORDS_KEY = 'pigeon_health_records_v1';
+  const TRAINING_STORAGE_KEY = 'pigeon_training_records_v1';
+  const PAIRINGS_STORAGE_KEY = 'pigeon_pairings_v1';
+  const QUALIFICATION_STORAGE_KEY = 'pigeon_qualification_records_v1';
+  const RACES_STORAGE_KEY = 'pigeon_races_v1';
+  
+  // 修复问题18：localStorage大小限制检查
+  const MAX_STORAGE_SIZE = 4 * 1024 * 1024; // 4MB限制（留出1MB缓冲）
+  
+  function checkStorageSize() {
+    try {
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          totalSize += localStorage[key].length + key.length;
+        }
+      }
+      return totalSize;
+    } catch (e) {
+      console.warn('检查存储大小失败:', e);
+      return 0;
+    }
+  }
+  
+  function isStorageNearLimit() {
+    const currentSize = checkStorageSize();
+    return currentSize > MAX_STORAGE_SIZE;
+  }
+  
   let pigeons = [];
   let currentDetailId = null; // 当前详情页显示的鸽子 id
   
@@ -9171,16 +9201,34 @@
   let isCloudSyncEnabled = true; // 是否启用云端同步
   let authToken = null; // 用户认证token
 
-  // 获取API配置
+  // 获取API配置 - 修复问题8：统一API URL配置
   function getBackendApiUrl() {
-    const apiConfig = getApiConfig();
-    // 如果配置的URL包含localhost，自动使用当前域名
-    if (apiConfig.apiUrl && apiConfig.apiUrl.includes('localhost')) {
-      const currentOrigin = window.location.origin;
-      return currentOrigin + '/api';
+    // 优先使用全局函数（如果存在）
+    if (typeof window.getBackendApiUrl === 'function' && window.getBackendApiUrl !== getBackendApiUrl) {
+      try {
+        const url = window.getBackendApiUrl();
+        if (url) return url;
+      } catch (e) {
+        console.warn('调用全局getBackendApiUrl失败:', e);
+      }
     }
-    return apiConfig.apiUrl || (window.location.origin + '/api');
+    
+    try {
+      const apiConfig = getApiConfig();
+      // 如果配置的URL包含localhost，自动使用当前域名
+      if (apiConfig.apiUrl && apiConfig.apiUrl.includes('localhost')) {
+        const currentOrigin = window.location.origin;
+        return currentOrigin + '/api';
+      }
+      return apiConfig.apiUrl || (window.location.origin + '/api');
+    } catch (e) {
+      console.warn('获取API配置失败，使用默认值:', e);
+      return window.location.origin + '/api';
+    }
   }
+  
+  // 暴露到全局，供其他脚本使用（修复问题8）
+  window.getBackendApiUrl = getBackendApiUrl;
 
   // 提交意见与反馈
   async function submitUserFeedback({ content, contact, page, source }) {
@@ -9260,7 +9308,7 @@
     }
   }
 
-  // 云端保存数据（使用后端API）
+  // 云端保存数据（使用后端API）- 修复问题6、11
   async function saveToCloud(key, data) {
     if (!isCloudSyncEnabled) return false;
     
@@ -9283,30 +9331,71 @@
         })
       });
       
+      // 修复问题6：完整的错误处理
+      if (!response.ok) {
+        let errorMessage = '云端同步失败';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+          
+          // 如果token失效，清除token
+          if (response.status === 401 || (errorData.error && errorData.error.includes('token'))) {
+            setAuthToken(null);
+            errorMessage = '登录已过期，请重新登录';
+          }
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        // 修复问题11：显示用户提示
+        showUserError('云端同步失败：' + errorMessage);
+        console.warn('⚠️ 云端保存失败:', errorMessage);
+        return false;
+      }
+      
       const result = await response.json();
       if (result.success) {
         console.log('✅ 数据已同步到云端');
+        showUserSuccess('数据已同步到云端');
         return true;
       } else {
-        console.warn('⚠️ 云端保存失败:', result.error);
-        // 如果token失效，清除token
-        if (result.error && result.error.includes('token')) {
-          setAuthToken(null);
-        }
+        const errorMsg = result.error || '未知错误';
+        showUserError('云端同步失败：' + errorMsg);
+        console.warn('⚠️ 云端保存失败:', errorMsg);
         return false;
       }
     } catch (error) {
-      console.warn('⚠️ 云端保存失败，使用本地存储:', error.message);
+      // 修复问题6：详细的网络错误处理
+      let errorMessage = '网络错误';
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage = '无法连接到服务器，请检查网络连接';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '请求超时，请稍后重试';
+      } else {
+        errorMessage = error.message || '未知错误';
+      }
+      
+      // 修复问题11：显示用户提示
+      showUserError('云端同步失败：' + errorMessage);
+      console.warn('⚠️ 云端保存失败，使用本地存储:', errorMessage);
       // 云端失败不影响本地保存
       return false;
     }
   }
 
-  // 自动同步完整用户数据到后台/云端（PC 端）
+  // 自动同步完整用户数据到后台/云端（PC 端）- 修复问题7、9
   let lastUserDataSyncAt = 0;
+  let isSyncing = false; // 修复问题9：防止竞态条件
 
   async function autoSyncUserData(options = {}) {
     const { force = false } = options;
+    
+    // 修复问题9：防止竞态条件
+    if (isSyncing && !force) {
+      console.log('⏳ 同步正在进行中，跳过本次请求');
+      return;
+    }
+    
     try {
       if (!isCloudSyncEnabled) return;
 
@@ -9318,6 +9407,8 @@
         return;
       }
 
+      isSyncing = true; // 标记正在同步
+      
       const apiUrl = getBackendApiUrl();
       const deviceId = getOrCreateDeviceId();
       const deviceInfo = {
@@ -9345,13 +9436,32 @@
         body: JSON.stringify(body)
       });
 
+      // 修复问题7：完整的错误处理
       if (resp.ok) {
         lastUserDataSyncAt = now;
+        console.log('✅ 自动同步成功');
       } else {
-        console.warn('自动同步完整用户数据失败:', resp.status);
+        let errorMessage = `HTTP ${resp.status}`;
+        try {
+          const errorData = await resp.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${resp.status}: ${resp.statusText}`;
+        }
+        console.warn('⚠️ 自动同步完整用户数据失败:', errorMessage);
+        
+        // 如果是401错误，清除token
+        if (resp.status === 401) {
+          setAuthToken(null);
+        }
       }
     } catch (e) {
-      console.warn('自动同步完整用户数据异常:', e);
+      console.warn('⚠️ 自动同步完整用户数据异常:', e);
+      if (e.message && e.message.includes('Failed to fetch')) {
+        console.warn('⚠️ 网络连接失败，数据将保存在本地');
+      }
+    } finally {
+      isSyncing = false; // 修复问题9：释放同步锁
     }
   }
 
@@ -9592,11 +9702,19 @@
       return;
     }
     
-    const ring = ringInput.value.trim();
+    // 修复问题20：输入清理
+    const ring = sanitizeInput(ringInput.value.trim());
     console.log('🔍 读取足环号码:', ring, '长度:', ring.length);
     
+    // 修复问题14：表单验证
     if (!ring) {
-      alert('足环号码为必填项。');
+      showUserError('足环号码为必填项');
+      return;
+    }
+    
+    // 修复问题14：格式验证
+    if (ring.length < 3 || ring.length > 50) {
+      showUserError('足环号码长度应在3-50个字符之间');
       return;
     }
     
@@ -9620,13 +9738,21 @@
       }
     }
 
-    let name = document.getElementById('c_name')?.value.trim() || '';
+    // 修复问题20：输入清理
+    let name = sanitizeInput(document.getElementById('c_name')?.value.trim() || '');
+    
+    // 修复问题14：名称验证
+    if (name && name.length > 50) {
+      showUserError('名字长度不能超过50个字符');
+      return;
+    }
+    
     // 如果名称为空，自动分配一个未使用的名字
     if (!name) {
       if (typeof getRandomUnusedName === 'function') {
         name = getRandomUnusedName();
         if (!name) {
-          alert('所有可用名字都已使用完毕，请手动输入一个名字。');
+          showUserError('所有可用名字都已使用完毕，请手动输入一个名字');
           return;
         }
       }
@@ -9641,10 +9767,25 @@
       }
     }
 
-    const gender = document.getElementById('c_gender')?.value || '';
-    const color = document.getElementById('c_color')?.value.trim() || '';
+    // 修复问题20：输入清理
+    const gender = sanitizeInput(document.getElementById('c_gender')?.value || '');
+    const color = sanitizeInput(document.getElementById('c_color')?.value.trim() || '');
     const birth = document.getElementById('c_birth')?.value || '';
-    const type = document.getElementById('c_type')?.value || '';
+    const type = sanitizeInput(document.getElementById('c_type')?.value || '');
+    
+    // 修复问题14：日期验证
+    if (birth) {
+      const birthDate = new Date(birth);
+      if (isNaN(birthDate.getTime())) {
+        showUserError('出生日期格式不正确');
+        return;
+      }
+      const now = new Date();
+      if (birthDate > now) {
+        showUserError('出生日期不能是未来日期');
+        return;
+      }
+    }
     const fatherId = document.getElementById('c_father')?.value || null;
     const motherId = document.getElementById('c_mother')?.value || null;
     
@@ -9663,9 +9804,20 @@
     const previousOwner = type === '种鸽' ? (document.getElementById('c_previousOwner')?.value.trim() || '') : '';
     const previousRegion = type === '种鸽' ? (document.getElementById('c_previousRegion')?.value.trim() || '') : '';
     
+    // 修复问题20：输入清理
     // 获取现鸽主和现地区
-    const currentOwner = document.getElementById('c_currentOwner')?.value.trim() || '';
-    const currentRegion = document.getElementById('c_currentRegion')?.value.trim() || '';
+    const currentOwner = sanitizeInput(document.getElementById('c_currentOwner')?.value.trim() || '');
+    const currentRegion = sanitizeInput(document.getElementById('c_currentRegion')?.value.trim() || '');
+    
+    // 修复问题14：长度验证
+    if (currentOwner && currentOwner.length > 50) {
+      showUserError('现鸽主名称长度不能超过50个字符');
+      return;
+    }
+    if (currentRegion && currentRegion.length > 50) {
+      showUserError('现地区名称长度不能超过50个字符');
+      return;
+    }
     
     // 记录鸽主-地区配对
     if (currentOwner && currentRegion && typeof addOwnerRegionPair === 'function') {
@@ -9692,7 +9844,8 @@
       });
     }
 
-    // 处理图片上传
+    // 处理图片上传 - 修复问题15：添加大小限制
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB限制
     const bodyFile = document.getElementById('c_body_photo')?.files[0] || null;
     const eyeFile = document.getElementById('c_eye_photo')?.files[0] || null;
 
@@ -9701,28 +9854,56 @@
     
     if (bodyFile) {
       try {
+        // 检查文件类型
         if (!bodyFile.type || !bodyFile.type.startsWith('image/')) {
-          alert('站立侧身图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）。');
+          showUserError('站立侧身图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）');
           return;
         }
+        
+        // 修复问题15：检查文件大小
+        if (bodyFile.size > MAX_IMAGE_SIZE) {
+          showUserError(`站立侧身图片过大（${(bodyFile.size / 1024 / 1024).toFixed(2)}MB），请选择小于2MB的图片`);
+          return;
+        }
+        
+        // 修复问题18：检查存储空间
+        if (isStorageNearLimit()) {
+          const confirm = window.confirm('存储空间即将用完，继续上传图片可能导致数据丢失。是否继续？');
+          if (!confirm) return;
+        }
+        
         bodyImg = await readFileAsDataURL(bodyFile);
       } catch (e) {
         console.error('读取站立侧身图片失败', e);
-        alert('读取站立侧身图片失败：' + (e.message || '未知错误') + '，请重试。');
+        showUserError('读取站立侧身图片失败：' + (e.message || '未知错误'));
         return;
       }
     }
     
     if (eyeFile) {
       try {
+        // 检查文件类型
         if (!eyeFile.type || !eyeFile.type.startsWith('image/')) {
-          alert('眼睛特写图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）。');
+          showUserError('眼睛特写图片格式不正确，请选择图片文件（JPG、PNG、GIF、WEBP等）');
           return;
         }
+        
+        // 修复问题15：检查文件大小
+        if (eyeFile.size > MAX_IMAGE_SIZE) {
+          showUserError(`眼睛特写图片过大（${(eyeFile.size / 1024 / 1024).toFixed(2)}MB），请选择小于2MB的图片`);
+          return;
+        }
+        
+        // 修复问题18：检查存储空间
+        if (isStorageNearLimit()) {
+          const confirm = window.confirm('存储空间即将用完，继续上传图片可能导致数据丢失。是否继续？');
+          if (!confirm) return;
+        }
+        
         eyeImg = await readFileAsDataURL(eyeFile);
       } catch (e) {
         console.error('读取眼睛图片失败', e);
-        alert('读取眼睛图片失败：' + (e.message || '未知错误') + '，请重试。');
+        showUserError('读取眼睛图片失败：' + (e.message || '未知错误'));
         return;
       }
     }
@@ -9754,8 +9935,7 @@
       currentRegion: currentRegion
     };
 
-    // 保存到存储
-    const STORAGE_KEY = 'pigeon_manager_data_v1';
+    // 保存到存储 - 修复问题10：使用统一的存储键名
     let pigeons = loadPigeons();
     
     // 如果有回收的足环号，先更新已死亡鸽子的标记
@@ -9772,10 +9952,25 @@
     pigeons.push(pigeon);
     
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(pigeons));
+      // 修复问题18：检查存储空间
+      const dataString = JSON.stringify(pigeons);
+      const estimatedSize = dataString.length;
+      
+      if (isStorageNearLimit() && estimatedSize > 100 * 1024) {
+        const confirm = window.confirm('存储空间即将用完，保存大量数据可能导致数据丢失。是否继续？');
+        if (!confirm) return;
+      }
+      
+      localStorage.setItem(STORAGE_KEY, dataString);
     } catch (e) {
       console.error('保存鸽子数据失败:', e);
-      alert('保存失败：' + (e.message || '未知错误'));
+      
+      // 修复问题22：友好的错误提示
+      if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+        showUserError('存储空间不足，请删除部分数据或图片后重试');
+      } else {
+        showUserError('保存失败：' + (e.message || '未知错误'));
+      }
       return;
     }
 
@@ -9792,7 +9987,7 @@
       console.warn('⚠️ 同步到云端失败:', e);
     }
     
-    alert('保存成功，已生成档案。');
+    showUserSuccess('保存成功，已生成档案');
     
     // 切换回列表视图
     if (typeof window.switchView === 'function') {
@@ -10244,8 +10439,10 @@
   }
 
   // 3. 修复所有按钮的点击事件（优化版 - 与内嵌脚本协同工作）
+  // 修复问题13：防止重复绑定
   let isFixing = false;
   let fixTimeout = null;
+  const fixedButtons = new WeakSet(); // 使用WeakSet跟踪已修复的按钮
   
   function fixAllButtonClicks() {
     // 防止重复执行
@@ -10293,13 +10490,10 @@
       document.body.style.pointerEvents = 'auto';
       document.documentElement.style.pointerEvents = 'auto';
       
-      // 4. 修复侧边栏按钮 - 使用唯一标识符避免重复绑定
+      // 4. 修复侧边栏按钮 - 修复问题13：使用WeakSet防止重复绑定
       document.querySelectorAll('.sidebar-item').forEach((item, index) => {
-        // 使用data属性标记已修复的按钮
-        const buttonId = item.dataset.view || item.dataset.openFeedback || `btn_${index}`;
-        const fixedKey = `fixed_${buttonId}`;
-        
-        if (item.dataset.fixed === 'true') {
+        // 修复问题13：检查是否已修复
+        if (fixedButtons.has(item) || item.dataset.fixed === 'true') {
           return; // 已修复，跳过
         }
         
@@ -10307,46 +10501,47 @@
         item.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; z-index: 99999 !important; position: relative !important;';
         item.removeAttribute('disabled');
         
-        // 标记为已修复，避免重复处理
+        // 修复问题13：标记为已修复（使用WeakSet和data属性双重标记）
+        fixedButtons.add(item);
         item.dataset.fixed = 'true';
         
+        // 修复问题13：移除旧的事件监听器，然后绑定新的事件
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.dataset.fixed = 'true';
+        fixedButtons.add(newItem);
+        
         // 直接绑定onclick，不使用addEventListener避免重复绑定
-        const view = item.dataset.view;
-        const openFeedback = item.dataset.openFeedback;
+        const view = newItem.dataset.view;
+        const openFeedback = newItem.dataset.openFeedback;
         
         if (view) {
-          // 只在onclick未设置时才设置
-          if (!item.onclick) {
-            item.onclick = function(e) {
-              if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-              }
-              console.log('🔘 点击侧边栏按钮:', view);
-              if (typeof window.switchView === 'function') {
-                window.switchView(view);
-              }
-              return false;
-            };
-          }
+          newItem.onclick = function(e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            }
+            console.log('🔘 点击侧边栏按钮:', view);
+            if (typeof window.switchView === 'function') {
+              window.switchView(view);
+            }
+            return false;
+          };
         } else if (openFeedback === 'true') {
-          // 只在onclick未设置时才设置
-          if (!item.onclick) {
-            item.onclick = function(e) {
-              if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-              }
-              console.log('🔘 点击反馈按钮');
-              const feedbackModal = document.getElementById('feedbackModal');
-              if (feedbackModal) {
-                feedbackModal.style.display = 'flex';
-              }
-              return false;
-            };
-          }
+          newItem.onclick = function(e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            }
+            console.log('🔘 点击反馈按钮');
+            const feedbackModal = document.getElementById('feedbackModal');
+            if (feedbackModal) {
+              feedbackModal.style.display = 'flex';
+            }
+            return false;
+          };
         }
       });
       
@@ -11372,23 +11567,31 @@
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 3);
     
-    container.innerHTML = latestAnalyses.map(analysis => {
+    // 修复问题19：使用安全的innerHTML设置
+    const html = latestAnalyses.map(analysis => {
       const pigeon = getPigeonById(analysis.pigeonId);
+      const pigeonName = escapeHtml(pigeon ? (pigeon.name || pigeon.ring) : '未知鸽子');
+      const date = escapeHtml(analysis.date || '');
+      const summary = escapeHtml(analysis.summary || '暂无总结');
+      const totalTrainings = analysis.totalTrainings || 0;
+      const pigeonId = escapeHtml(analysis.pigeonId || '');
+      
       return `
-        <div class="card" style="margin-bottom: 16px; cursor: pointer;" onclick="showTrainingAnalysisDetailPC('${analysis.pigeonId}')">
+        <div class="card" style="margin-bottom: 16px; cursor: pointer;" onclick="showTrainingAnalysisDetailPC('${pigeonId}')">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <h4 style="margin: 0; color: #1f2937;">${pigeon ? (pigeon.name || pigeon.ring) : '未知鸽子'}</h4>
-            <span style="font-size: 12px; color: #6b7280;">${analysis.date}</span>
+            <h4 style="margin: 0; color: #1f2937;">${pigeonName}</h4>
+            <span style="font-size: 12px; color: #6b7280;">${date}</span>
           </div>
           <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
-            ${analysis.totalTrainings || 0}次训练
+            ${totalTrainings}次训练
           </div>
           <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-            ${analysis.summary || '暂无总结'}
+            ${summary}
           </div>
         </div>
       `;
     }).join('');
+    container.innerHTML = html;
   }
   
   // 渲染训练分析表格 - PC端版本
@@ -11418,24 +11621,32 @@
       return;
     }
     
-    tbody.innerHTML = filtered.map(analysis => {
+    // 修复问题19：使用安全的innerHTML设置
+    const html = filtered.map(analysis => {
       const pigeon = getPigeonById(analysis.pigeonId);
+      const pigeonName = escapeHtml(pigeon ? (pigeon.name || '未命名') : '未知鸽子');
+      const ring = escapeHtml(pigeon ? (pigeon.ring || '—') : '—');
+      const date = escapeHtml(analysis.date || '');
+      const totalTrainings = analysis.totalTrainings || 0;
+      const pigeonId = escapeHtml(analysis.pigeonId || '');
+      
       return `
-        <tr style="border-bottom: 1px solid #E5E7EB; cursor: pointer;" onclick="showTrainingAnalysisDetailPC('${analysis.pigeonId}')">
+        <tr style="border-bottom: 1px solid #E5E7EB; cursor: pointer;" onclick="showTrainingAnalysisDetailPC('${pigeonId}')">
           <td style="padding: 12px; font-size: 14px; color: #1f2937;">
-            ${pigeon ? (pigeon.name || '未命名') : '未知鸽子'}
+            ${pigeonName}
           </td>
-          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${pigeon ? pigeon.ring : '—'}</td>
-          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${analysis.date}</td>
-          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${analysis.totalTrainings || 0}次</td>
+          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${ring}</td>
+          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${date}</td>
+          <td style="padding: 12px; font-size: 13px; color: #6b7280;">${totalTrainings}次</td>
           <td style="padding: 12px;">
-            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); showTrainingAnalysisDetailPC('${analysis.pigeonId}')">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); showTrainingAnalysisDetailPC('${pigeonId}')">
               查看详情
             </button>
           </td>
         </tr>
       `;
     }).join('');
+    tbody.innerHTML = html;
   }
   
   // 搜索过滤 - PC端版本
@@ -11463,44 +11674,58 @@
     
     title.textContent = `${pigeon ? (pigeon.name || pigeon.ring) : '未知鸽子'} - 训练分析与总结`;
     
-    // 显示最新分析
+    // 修复问题19：使用安全的innerHTML设置
+    const date = escapeHtml(analysis.date || '');
+    const analysisText = escapeHtml(analysis.analysis || '暂无分析');
+    const summary = escapeHtml(analysis.summary || '暂无总结');
+    const comparison = analysis.comparison ? escapeHtml(analysis.comparison) : '';
+    const suggestions = escapeHtml(analysis.suggestions || '暂无建议');
+    
     latestDiv.innerHTML = `
       <div style="margin-bottom: 12px;">
-        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">分析日期：${analysis.date}</div>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">分析日期：${date}</div>
         <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📊 训练表现分析</div>
         <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
-          ${analysis.analysis || '暂无分析'}
+          ${analysisText}
         </div>
         <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📝 总结</div>
         <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
-          ${analysis.summary || '暂无总结'}
+          ${summary}
         </div>
-        ${analysis.comparison ? `
+        ${comparison ? `
           <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">📈 进步与不足</div>
           <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 12px; white-space: pre-wrap;">
-            ${analysis.comparison}
+            ${comparison}
           </div>
         ` : ''}
         <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #1f2937;">💡 训练建议</div>
         <div style="font-size: 13px; line-height: 1.6; color: #374151; white-space: pre-wrap;">
-          ${analysis.suggestions || '暂无建议'}
+          ${suggestions}
         </div>
       </div>
     `;
     
-    // 显示历史分析
+    // 显示历史分析 - 修复问题19：使用安全的innerHTML设置
     if (analysis.history && analysis.history.length > 0) {
-      historyDiv.innerHTML = analysis.history.map((h, index) => `
-        <div class="card" style="margin-bottom: 12px; padding: 16px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">历史分析 #${analysis.history.length - index} - ${h.date}</div>
-          <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 8px; white-space: pre-wrap;">
-            ${h.summary || '暂无总结'}
+      const historyHtml = analysis.history.map((h, index) => {
+        const historyId = escapeHtml(h.id || '');
+        const date = escapeHtml(h.date || '');
+        const summary = escapeHtml(h.summary || '暂无总结');
+        const historyIndex = analysis.history.length - index;
+        
+        return `
+          <div class="card" style="margin-bottom: 12px; padding: 16px;">
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">历史分析 #${historyIndex} - ${date}</div>
+            <div style="font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 8px; white-space: pre-wrap;">
+              ${summary}
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="showHistoryAnalysisDetailPC('${historyId}')">
+              查看完整分析
+            </button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="showHistoryAnalysisDetailPC('${h.id}')">
-            查看完整分析
-          </button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+      historyDiv.innerHTML = historyHtml;
     } else {
       historyDiv.innerHTML = '<p class="muted">暂无历史分析</p>';
     }
@@ -11548,6 +11773,506 @@
       }
     };
   }
+
+  // ========================================
+  // 🔒 安全工具函数 - XSS防护和输入清理
+  // ========================================
+  
+  // HTML转义函数（防止XSS攻击）
+  function escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  // 清理用户输入
+  function sanitizeInput(input) {
+    if (typeof input !== 'string') return input;
+    return input.trim()
+      .replace(/[<>]/g, '') // 移除HTML标签字符
+      .replace(/javascript:/gi, '') // 移除javascript协议
+      .replace(/on\w+=/gi, ''); // 移除事件处理器
+  }
+  
+  // 安全的innerHTML设置（带转义）- 修复问题19：XSS防护
+  function setSafeHTML(element, html) {
+    if (!element) return;
+    if (html == null) html = '';
+    
+    // 如果html是字符串，进行转义
+    if (typeof html === 'string') {
+      element.textContent = ''; // 先清空
+      const temp = document.createElement('div');
+      temp.textContent = html;
+      element.innerHTML = temp.innerHTML;
+    } else {
+      // 如果不是字符串，直接设置（可能是DOM元素）
+      element.innerHTML = '';
+      if (html instanceof Node) {
+        element.appendChild(html);
+      } else {
+        element.textContent = String(html);
+      }
+    }
+  }
+  
+  // 安全的innerHTML设置（允许HTML但转义用户输入）- 修复问题19
+  function setSafeHTMLWithEscape(element, html, userInputs = {}) {
+    if (!element) return;
+    if (html == null) html = '';
+    
+    // 转义所有用户输入
+    let safeHtml = String(html);
+    Object.keys(userInputs).forEach(key => {
+      const value = userInputs[key];
+      if (value != null) {
+        const escaped = escapeHtml(String(value));
+        safeHtml = safeHtml.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), escaped);
+      }
+    });
+    
+    element.innerHTML = safeHtml;
+  }
+  
+  // ========================================
+  // 🎨 渲染函数 - 确保所有渲染函数存在
+  // ========================================
+  
+  // 渲染首页内容
+  function renderHome() {
+    try {
+      // 更新日期显示
+      const now = new Date();
+      const dayEl = document.getElementById('homeDay');
+      const weekdayEl = document.getElementById('homeWeekday');
+      const dateFullEl = document.getElementById('homeDateFull');
+      
+      if (dayEl) dayEl.textContent = now.getDate();
+      if (weekdayEl) {
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        weekdayEl.textContent = weekdays[now.getDay()];
+      }
+      if (dateFullEl) {
+        dateFullEl.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+      }
+      
+      // 更新统计数据
+      const newsCountEl = document.getElementById('homeNewsCount');
+      const activeRacesEl = document.getElementById('homeActiveRaces');
+      const completedRacesEl = document.getElementById('homeCompletedRaces');
+      
+      if (newsCountEl) {
+        // 从localStorage获取资讯数据
+        try {
+          const newsData = localStorage.getItem('pigeon_news_data');
+          if (newsData) {
+            const news = JSON.parse(newsData);
+            newsCountEl.textContent = Array.isArray(news) ? news.length : 0;
+          } else {
+            newsCountEl.textContent = '0';
+          }
+        } catch (e) {
+          newsCountEl.textContent = '0';
+        }
+      }
+      
+      if (activeRacesEl || completedRacesEl) {
+        // 从localStorage获取赛事数据
+        try {
+          const eventsData = localStorage.getItem('pigeon_events_data');
+          if (eventsData) {
+            const events = JSON.parse(eventsData);
+            const ongoing = events.ongoing || [];
+            const results = events.results || [];
+            if (activeRacesEl) activeRacesEl.textContent = ongoing.length;
+            if (completedRacesEl) completedRacesEl.textContent = results.length;
+          } else {
+            if (activeRacesEl) activeRacesEl.textContent = '0';
+            if (completedRacesEl) completedRacesEl.textContent = '0';
+          }
+        } catch (e) {
+          if (activeRacesEl) activeRacesEl.textContent = '0';
+          if (completedRacesEl) completedRacesEl.textContent = '0';
+        }
+      }
+      
+      // 加载公告
+      try {
+        const announcementEl = document.getElementById('homeAnnouncementBubbleText');
+        if (announcementEl) {
+          const announcement = localStorage.getItem('pigeon_announcement');
+          if (announcement) {
+            const annData = JSON.parse(announcement);
+            if (annData && annData.content) {
+              announcementEl.textContent = sanitizeInput(annData.content);
+            } else {
+              announcementEl.textContent = '暂无公告';
+            }
+          } else {
+            announcementEl.textContent = '暂无公告';
+          }
+        }
+      } catch (e) {
+        console.warn('加载公告失败:', e);
+      }
+      
+      console.log('✅ 首页渲染完成');
+    } catch (error) {
+      console.error('❌ 渲染首页失败:', error);
+      showUserError('首页加载失败，请刷新页面重试');
+    }
+  }
+  
+  // 渲染鸽子列表（如果函数不存在则创建）
+  if (typeof renderPigeonList !== 'function') {
+    function renderPigeonList() {
+      try {
+        const listView = document.getElementById('listView');
+        if (!listView) return;
+        
+        // 检查是否有表格容器
+        const tableContainer = listView.querySelector('.table-container');
+        const cardContainer = listView.querySelector('.pigeon-cards');
+        
+        if (tableContainer || cardContainer) {
+          // 如果已经有渲染逻辑，触发刷新
+          if (typeof refreshList === 'function') {
+            refreshList();
+          }
+        }
+        
+        console.log('✅ 鸽子列表渲染完成');
+      } catch (error) {
+        console.error('❌ 渲染鸽子列表失败:', error);
+      }
+    }
+    window.renderPigeonList = renderPigeonList;
+  }
+  
+  // 渲染统计数据（如果函数不存在则创建）
+  if (typeof renderStats !== 'function') {
+    function renderStats() {
+      try {
+        const statsView = document.getElementById('statsView');
+        if (!statsView) return;
+        
+        // 如果已经有渲染逻辑，触发刷新
+        if (typeof refreshStats === 'function') {
+          refreshStats();
+        } else if (typeof renderStatsViewTable === 'function') {
+          renderStatsViewTable();
+        }
+        
+        console.log('✅ 统计数据渲染完成');
+      } catch (error) {
+        console.error('❌ 渲染统计数据失败:', error);
+      }
+    }
+    window.renderStats = renderStats;
+  }
+  
+  // ========================================
+  // 🔄 统一的视图切换函数（修复问题5）
+  // ========================================
+  
+  // 确保switchView函数只定义一次，并添加数据刷新逻辑
+  if (typeof window.switchView === 'function') {
+    // 保存原始函数
+    const originalSwitchView = window.switchView;
+    
+    // 重新定义，添加数据刷新逻辑
+    window.switchView = function(viewName) {
+      console.log('🔄 切换视图:', viewName);
+      
+      // 调用原始函数
+      originalSwitchView(viewName);
+      
+      // 根据视图类型触发数据刷新（修复问题12）
+      setTimeout(() => {
+        try {
+          switch(viewName) {
+            case 'homeView':
+              if (typeof renderHome === 'function') renderHome();
+              break;
+            case 'listView':
+              if (typeof renderPigeonList === 'function') renderPigeonList();
+              break;
+            case 'statsView':
+            case 'dashboardView':
+              if (typeof renderStats === 'function') renderStats();
+              if (typeof refreshDashboard === 'function') refreshDashboard();
+              break;
+            case 'pedigreeView':
+              if (typeof fillPedigreeSelect === 'function') fillPedigreeSelect();
+              break;
+            case 'raceView':
+              if (typeof loadRaces === 'function') loadRaces();
+              break;
+            case 'breedingView':
+              if (typeof fillBreedingSelects === 'function') fillBreedingSelects();
+              break;
+            case 'healthView':
+              if (typeof refreshHealth === 'function') refreshHealth();
+              break;
+            case 'trainingView':
+              if (typeof initTrainingAnalysisPC === 'function') initTrainingAnalysisPC();
+              break;
+          }
+        } catch (e) {
+          console.warn('视图切换后刷新数据失败:', e);
+        }
+      }, 100);
+    };
+  }
+  
+  // ========================================
+  // 🚀 页面初始化 - 确保页面正常显示（修复问题2、3、21）
+  // ========================================
+  
+  // 初始化标志，防止重复初始化
+  let pageInitialized = false;
+  
+  async function initPage() {
+    // 防止重复初始化（修复问题2）
+    if (pageInitialized) {
+      console.log('⚠️ 页面已初始化，跳过重复初始化');
+      return;
+    }
+    pageInitialized = true;
+    
+    try {
+      console.log('🚀 开始初始化页面...');
+      
+      // 0. 首先确保body和主要内容区域可见
+      if (document.body) {
+        document.body.style.visibility = 'visible';
+        document.body.style.opacity = '1';
+      }
+      
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.style.visibility = 'visible';
+        mainContent.style.opacity = '1';
+      }
+      
+      // 1. 确保首页视图显示（优先级最高）
+      const homeView = document.getElementById('homeView');
+      if (homeView) {
+        homeView.style.display = '';
+        homeView.style.visibility = 'visible';
+        homeView.style.opacity = '1';
+        console.log('✅ 首页视图已显示');
+      } else {
+        console.warn('⚠️ 找不到homeView元素');
+        showUserError('页面结构异常，请刷新页面');
+      }
+      
+      // 2. 隐藏其他视图
+      const viewIds = ['dashboardView', 'listView', 'pedigreeView', 'statsView', 
+                       'raceView', 'breedingView', 'healthView', 'analysisView', 'trainingView', 
+                       'qualificationView', 'createView', 'detailView'];
+      viewIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.display = 'none';
+        }
+      });
+      
+      // 3. 更新侧边栏激活状态
+      try {
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+          item.classList.toggle('active', item.dataset.view === 'homeView');
+        });
+      } catch (e) {
+        console.warn('更新侧边栏状态失败:', e);
+      }
+      
+      // 4. 加载数据（异步，不阻塞页面显示）
+      // 检查是否已经有其他初始化函数在加载数据（修复问题2）
+      let dataLoaded = false;
+      if (typeof loadFromStorage === 'function') {
+        try {
+          await loadFromStorage();
+          dataLoaded = true;
+          console.log('✅ 数据加载完成');
+        } catch (e) {
+          console.warn('⚠️ 数据加载失败:', e);
+          showUserError('数据加载失败，部分功能可能不可用');
+        }
+      }
+      
+      // 5. 恢复用户数据（修复问题3：使用await）
+      if (typeof restoreUserDataIfMissing === 'function' && !dataLoaded) {
+        try {
+          await restoreUserDataIfMissing(); // 修复：添加await
+          console.log('✅ 用户数据恢复完成');
+        } catch (e) {
+          console.warn('⚠️ 用户数据恢复失败:', e);
+          // 不显示错误，因为这是可选的
+        }
+      }
+      
+      // 6. 渲染首页内容
+      if (typeof renderHome === 'function') {
+        try {
+          renderHome();
+        } catch (e) {
+          console.warn('⚠️ 渲染首页失败:', e);
+        }
+      }
+      
+      // 7. 渲染列表
+      if (typeof renderPigeonList === 'function') {
+        try {
+          renderPigeonList();
+        } catch (e) {
+          console.warn('⚠️ 渲染列表失败:', e);
+        }
+      }
+      
+      // 8. 渲染统计
+      if (typeof renderStats === 'function') {
+        try {
+          renderStats();
+        } catch (e) {
+          console.warn('⚠️ 渲染统计失败:', e);
+        }
+      }
+      
+      console.log('✅ 页面初始化完成');
+    } catch (error) {
+      console.error('❌ 页面初始化失败:', error);
+      showUserError('页面初始化失败：' + (error.message || '未知错误'));
+      
+      // 即使出错，也确保首页显示
+      const homeView = document.getElementById('homeView');
+      if (homeView) {
+        homeView.style.display = '';
+        homeView.style.visibility = 'visible';
+        homeView.style.opacity = '1';
+      }
+      
+      // 显示错误提示
+      if (document.body) {
+        document.body.style.visibility = 'visible';
+        document.body.style.opacity = '1';
+      }
+    }
+  }
+  
+  // 用户友好的错误提示函数（修复问题22）
+  function showUserError(message) {
+    try {
+      // 创建错误提示元素
+      let errorEl = document.getElementById('globalErrorToast');
+      if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.id = 'globalErrorToast';
+        errorEl.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #ef4444;
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 10000;
+          max-width: 400px;
+          font-size: 14px;
+          line-height: 1.5;
+        `;
+        document.body.appendChild(errorEl);
+      }
+      
+      errorEl.textContent = '❌ ' + message;
+      errorEl.style.display = 'block';
+      
+      // 5秒后自动隐藏
+      setTimeout(() => {
+        if (errorEl) errorEl.style.display = 'none';
+      }, 5000);
+    } catch (e) {
+      console.error('显示错误提示失败:', e);
+      alert(message); // 降级到alert
+    }
+  }
+  
+  // 用户友好的成功提示函数
+  function showUserSuccess(message) {
+    try {
+      let successEl = document.getElementById('globalSuccessToast');
+      if (!successEl) {
+        successEl = document.createElement('div');
+        successEl.id = 'globalSuccessToast';
+        successEl.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #10b981;
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 10000;
+          max-width: 400px;
+          font-size: 14px;
+          line-height: 1.5;
+        `;
+        document.body.appendChild(successEl);
+      }
+      
+      successEl.textContent = '✅ ' + message;
+      successEl.style.display = 'block';
+      
+      setTimeout(() => {
+        if (successEl) successEl.style.display = 'none';
+      }, 3000);
+    } catch (e) {
+      console.error('显示成功提示失败:', e);
+    }
+  }
+  
+  // 全局错误处理
+  window.addEventListener('error', function(e) {
+    console.error('❌ 全局错误:', e.error);
+    // 确保页面可见
+    if (document.body) {
+      document.body.style.visibility = 'visible';
+      document.body.style.opacity = '1';
+    }
+    const homeView = document.getElementById('homeView');
+    if (homeView) {
+      homeView.style.display = '';
+      homeView.style.visibility = 'visible';
+      homeView.style.opacity = '1';
+    }
+  }, true);
+  
+  // 页面加载完成后执行初始化 - 修复问题17：优化初始化延迟
+  function startPageInit() {
+    // 立即执行，不延迟（修复问题17）
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+      // DOM已加载，立即执行
+      initPage();
+    }
+    
+    // 备用初始化（如果DOMContentLoaded已经触发）- 缩短延迟时间
+    setTimeout(function() {
+      const homeView = document.getElementById('homeView');
+      if (homeView && (homeView.style.display === 'none' || !homeView.style.display)) {
+        console.log('🔧 备用初始化：显示首页');
+        homeView.style.display = '';
+        homeView.style.visibility = 'visible';
+        homeView.style.opacity = '1';
+      }
+    }, 500); // 修复问题17：从1000ms减少到500ms
+  }
+  
+  startPageInit();
 
 </script>
 </body>

@@ -285,3 +285,63 @@ class CloudStorageService {
 
 module.exports = new CloudStorageService();
 
+
+      return null;
+    }
+  }
+
+  /**
+   * 检查云存储是否可用
+   */
+  isAvailable() {
+    return this.isInitialized;
+  }
+}
+
+module.exports = new CloudStorageService();
+
+
+      return null;
+    }
+  }
+
+  /**
+   * 检查云存储是否可用
+   */
+  isAvailable() {
+    return this.isInitialized;
+  }
+}
+
+module.exports = new CloudStorageService();
+
+
+      return null;
+    }
+  }
+
+  /**
+   * 检查云存储是否可用
+   */
+  isAvailable() {
+    return this.isInitialized;
+  }
+}
+
+module.exports = new CloudStorageService();
+
+
+      return null;
+    }
+  }
+
+  /**
+   * 检查云存储是否可用
+   */
+  isAvailable() {
+    return this.isInitialized;
+  }
+}
+
+module.exports = new CloudStorageService();
+

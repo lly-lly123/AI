@@ -828,8 +828,8 @@
         }
       });
       
-      // 定期自动保存（每5分钟）
-      setInterval(async () => {
+      // 定期自动保存（每5分钟）- 存储定时器ID以便清理
+      const autoSaveTimer = setInterval(async () => {
         if (window.pigeons) {
           await autoSaveData('pigeons', window.pigeons);
         }
@@ -837,6 +837,13 @@
           await autoSaveData('races', window.races);
         }
       }, 5 * 60 * 1000);
+      
+      // 页面卸载时清理定时器
+      window.addEventListener('beforeunload', () => {
+        if (autoSaveTimer) {
+          clearInterval(autoSaveTimer);
+        }
+      });
     }
     
     console.log('✅ [自动账号] 自动账号系统初始化完成');

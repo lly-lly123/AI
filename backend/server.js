@@ -51,13 +51,7 @@ function findFrontendPath() {
     path.resolve(process.cwd())  // 绝对路径：当前工作目录
   ];
   
-  // 使用console.log确保在Zeabur日志中可见
-  console.log('🔍 开始检测前端文件路径...');
-  console.log('  __dirname:', __dirname);
-  console.log('  process.cwd():', process.cwd());
-  console.log('  NODE_ENV:', process.env.NODE_ENV);
-  
-  logger.info('开始检测前端文件路径', {
+  logger.info('🔍 开始检测前端文件路径', {
     __dirname: __dirname,
     processCwd: process.cwd(),
     nodeEnv: process.env.NODE_ENV
@@ -69,12 +63,7 @@ function findFrontendPath() {
     const indexPathResolved = path.resolve(indexPath);
     const exists = fs.existsSync(indexPathResolved);
     
-    // 使用console.log确保在Zeabur日志中可见
-    console.log(`  检测路径: ${testPath}`);
-    console.log(`    indexPath: ${indexPathResolved}`);
-    console.log(`    存在: ${exists ? '✅' : '❌'}`);
-    
-    logger.info('检测路径', {
+    logger.debug('检测路径', {
       testPath: testPath,
       indexPath: indexPath,
       indexPathResolved: indexPathResolved,
@@ -83,10 +72,6 @@ function findFrontendPath() {
     
     if (exists) {
       const files = fs.readdirSync(testPath).slice(0, 5);
-      console.log(`✅ 找到前端文件路径: ${testPath}`);
-      console.log(`   index.html路径: ${indexPathResolved}`);
-      console.log(`   目录文件: ${files.join(', ')}`);
-      
       logger.info('✅ 找到前端文件路径', { 
         path: testPath, 
         indexPath: indexPathResolved,
@@ -98,12 +83,6 @@ function findFrontendPath() {
   
   // 如果都找不到，默认使用上级目录
   const defaultPath = path.join(__dirname, '..');
-  console.log(`❌ 未找到index.html，使用默认路径: ${defaultPath}`);
-  console.log(`  尝试过的路径:`);
-  possiblePaths.forEach(p => {
-    console.log(`    - ${path.join(p, 'index.html')}`);
-  });
-  
   logger.error('❌ 未找到index.html，使用默认路径', { 
     defaultPath: defaultPath,
     triedPaths: possiblePaths.map(p => path.join(p, 'index.html'))
@@ -118,17 +97,8 @@ const finalIndexPath = path.join(frontendPath, 'index.html');
 const finalIndexPathResolved = path.resolve(finalIndexPath);
 const finalIndexExists = fs.existsSync(finalIndexPathResolved);
 
-console.log('========================================');
-console.log('📁 前端文件路径配置完成');
-console.log('========================================');
-console.log(`  环境: ${process.env.NODE_ENV || 'development'}`);
-console.log(`  前端路径: ${frontendPath}`);
-console.log(`  index.html: ${finalIndexPathResolved}`);
-console.log(`  存在: ${finalIndexExists ? '✅' : '❌'}`);
-console.log('========================================');
-
-logger.info('前端文件路径配置', {
-  nodeEnv: process.env.NODE_ENV,
+logger.info('📁 前端文件路径配置完成', {
+  nodeEnv: process.env.NODE_ENV || 'development',
   frontendPath: frontendPath,
   __dirname: __dirname,
   indexPath: finalIndexPathResolved,
@@ -137,7 +107,7 @@ logger.info('前端文件路径配置', {
 
 // 移动端设备检测和自动跳转（在静态文件服务之前）
 app.get('/', (req, res, next) => {
-  console.log('🌐 根路径请求:', req.path, req.url);
+  logger.debug('🌐 根路径请求', { path: req.path, url: req.url });
   
   const userAgent = req.get('user-agent') || '';
   const ua = userAgent.toLowerCase();
@@ -156,7 +126,7 @@ app.get('/', (req, res, next) => {
   
   // 如果是移动设备且不是访问 mobile.html，重定向到 mobile.html
   if (isMobile && !req.path.includes('mobile.html')) {
-    console.log('📱 移动设备，重定向到 mobile.html');
+    logger.info('📱 移动设备，重定向到 mobile.html');
     return res.redirect('/mobile.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
   }
   
@@ -171,15 +141,12 @@ app.get('/', (req, res, next) => {
     path.join(process.cwd(), 'index.html')
   ];
   
-  console.log('🔍 查找index.html，尝试路径:');
   for (const indexPath of possibleIndexPaths) {
     const indexPathResolved = path.resolve(indexPath);
     const exists = fs.existsSync(indexPathResolved);
-    console.log(`  ${exists ? '✅' : '❌'} ${indexPathResolved}`);
     
     if (exists) {
-      console.log(`✅ 找到index.html，返回: ${indexPathResolved}`);
-      logger.info('根路径请求 - 返回index.html', {
+      logger.info('✅ 根路径请求 - 返回index.html', {
         path: req.path,
         indexPath: indexPathResolved,
         exists: true
@@ -189,8 +156,7 @@ app.get('/', (req, res, next) => {
   }
   
   // 如果都找不到，记录警告但继续（让静态文件服务或404处理）
-  console.log('⚠️ 未找到index.html，继续到下一个中间件');
-  logger.warn('根路径请求 - index.html不存在', {
+  logger.warn('⚠️ 根路径请求 - index.html不存在', {
     path: req.path,
     triedPaths: possibleIndexPaths
   });
@@ -201,8 +167,11 @@ app.get('/', (req, res, next) => {
 // 处理简化路由（在HTML文件路由之前）
 // /admin -> 直接返回 admin.html（不重定向，避免路由问题）
 app.all('/admin', (req, res, next) => {
-  console.log('🔄 [路由处理] /admin -> 直接返回 admin.html');
-  console.log(`  请求方法: ${req.method}, 路径: ${req.path}, URL: ${req.url}`);
+  logger.debug('🔄 [路由处理] /admin -> 直接返回 admin.html', {
+    method: req.method,
+    path: req.path,
+    url: req.url
+  });
   
   // 尝试所有可能的路径查找admin.html
   const possibleAdminPaths = [
@@ -216,15 +185,12 @@ app.all('/admin', (req, res, next) => {
     path.resolve(__dirname, 'admin.html')
   ];
   
-  console.log(`  [Admin路由] 尝试查找 admin.html:`);
   for (const adminPath of possibleAdminPaths) {
     const adminPathResolved = path.resolve(adminPath);
     const exists = fs.existsSync(adminPathResolved);
-    console.log(`    ${exists ? '✅' : '❌'} ${adminPathResolved}`);
     
     if (exists) {
-      console.log(`  ✅ [Admin路由] 找到 admin.html，返回: ${adminPathResolved}`);
-      logger.info('Admin路由 - 返回admin.html', {
+      logger.info('✅ [Admin路由] 找到 admin.html', {
         method: req.method,
         path: req.path,
         adminPath: adminPathResolved
@@ -235,8 +201,7 @@ app.all('/admin', (req, res, next) => {
     }
   }
   
-  console.log(`  ⚠️ [Admin路由] 未找到 admin.html，继续到下一个中间件`);
-  logger.warn('Admin路由 - admin.html不存在', {
+  logger.warn('⚠️ [Admin路由] 未找到 admin.html', {
     method: req.method,
     path: req.path,
     triedPaths: possibleAdminPaths
@@ -249,7 +214,7 @@ app.all('/admin', (req, res, next) => {
 // 处理 /admin.html, /mobile.html 等
 app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
   const htmlFileName = req.path.substring(1); // 移除开头的 /
-  console.log(`📄 [HTML路由] 请求: ${htmlFileName}, 方法: ${req.method}`);
+  logger.debug(`📄 [HTML路由] 请求: ${htmlFileName}`, { method: req.method });
   
   // 尝试所有可能的路径查找HTML文件
   const possibleHtmlPaths = [
@@ -263,15 +228,12 @@ app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
     path.resolve(__dirname, htmlFileName)
   ];
   
-  console.log(`  [HTML路由] 尝试查找 ${htmlFileName}:`);
   for (const htmlPath of possibleHtmlPaths) {
     const htmlPathResolved = path.resolve(htmlPath);
     const exists = fs.existsSync(htmlPathResolved);
-    console.log(`    ${exists ? '✅' : '❌'} ${htmlPathResolved}`);
     
     if (exists) {
-      console.log(`  ✅ [HTML路由] 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
-      logger.info(`HTML文件请求 - 返回${htmlFileName}`, {
+      logger.info(`✅ [HTML路由] 找到 ${htmlFileName}`, {
         path: req.path,
         method: req.method,
         htmlPath: htmlPathResolved
@@ -282,8 +244,7 @@ app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
     }
   }
   
-  console.log(`  ⚠️ [HTML路由] 未找到 ${htmlFileName}，继续到下一个中间件`);
-  logger.warn(`HTML文件请求 - ${htmlFileName}不存在`, {
+  logger.warn(`⚠️ [HTML路由] 未找到 ${htmlFileName}`, {
     path: req.path,
     method: req.method,
     triedPaths: possibleHtmlPaths
@@ -293,19 +254,7 @@ app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
 });
 
 // 静态文件服务 - 提供前端页面
-console.log('========================================');
-console.log('📂 配置静态文件服务');
-console.log('========================================');
-console.log(`  前端路径: ${frontendPath}`);
-console.log(`  路径存在: ${fs.existsSync(frontendPath) ? '✅' : '❌'}`);
-console.log(`  index.html存在: ${fs.existsSync(path.join(frontendPath, 'index.html')) ? '✅' : '❌'}`);
-
-if (fs.existsSync(frontendPath)) {
-  const files = fs.readdirSync(frontendPath).slice(0, 10);
-  console.log(`  目录文件 (前10个): ${files.join(', ')}`);
-}
-
-logger.info('配置静态文件服务', {
+logger.info('📂 配置静态文件服务', {
   frontendPath: frontendPath,
   exists: fs.existsSync(frontendPath),
   indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
@@ -329,15 +278,13 @@ app.use((req, res, next) => {
   staticMiddleware(req, res, next);
 });
 
-console.log('✅ 静态文件服务已配置');
-console.log('========================================');
+logger.info('✅ 静态文件服务已配置');
 
 // 请求日志（在静态文件服务之后，只记录非静态文件请求）
 app.use((req, res, next) => {
   // 跳过静态文件请求的日志（避免日志过多）
   if (!req.path.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/i)) {
-    console.log(`📥 ${req.method} ${req.path}`);
-    logger.info(`${req.method} ${req.path}`, {
+    logger.debug(`📥 ${req.method} ${req.path}`, {
       ip: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -357,11 +304,10 @@ app.use((err, req, res, next) => {
 
 // 404处理 - 最后一个中间件，处理所有未匹配的请求
 app.use((req, res) => {
-  console.log('❌ 404 - 未匹配的请求:', req.method, req.path, req.url);
+  logger.warn('❌ 404 - 未匹配的请求', { method: req.method, path: req.path, url: req.url });
   
   // 如果是API请求，返回JSON错误
   if (req.path.startsWith('/api/')) {
-    console.log('  → API请求，返回JSON错误');
     logger.warn('404 - API请求不存在', {
       method: req.method,
       path: req.path,
@@ -377,7 +323,7 @@ app.use((req, res) => {
   const htmlFileMatch = req.path.match(/^\/([^\/]+\.html)$/);
   if (htmlFileMatch) {
     const htmlFileName = htmlFileMatch[1];
-    console.log(`  → HTML文件请求: ${htmlFileName}`);
+    logger.debug(`404处理 - HTML文件请求: ${htmlFileName}`);
     
     // 尝试所有可能的路径查找HTML文件
     const possibleHtmlPaths = [
@@ -391,15 +337,12 @@ app.use((req, res) => {
       path.resolve(__dirname, htmlFileName)
     ];
     
-    console.log(`  尝试查找 ${htmlFileName}:`);
     for (const htmlPath of possibleHtmlPaths) {
       const htmlPathResolved = path.resolve(htmlPath);
       const exists = fs.existsSync(htmlPathResolved);
-      console.log(`    ${exists ? '✅' : '❌'} ${htmlPathResolved}`);
       
       if (exists) {
-        console.log(`  ✅ 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
-        logger.info(`404处理 - 返回${htmlFileName}`, {
+        logger.info(`✅ 404处理 - 找到 ${htmlFileName}`, {
           method: req.method,
           path: req.path,
           htmlPath: htmlPathResolved
@@ -408,11 +351,11 @@ app.use((req, res) => {
       }
     }
     
-    console.log(`  ❌ 所有路径都找不到 ${htmlFileName}`);
+    logger.warn(`❌ 404处理 - 所有路径都找不到 ${htmlFileName}`);
   }
   
   // 对于非API请求，尝试返回index.html（SPA路由支持）
-  console.log('  → 非API请求，尝试返回index.html');
+  logger.debug('404处理 - 非API请求，尝试返回index.html');
   
   // 尝试所有可能的路径
   const possibleIndexPaths = [
@@ -426,15 +369,12 @@ app.use((req, res) => {
     path.resolve(__dirname, 'index.html')
   ];
   
-  console.log('  尝试路径:');
   for (const indexPath of possibleIndexPaths) {
     const indexPathResolved = path.resolve(indexPath);
     const exists = fs.existsSync(indexPathResolved);
-    console.log(`    ${exists ? '✅' : '❌'} ${indexPathResolved}`);
     
     if (exists) {
-      console.log(`  ✅ 找到index.html，返回: ${indexPathResolved}`);
-      logger.info('404处理 - 返回index.html', {
+      logger.info('✅ 404处理 - 找到index.html', {
         method: req.method,
         path: req.path,
         indexPath: indexPathResolved
@@ -444,8 +384,7 @@ app.use((req, res) => {
   }
   
   // 如果所有路径都不存在，返回404 JSON
-  console.log('  ❌ 所有路径都找不到index.html');
-  logger.error('404处理 - 无法找到index.html', {
+  logger.error('❌ 404处理 - 所有路径都找不到index.html', {
     method: req.method,
     path: req.path,
     url: req.url,
@@ -549,22 +488,25 @@ if (!process.env.VERCEL) {
   const HOST = process.env.HOST || '0.0.0.0';
   
   // 在启动前输出关键信息（确保能看到）
-  console.log('========================================');
-  console.log('🚀 服务器启动中...');
-  console.log('========================================');
-  console.log('工作目录:', process.cwd());
-  console.log('__dirname:', __dirname);
-  console.log('前端文件路径:', frontendPath);
-  console.log('index.html路径:', path.join(frontendPath, 'index.html'));
-  console.log('index.html存在:', fs.existsSync(path.join(frontendPath, 'index.html')));
-  console.log('========================================');
+  logger.info('========================================');
+  logger.info('🚀 服务器启动中...');
+  logger.info('========================================');
+  logger.info('启动信息', {
+    workDir: process.cwd(),
+    __dirname: __dirname,
+    frontendPath: frontendPath,
+    indexPath: path.join(frontendPath, 'index.html'),
+    indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+  });
+  logger.info('========================================');
   
   app.listen(PORT, HOST, async () => {
-    logger.info(`服务器启动成功，监听地址: ${HOST}:${PORT}`);
+    logger.info(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
     logger.info(`环境: ${config.server.env}`);
-    console.log(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
-    console.log(`前端文件路径: ${frontendPath}`);
-    console.log(`index.html: ${fs.existsSync(path.join(frontendPath, 'index.html')) ? '✅ 存在' : '❌ 不存在'}`);
+    logger.info('服务器启动信息', {
+      frontendPath: frontendPath,
+      indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+    });
     
     await initDefaultAdmin();
     try {
@@ -575,6 +517,18 @@ if (!process.env.VERCEL) {
     } catch (error) {
       logger.error('数据预加载失败', error);
     }
+  });
+
+  // 全局错误处理
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('未处理的Promise拒绝', { reason, promise });
+    // 不退出进程，只记录错误
+  });
+
+  process.on('uncaughtException', (error) => {
+    logger.error('未捕获的异常', error);
+    // 记录错误后优雅退出
+    process.exit(1);
   });
 
   process.on('SIGTERM', () => {

@@ -43,17 +43,20 @@
     
     const isMobileUA = mobileKeywords.some(keyword => ua.includes(keyword));
     
-    // 4. 屏幕尺寸辅助判断（作为UA检测的补充）
+    // 4. 屏幕尺寸辅助判断（作为UA检测的补充）- 修复问题16：优化检测逻辑
     const screenWidth = window.screen ? window.screen.width : 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
     const isSmallScreen = screenWidth > 0 && screenWidth < 768;
+    const isSmallViewport = viewportWidth > 0 && viewportWidth < 768;
     
-    // 5. 触摸设备检测（作为辅助判断）
+    // 5. 触摸设备检测（作为辅助判断）- 修复问题16：更严格的检测
     const isTouchDevice = 'ontouchstart' in window || 
-                         navigator.maxTouchPoints > 0 || 
-                         navigator.msMaxTouchPoints > 0;
+                         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || 
+                         (navigator.msMaxTouchPoints && navigator.msMaxTouchPoints > 0);
     
-    // 综合判断：UA检测为主，屏幕和触摸为辅
-    const isMobileDevice = isMobileUA || (isSmallScreen && isTouchDevice);
+    // 修复问题16：更严格的综合判断，避免误判
+    // 只有在UA明确是移动设备，或者（小屏幕+触摸设备+小视口）时才判定为移动设备
+    const isMobileDevice = isMobileUA || (isSmallScreen && isSmallViewport && isTouchDevice && viewportWidth < 600);
     
     // 6. 跳转逻辑决策
     let shouldGoMobile = false;
@@ -102,6 +105,9 @@
     }
   }
 })();
+
+
+
 
 
 

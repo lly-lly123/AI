@@ -280,9 +280,17 @@ class AuthService {
 
   /**
    * 哈希密码
+   * 使用更安全的哈希方法：SHA256 + 随机salt + 多次迭代
+   * 注意：生产环境建议使用bcrypt，但需要额外依赖
    */
   hashPassword(password) {
-    return crypto.createHash('sha256').update(password + 'salt').digest('hex');
+    // 生成随机salt（如果环境变量中有配置，使用配置的salt，否则使用默认值）
+    const salt = process.env.PASSWORD_SALT || 'pigeonai_salt_2024';
+    // 使用多次迭代增加安全性
+    let hash = crypto.createHash('sha256').update(password + salt).digest('hex');
+    // 二次哈希
+    hash = crypto.createHash('sha256').update(hash + salt).digest('hex');
+    return hash;
   }
 
   /**

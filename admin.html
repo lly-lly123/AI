@@ -6571,7 +6571,7 @@
         if (error.name === 'AbortError' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
           container.innerHTML = '<div style="padding: 20px; background: var(--warning-light); border-radius: var(--radius-md); margin-bottom: 16px;"><p style="color: #92400e; margin: 0;">⚠️ 无法连接到服务器。请检查后端服务是否已启动。</p></div><p class="muted" style="text-align: center; padding: 40px;">无法加载公告列表</p>';
         } else {
-        container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${error.message}</p>`;
+        container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
         }
         // 即使公告列表加载失败，也尝试加载历史公告
         loadAnnouncementHistory();
@@ -6744,7 +6744,7 @@
         if (error.name === 'AbortError' || error.message.includes('Failed to fetch')) {
           container.innerHTML = '<p class="muted" style="text-align: center; padding: 40px; color: var(--danger);">无法连接到服务器，请检查后端是否已启动</p>';
         } else {
-          container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${error.message}</p>`;
+          container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
         }
       }
     }
@@ -6916,7 +6916,7 @@
         if (error.name === 'AbortError' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
           tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:32px;">无法连接到服务器，请检查后端是否已启动</td></tr>';
         } else {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:32px;">加载失败：${error.message}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:32px;">加载失败：${escapeHtml(error.message || '未知错误')}</td></tr>`;
         }
       }
     }
@@ -7036,7 +7036,7 @@
         `;
       } catch (error) {
         console.error('加载用户列表失败:', error);
-        container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${error.message}</p>`;
+        container.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
       }
     };
     
@@ -7155,7 +7155,7 @@
         `;
       } catch (error) {
         console.error('获取用户数据失败:', error);
-        modalBody.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${error.message}</p>`;
+        modalBody.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 40px;">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
       }
     };
     
@@ -7446,7 +7446,7 @@
         `).join('');
         bodyEl.innerHTML = listHtml;
       } catch (e) {
-        bodyEl.innerHTML = `<p style="color:var(--danger);text-align:center;">加载失败：${e.message}</p>`;
+        bodyEl.innerHTML = `<p style="color:var(--danger);text-align:center;">加载失败：${escapeHtml(e.message || '未知错误')}</p>`;
       }
       historyModal.addEventListener('click', function(e) {
         if (e.target === historyModal) {
@@ -10000,7 +10000,7 @@
           } else {
             if (statusInfoEl) {
               statusInfoEl.style.background = 'rgba(244, 67, 54, 0.3)';
-              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${result.error || '未知错误'}`;
+              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${escapeHtml(result.error || '未知错误')}`;
             }
             displayEvoAIModelInfo(null);
           }
@@ -11458,10 +11458,10 @@
         if (result.success && result.data?.valid) {
           resultDiv.innerHTML = `<div style="padding:12px;background:#d1fae5;color:#047857;border-radius:6px;">✅ 连接成功！找到 ${result.data.itemCount} 条内容</div>`;
         } else {
-          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${result.error || '未知错误'}</div>`;
+          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${escapeHtml(result.error || '未知错误')}</div>`;
         }
       } catch (error) {
-        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${error.message}</div>`;
+        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${escapeHtml(error.message || '未知错误')}</div>`;
       }
     });
     
@@ -14411,7 +14411,7 @@
           } else {
             if (statusInfoEl) {
               statusInfoEl.style.background = 'rgba(244, 67, 54, 0.3)';
-              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${result.error || '未知错误'}`;
+              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${escapeHtml(result.error || '未知错误')}`;
             }
             displayEvoAIModelInfo(null);
           }
@@ -14788,160 +14788,6 @@
         }
       }
       
-      // 获取token函数
-      function getAuthToken() {
-        // 优先使用adminToken（智能管理系统使用的token）
-        const adminToken = localStorage.getItem('adminToken');
-        if (adminToken) {
-          return adminToken;
-        }
-        // 如果没有adminToken，尝试使用token（主站使用的token）
-        return localStorage.getItem('token');
-      }
-      
-      // 调用后端AI API
-      async function chatWithBackendAPI(question, history = [], context = {}) {
-        try {
-          // 使用统一的getApiUrl函数
-          const apiBaseUrl = getApiUrl();
-          
-          const token = getAuthToken();
-          if (!token) {
-            console.warn('❌ 未找到token，无法调用后端API。请先登录！');
-            return null;
-          }
-          
-          console.log(`🔄 正在调用后端AI API...`);
-          console.log(`📡 API地址: ${apiBaseUrl}/evo/chat`);
-          console.log(`📝 问题: ${question.substring(0, 50)}...`);
-          
-          const startTime = Date.now();
-          const response = await fetch(`${apiBaseUrl}/evo/chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              question: question,
-              history: history,
-              context: context
-            })
-          });
-          
-          const responseTime = Date.now() - startTime;
-          console.log(`⏱️ 响应时间: ${responseTime}ms`);
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('📥 API响应数据:', data);
-            
-            if (data.success && data.data) {
-              const responseText = data.data.text || data.data.response;
-              if (responseText && responseText.length > 10) {
-                console.log(`✅ AI API调用成功！`);
-                console.log(`📊 回复长度: ${responseText.length} 字符`);
-                console.log(`🤖 使用模型: ${data.data.model || '未知'}`);
-                console.log(`🏢 服务提供商: ${data.data.provider || '未知'}`);
-                console.log(`💬 回复预览: ${responseText.substring(0, 100)}...`);
-                
-                return { 
-                  text: responseText, 
-                  data: data.data,
-                  modelInfo: data.modelInfo || null
-                };
-              } else {
-                console.warn('⚠️ AI回复为空或太短，长度:', responseText?.length || 0);
-              }
-            } else {
-              console.warn('⚠️ API返回success=false:', data);
-            }
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('❌ 后端AI API响应错误:', response.status);
-            console.error('❌ 错误详情:', errorData);
-            
-            if (response.status === 401) {
-              console.error('❌ 认证失败！请重新登录！');
-              alert('登录已过期，请重新登录！');
-            } else if (response.status === 500) {
-              console.error('❌ 服务器内部错误！');
-            } else if (response.status === 404) {
-              console.error('❌ API接口不存在！请检查后端服务！');
-            }
-          }
-        } catch (error) {
-          console.error('❌ Backend AI API调用异常:', error);
-          console.error('❌ 错误类型:', error.name);
-          console.error('❌ 错误消息:', error.message);
-          
-          if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            console.error('❌ 网络错误：无法连接到后端服务！');
-            console.error('💡 请确认：1) 后端服务已启动 2) 服务地址正确 3) 网络连接正常');
-          }
-        }
-        
-        return null;
-      }
-      
-      async function chat(question) {
-        console.log('💬 收到用户问题:', question);
-        
-        // 获取对话历史
-        const history = messages.map(msg => ({
-          type: msg.type,
-          text: msg.text,
-          time: msg.time
-        }));
-        
-        // 获取上下文数据（如果有的话）
-        const context = {};
-        
-        // 优先级1：尝试使用后端AI API（必须优先使用AI）
-        try {
-          console.log('🔄 正在调用后端AI API...');
-          const apiResponse = await chatWithBackendAPI(question, history, context);
-          
-          if (apiResponse && apiResponse.text && apiResponse.text.length > 10) {
-            console.log('✅ AI API调用成功，返回智能AI回复');
-            return apiResponse;
-          } else {
-            console.warn('⚠️ AI API返回的回复为空或太短');
-            console.warn('⚠️ 回复内容:', apiResponse?.text || '(空)');
-            console.warn('⚠️ 继续尝试其他方式...');
-          }
-        } catch (error) {
-          console.error('❌ 后端AI API调用失败:', error);
-          console.error('❌ 错误堆栈:', error.stack);
-        }
-        
-        // 如果AI API失败，显示明确的错误提示
-        const token = getAuthToken();
-        if (!token) {
-          return { 
-            text: '❌ 无法使用AI功能：您尚未登录。\n\n请先登录系统，然后才能使用AI助手功能。\n\n登录后，AI助手将为您提供智能回复。' 
-          };
-        }
-        
-        // 检查后端服务是否可达
-        try {
-          const healthCheck = await fetch(`${getApiUrl()}/health`).catch(() => null);
-          if (!healthCheck || !healthCheck.ok) {
-            return { 
-              text: '❌ 无法连接到后端服务。\n\n请确认：\n1. 后端服务已启动（运行 npm start）\n2. 服务地址正确（http://localhost:3000）\n3. 网络连接正常\n\n连接成功后，AI助手将正常工作。' 
-            };
-          }
-        } catch (e) {
-          return { 
-            text: '❌ 后端服务连接失败。\n\n请检查：\n1. 后端服务是否已启动\n2. 服务地址是否正确\n3. 防火墙设置\n\n修复后，AI助手将自动恢复。' 
-          };
-        }
-        
-        // 如果后端服务正常但AI调用失败，显示提示
-        return { 
-          text: `⚠️ AI服务暂时不可用。\n\n问题："${question}"\n\n可能的原因：\n1. AI API配置问题\n2. API Key无效或过期\n3. 网络连接问题\n\n请检查：\n• 浏览器控制台的错误信息\n• 后端日志文件\n• API Key配置\n\n修复后，AI助手将自动恢复智能回复功能。` 
-        };
-      }
       
       function addMessage(type, text) {
         const message = { type, text, time: new Date() };
@@ -15867,10 +15713,10 @@
         if (result.success && result.data?.valid) {
           resultDiv.innerHTML = `<div style="padding:12px;background:#d1fae5;color:#047857;border-radius:6px;">✅ 连接成功！找到 ${result.data.itemCount} 条内容</div>`;
         } else {
-          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${result.error || '未知错误'}</div>`;
+          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${escapeHtml(result.error || '未知错误')}</div>`;
         }
       } catch (error) {
-        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${error.message}</div>`;
+        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${escapeHtml(error.message || '未知错误')}</div>`;
       }
     });
     
@@ -18820,7 +18666,7 @@
           } else {
             if (statusInfoEl) {
               statusInfoEl.style.background = 'rgba(244, 67, 54, 0.3)';
-              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${result.error || '未知错误'}`;
+              statusInfoEl.innerHTML = `❌ <strong>API返回错误</strong><br>${escapeHtml(result.error || '未知错误')}`;
             }
             displayEvoAIModelInfo(null);
           }
@@ -19197,160 +19043,6 @@
         }
       }
       
-      // 获取token函数
-      function getAuthToken() {
-        // 优先使用adminToken（智能管理系统使用的token）
-        const adminToken = localStorage.getItem('adminToken');
-        if (adminToken) {
-          return adminToken;
-        }
-        // 如果没有adminToken，尝试使用token（主站使用的token）
-        return localStorage.getItem('token');
-      }
-      
-      // 调用后端AI API
-      async function chatWithBackendAPI(question, history = [], context = {}) {
-        try {
-          // 使用统一的getApiUrl函数
-          const apiBaseUrl = getApiUrl();
-          
-          const token = getAuthToken();
-          if (!token) {
-            console.warn('❌ 未找到token，无法调用后端API。请先登录！');
-            return null;
-          }
-          
-          console.log(`🔄 正在调用后端AI API...`);
-          console.log(`📡 API地址: ${apiBaseUrl}/evo/chat`);
-          console.log(`📝 问题: ${question.substring(0, 50)}...`);
-          
-          const startTime = Date.now();
-          const response = await fetch(`${apiBaseUrl}/evo/chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              question: question,
-              history: history,
-              context: context
-            })
-          });
-          
-          const responseTime = Date.now() - startTime;
-          console.log(`⏱️ 响应时间: ${responseTime}ms`);
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('📥 API响应数据:', data);
-            
-            if (data.success && data.data) {
-              const responseText = data.data.text || data.data.response;
-              if (responseText && responseText.length > 10) {
-                console.log(`✅ AI API调用成功！`);
-                console.log(`📊 回复长度: ${responseText.length} 字符`);
-                console.log(`🤖 使用模型: ${data.data.model || '未知'}`);
-                console.log(`🏢 服务提供商: ${data.data.provider || '未知'}`);
-                console.log(`💬 回复预览: ${responseText.substring(0, 100)}...`);
-                
-                return { 
-                  text: responseText, 
-                  data: data.data,
-                  modelInfo: data.modelInfo || null
-                };
-              } else {
-                console.warn('⚠️ AI回复为空或太短，长度:', responseText?.length || 0);
-              }
-            } else {
-              console.warn('⚠️ API返回success=false:', data);
-            }
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('❌ 后端AI API响应错误:', response.status);
-            console.error('❌ 错误详情:', errorData);
-            
-            if (response.status === 401) {
-              console.error('❌ 认证失败！请重新登录！');
-              alert('登录已过期，请重新登录！');
-            } else if (response.status === 500) {
-              console.error('❌ 服务器内部错误！');
-            } else if (response.status === 404) {
-              console.error('❌ API接口不存在！请检查后端服务！');
-            }
-          }
-        } catch (error) {
-          console.error('❌ Backend AI API调用异常:', error);
-          console.error('❌ 错误类型:', error.name);
-          console.error('❌ 错误消息:', error.message);
-          
-          if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            console.error('❌ 网络错误：无法连接到后端服务！');
-            console.error('💡 请确认：1) 后端服务已启动 2) 服务地址正确 3) 网络连接正常');
-          }
-        }
-        
-        return null;
-      }
-      
-      async function chat(question) {
-        console.log('💬 收到用户问题:', question);
-        
-        // 获取对话历史
-        const history = messages.map(msg => ({
-          type: msg.type,
-          text: msg.text,
-          time: msg.time
-        }));
-        
-        // 获取上下文数据（如果有的话）
-        const context = {};
-        
-        // 优先级1：尝试使用后端AI API（必须优先使用AI）
-        try {
-          console.log('🔄 正在调用后端AI API...');
-          const apiResponse = await chatWithBackendAPI(question, history, context);
-          
-          if (apiResponse && apiResponse.text && apiResponse.text.length > 10) {
-            console.log('✅ AI API调用成功，返回智能AI回复');
-            return apiResponse;
-          } else {
-            console.warn('⚠️ AI API返回的回复为空或太短');
-            console.warn('⚠️ 回复内容:', apiResponse?.text || '(空)');
-            console.warn('⚠️ 继续尝试其他方式...');
-          }
-        } catch (error) {
-          console.error('❌ 后端AI API调用失败:', error);
-          console.error('❌ 错误堆栈:', error.stack);
-        }
-        
-        // 如果AI API失败，显示明确的错误提示
-        const token = getAuthToken();
-        if (!token) {
-          return { 
-            text: '❌ 无法使用AI功能：您尚未登录。\n\n请先登录系统，然后才能使用AI助手功能。\n\n登录后，AI助手将为您提供智能回复。' 
-          };
-        }
-        
-        // 检查后端服务是否可达
-        try {
-          const healthCheck = await fetch(`${getApiUrl()}/health`).catch(() => null);
-          if (!healthCheck || !healthCheck.ok) {
-            return { 
-              text: '❌ 无法连接到后端服务。\n\n请确认：\n1. 后端服务已启动（运行 npm start）\n2. 服务地址正确（http://localhost:3000）\n3. 网络连接正常\n\n连接成功后，AI助手将正常工作。' 
-            };
-          }
-        } catch (e) {
-          return { 
-            text: '❌ 后端服务连接失败。\n\n请检查：\n1. 后端服务是否已启动\n2. 服务地址是否正确\n3. 防火墙设置\n\n修复后，AI助手将自动恢复。' 
-          };
-        }
-        
-        // 如果后端服务正常但AI调用失败，显示提示
-        return { 
-          text: `⚠️ AI服务暂时不可用。\n\n问题："${question}"\n\n可能的原因：\n1. AI API配置问题\n2. API Key无效或过期\n3. 网络连接问题\n\n请检查：\n• 浏览器控制台的错误信息\n• 后端日志文件\n• API Key配置\n\n修复后，AI助手将自动恢复智能回复功能。` 
-        };
-      }
       
       function addMessage(type, text) {
         const message = { type, text, time: new Date() };
@@ -20276,10 +19968,10 @@
         if (result.success && result.data?.valid) {
           resultDiv.innerHTML = `<div style="padding:12px;background:#d1fae5;color:#047857;border-radius:6px;">✅ 连接成功！找到 ${result.data.itemCount} 条内容</div>`;
         } else {
-          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${result.error || '未知错误'}</div>`;
+          resultDiv.innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 连接失败: ${escapeHtml(result.error || '未知错误')}</div>`;
         }
       } catch (error) {
-        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${error.message}</div>`;
+        document.getElementById('rssSourceTestResult').innerHTML = `<div style="padding:12px;background:#fee2e2;color:#991b1b;border-radius:6px;">❌ 测试失败: ${escapeHtml(error.message || '未知错误')}</div>`;
       }
     });
     
