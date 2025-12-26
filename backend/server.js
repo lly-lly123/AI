@@ -37,7 +37,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 健康检查端点（在限流之前，确保Zeabur等平台可以检查服务状态）
 app.get('/health', (req, res) => {
-  res.status(200).json({
+  console.log('🏥 健康检查请求:', req.method, req.path);
+  const healthData = {
     success: true,
     status: 'healthy',
     service: 'pigeon-data-service',
@@ -45,7 +46,9 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     port: config.server.port,
     env: config.server.env
-  });
+  };
+  console.log('🏥 健康检查响应:', healthData);
+  res.status(200).json(healthData);
 });
 
 // API限流
