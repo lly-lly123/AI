@@ -526,7 +526,8 @@ async function initDefaultAdmin() {
 // 启动服务器（仅在非Vercel环境）
 if (!process.env.VERCEL) {
   try {
-    const PORT = config.server.port || 3000;
+    // 优先使用Zeabur设置的PORT环境变量（必须）
+    const PORT = parseInt(process.env.PORT || config.server.port || '3000', 10);
     const HOST = process.env.HOST || '0.0.0.0';
     
     // 在启动前输出关键信息（确保能看到）
@@ -541,6 +542,8 @@ if (!process.env.VERCEL) {
       indexPath: path.join(frontendPath, 'index.html'),
       indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
       port: PORT,
+      envPort: process.env.PORT,
+      configPort: config.server.port,
       host: HOST,
       nodeEnv: process.env.NODE_ENV,
       vercel: process.env.VERCEL

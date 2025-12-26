@@ -44,7 +44,8 @@ function parseRssSources() {
 
 module.exports = {
   server: {
-    port: process.env.PORT || 3000,
+    // Zeabur会自动设置PORT环境变量，必须使用它
+    port: parseInt(process.env.PORT || '3000', 10),
     env: process.env.NODE_ENV || 'development'
   },
   
