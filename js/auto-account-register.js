@@ -104,9 +104,29 @@
       const password = deviceId; // 使用设备ID作为密码
       
       console.log('🔧 [自动账号] 正在自动注册账号...');
+      console.log('🔧 [自动账号] API URL:', apiUrl);
+      console.log('🔧 [自动账号] 设备信息:', {
+        deviceId: deviceId.substring(0, 8) + '...',
+        deviceType: deviceInfo.deviceType,
+        platform: deviceInfo.platform
+      });
+      
+      // 确保API URL格式正确（如果已经包含/api，不再重复添加）
+      let registerUrl = apiUrl;
+      if (!registerUrl.endsWith('/api/auth/register')) {
+        if (registerUrl.endsWith('/api')) {
+          registerUrl = registerUrl + '/auth/register';
+        } else if (registerUrl.endsWith('/')) {
+          registerUrl = registerUrl + 'api/auth/register';
+        } else {
+          registerUrl = registerUrl + '/api/auth/register';
+        }
+      }
+      
+      console.log('🔧 [自动账号] 注册URL:', registerUrl);
       
       // 尝试注册
-      const registerResponse = await fetch(apiUrl + '/api/auth/register', {
+      const registerResponse = await fetch(registerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -136,8 +156,25 @@
         }
       } else {
         // 如果注册失败（可能用户名已存在），尝试登录
-        console.log('🔧 [自动账号] 注册失败，尝试登录...');
-        const loginResponse = await fetch(apiUrl + '/api/auth/login', {
+        const errorText = await registerResponse.text();
+        console.log('🔧 [自动账号] 注册失败，状态码:', registerResponse.status);
+        console.log('🔧 [自动账号] 注册失败，响应:', errorText);
+        console.log('🔧 [自动账号] 尝试登录...');
+        
+        // 确保登录URL格式正确
+        let loginUrl = apiUrl;
+        if (!loginUrl.endsWith('/api/auth/login')) {
+          if (loginUrl.endsWith('/api')) {
+            loginUrl = loginUrl + '/auth/login';
+          } else if (loginUrl.endsWith('/')) {
+            loginUrl = loginUrl + 'api/auth/login';
+          } else {
+            loginUrl = loginUrl + '/api/auth/login';
+          }
+        }
+        
+        console.log('🔧 [自动账号] 登录URL:', loginUrl);
+        const loginResponse = await fetch(loginUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -171,9 +208,22 @@
         }
       }
       
+      if (!account) {
+        console.warn('⚠️ [自动账号] 未能创建或登录账户，可能的原因：');
+        console.warn('  1. 网络连接问题');
+        console.warn('  2. 后端服务未启动');
+        console.warn('  3. API地址配置错误');
+        console.warn('  4. 注册接口返回错误');
+      }
+      
       return account;
     } catch (error) {
-      console.warn('⚠️ [自动账号] 自动注册失败:', error);
+      console.error('❌ [自动账号] 自动注册失败:', error);
+      console.error('❌ [自动账号] 错误详情:', {
+        message: error.message,
+        stack: error.stack,
+        apiUrl: apiUrl
+      });
       return null;
     }
   }
@@ -187,14 +237,30 @@
       return window.BACKEND_API_URL;
     }
     
+    // 尝试从页面的getBackendApiUrl函数获取（如果存在）
+    if (typeof window !== 'undefined' && typeof window.getBackendApiUrl === 'function') {
+      try {
+        const apiUrl = window.getBackendApiUrl();
+        if (apiUrl) {
+          console.log('✅ [自动账号] 从页面函数获取API URL:', apiUrl);
+          return apiUrl;
+        }
+      } catch (e) {
+        console.warn('⚠️ [自动账号] 调用页面getBackendApiUrl失败:', e);
+      }
+    }
+    
     // 从当前页面URL推断
     const hostname = window.location.hostname;
     if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
       return 'http://localhost:3000';
     }
     
-    // 使用当前域名
-    return window.location.origin;
+    // 使用当前域名（自动添加/api路径）
+    const origin = window.location.origin;
+    const apiUrl = origin + '/api';
+    console.log('✅ [自动账号] 使用当前域名作为API URL:', apiUrl);
+    return apiUrl;
   }
   
   // ==================== 3. 数据自动保存和调取 ====================
