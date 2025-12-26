@@ -26,6 +26,19 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// 健康检查端点（在限流之前，确保Zeabur等平台可以检查服务状态）
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    service: 'pigeon-data-service',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    port: config.server.port,
+    env: config.server.env
+  });
+});
+
 // API限流
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', strictLimiter);
@@ -500,23 +513,52 @@ if (!process.env.VERCEL) {
   });
   logger.info('========================================');
   
-  app.listen(PORT, HOST, async () => {
+  // 创建服务器实例
+  const server = app.listen(PORT, HOST, () => {
+    logger.info('========================================');
     logger.info(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
     logger.info(`环境: ${config.server.env}`);
+    logger.info(`进程ID: ${process.pid}`);
     logger.info('服务器启动信息', {
       frontendPath: frontendPath,
       indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
     });
+    logger.info('========================================');
     
-    await initDefaultAdmin();
-    try {
-      logger.info('预加载数据...');
-      await dataService.fetchNews();
-      await dataService.fetchEvents();
-      logger.info('数据预加载完成');
-    } catch (error) {
-      logger.error('数据预加载失败', error);
+    // 异步初始化（不阻塞服务器启动）
+    (async () => {
+      try {
+        await initDefaultAdmin();
+      } catch (error) {
+        logger.error('初始化默认管理员账户失败（非致命错误）', error);
+      }
+      
+      try {
+        logger.info('预加载数据...');
+        await dataService.fetchNews();
+        await dataService.fetchEvents();
+        logger.info('数据预加载完成');
+      } catch (error) {
+        logger.error('数据预加载失败（非致命错误）', error);
+      }
+    })();
+  });
+
+  // 处理服务器错误
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      logger.error(`❌ 端口 ${PORT} 已被占用`);
+      process.exit(1);
+    } else {
+      logger.error('❌ 服务器启动失败', error);
+      process.exit(1);
     }
+  });
+
+  // 确保服务器正确监听
+  server.on('listening', () => {
+    const addr = server.address();
+    logger.info(`📡 服务器正在监听: ${addr.address}:${addr.port}`);
   });
 
   // 全局错误处理
