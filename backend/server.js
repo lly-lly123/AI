@@ -198,6 +198,13 @@ app.get('/', (req, res, next) => {
   next();
 });
 
+// 处理简化路由（在HTML文件路由之前）
+// /admin -> /admin.html
+app.get('/admin', (req, res) => {
+  console.log('🔄 [路由重定向] /admin -> /admin.html');
+  res.redirect('/admin.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
+});
+
 // 专门处理HTML文件请求（在静态文件服务之前，使用use确保所有HTTP方法都匹配）
 // 处理 /admin.html, /mobile.html 等
 app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
