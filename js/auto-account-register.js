@@ -595,7 +595,7 @@
       }
       
       // 6. 如果已自动登录，隐藏登录弹窗
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       if (token && typeof window.closeLoginModal === 'function') {
         setTimeout(() => {
           window.closeLoginModal();
@@ -605,10 +605,13 @@
       
       // 7. 触发数据加载完成事件，让页面刷新视图
       if (typeof window !== 'undefined') {
+        const account = JSON.parse(localStorage.getItem(AUTO_ACCOUNT_KEY) || 'null');
+        const finalToken = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        console.log('🔔 [自动账号] 触发dataAutoLoaded事件，account:', account ? account.username : 'null', 'token:', finalToken ? '已存在' : '不存在');
         window.dispatchEvent(new CustomEvent('dataAutoLoaded', {
           detail: { 
-            account: JSON.parse(localStorage.getItem(AUTO_ACCOUNT_KEY) || 'null'),
-            token: token
+            account: account,
+            token: finalToken
           }
         }));
       }

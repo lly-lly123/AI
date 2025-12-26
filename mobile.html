@@ -4218,9 +4218,9 @@
       }
     }
     
-    // 获取认证token
+    // 获取认证token（兼容两个键）
     function getAuthToken() {
-      return localStorage.getItem('token');
+      return localStorage.getItem('token') || localStorage.getItem('auth_token');
     }
 
     // 提交意见与反馈
@@ -4623,12 +4623,30 @@
     // 当本地数据缺失时，从云端/后台恢复
     async function restoreUserDataIfMissing() {
       try {
+        // 等待自动注册完成（最多等待3秒）
+        let waitCount = 0;
+        while (waitCount < 30 && !localStorage.getItem('auth_token') && !localStorage.getItem('token')) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          waitCount++;
+        }
+        
         // 检查两个token键（兼容性）
         const token = getAuthToken() || localStorage.getItem('auth_token') || localStorage.getItem('token');
         if (!token) {
           console.log('ℹ️ [数据恢复] 未找到token，跳过数据恢复');
+          console.log('ℹ️ [数据恢复] 提示：系统正在自动注册账户，请稍候...');
+          // 如果自动注册还在进行，再等待一下
+          setTimeout(async () => {
+            const retryToken = getAuthToken() || localStorage.getItem('auth_token') || localStorage.getItem('token');
+            if (retryToken) {
+              console.log('✅ [数据恢复] 检测到token，重新尝试数据恢复');
+              await restoreUserDataIfMissing();
+            }
+          }, 2000);
           return;
         }
+        
+        console.log('✅ [数据恢复] 找到token，开始恢复数据');
 
         const hasLocalPigeons = !!localStorage.getItem('pigeon_manager_data_v1');
         const hasLocalRaces = !!localStorage.getItem('pigeon_races_v1');
@@ -6043,10 +6061,22 @@
       loadData();
       setInterval(updateDate, 60000);
       
+      // 监听自动注册完成事件
+      window.addEventListener('dataAutoLoaded', async (event) => {
+        console.log('✅ [移动端] 收到自动注册完成事件，开始数据恢复');
+        const { account, token } = event.detail;
+        if (token) {
+          // 等待一下确保token已保存
+          setTimeout(() => {
+            restoreUserDataIfMissing();
+          }, 500);
+        }
+      });
+      
       // 页面加载后，如果本地数据缺失且已登录，则尝试从后台/云端恢复数据
       setTimeout(() => {
         restoreUserDataIfMissing();
-      }, 1500);
+      }, 3000); // 增加等待时间，确保自动注册完成
       
       // 更新用户按钮显示
       setTimeout(() => {
