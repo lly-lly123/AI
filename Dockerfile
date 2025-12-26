@@ -30,7 +30,8 @@ COPY fonts/ ./fonts/
 RUN mkdir -p logs
 
 # 暴露端口（Zeabur 会自动设置 PORT 环境变量）
-EXPOSE 3000
+# 使用动态端口，Zeabur 会通过环境变量 PORT 设置
+EXPOSE 8080
 
 # 启动应用
 CMD ["node", "server.js"]

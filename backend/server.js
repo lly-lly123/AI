@@ -30,6 +30,18 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
+// 请求日志中间件（在所有路由之前，用于诊断）
+app.use((req, res, next) => {
+  console.log('📥 收到请求:', req.method, req.path, req.url);
+  console.log('📥 请求头:', {
+    'user-agent': req.get('user-agent'),
+    'host': req.get('host'),
+    'x-forwarded-for': req.get('x-forwarded-for'),
+    'x-forwarded-proto': req.get('x-forwarded-proto')
+  });
+  next();
+});
+
 // 中间件
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -38,6 +50,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 健康检查端点（在限流之前，确保Zeabur等平台可以检查服务状态）
 app.get('/health', (req, res) => {
   console.log('🏥 健康检查请求:', req.method, req.path);
+  console.log('🏥 请求头:', JSON.stringify(req.headers, null, 2));
   const healthData = {
     success: true,
     status: 'healthy',
@@ -45,10 +58,13 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     port: config.server.port,
-    env: config.server.env
+    env: config.server.env,
+    nodeVersion: process.version,
+    platform: process.platform,
+    listening: true
   };
   console.log('🏥 健康检查响应:', healthData);
-  res.status(200).json(healthData);
+  res.status(200).setHeader('Content-Type', 'application/json').json(healthData);
 });
 
 // API限流
