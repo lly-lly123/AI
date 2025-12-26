@@ -68,8 +68,310 @@
     })();
   </script>
   
+  <!-- 🔧 移动端立即显示脚本（最高优先级 - 必须在所有脚本之前） -->
+  <script>
+    // 移动端立即显示脚本 - 在页面加载前就执行
+    (function() {
+      'use strict';
+      const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        console.log('📱 [移动端修复] 检测到移动设备，启用移动端立即显示模式');
+        
+        // 立即添加内联样式到head，确保CSS优先级最高
+        const style = document.createElement('style');
+        style.id = 'mobile-immediate-fix';
+        style.textContent = `
+          body { display: block !important; visibility: visible !important; opacity: 1 !important; }
+          .mobile-content { display: block !important; visibility: visible !important; opacity: 1 !important; }
+          #homeView { display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; }
+        `;
+        if (document.head) {
+          document.head.appendChild(style);
+        } else {
+          document.addEventListener('DOMContentLoaded', function() {
+            document.head.appendChild(style);
+          });
+        }
+      }
+    })();
+  </script>
+  
   <!-- 🔧 自动账号注册和数据管理脚本（最高优先级 - 必须在其他脚本之前） -->
   <script src="js/auto-account-register.js"></script>
+  
+  <!-- 🔧 页面显示修复脚本（最高优先级 - 确保页面内容可见） -->
+  <script>
+    // 立即执行，确保页面内容可见（不等待DOM加载）
+    (function() {
+      console.log('🔧 [页面修复] 开始初始化页面显示修复脚本...');
+      
+      // 强制显示homeView的函数（使用最强力的方法）
+      function forceShowHomeView() {
+        try {
+          const homeView = document.getElementById('homeView');
+          const mobileContent = document.querySelector('.mobile-content');
+          const body = document.body;
+          
+          // 确保body可见
+          if (body) {
+            body.style.setProperty('display', 'block', 'important');
+            body.style.setProperty('visibility', 'visible', 'important');
+            body.style.setProperty('opacity', '1', 'important');
+          }
+          
+          // 确保mobile-content可见
+          if (mobileContent) {
+            mobileContent.style.setProperty('display', 'block', 'important');
+            mobileContent.style.setProperty('visibility', 'visible', 'important');
+            mobileContent.style.setProperty('opacity', '1', 'important');
+            mobileContent.style.setProperty('height', 'auto', 'important');
+            mobileContent.style.setProperty('min-height', 'auto', 'important');
+          }
+          
+          if (homeView) {
+            // 使用setProperty设置!important优先级（最强力）
+            homeView.style.setProperty('display', 'block', 'important');
+            homeView.style.setProperty('visibility', 'visible', 'important');
+            homeView.style.setProperty('opacity', '1', 'important');
+            homeView.style.setProperty('position', 'relative', 'important');
+            homeView.style.setProperty('height', 'auto', 'important');
+            homeView.style.setProperty('min-height', 'auto', 'important');
+            homeView.style.setProperty('width', '100%', 'important');
+            
+            // 移除可能隐藏元素的类
+            homeView.classList.remove('hidden', 'd-none');
+            
+            // 隐藏其他视图
+            document.querySelectorAll('.mobile-view').forEach(view => {
+              if (view.id && view.id !== 'homeView') {
+                view.style.setProperty('display', 'none', 'important');
+              }
+            });
+            
+            const computedStyle = window.getComputedStyle(homeView);
+            console.log('✅ [页面修复] 已强制显示homeView和mobile-content，状态:', {
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              height: homeView.offsetHeight,
+              width: homeView.offsetWidth,
+              isMobile: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
+            });
+            return true;
+          } else {
+            console.warn('⚠️ [页面修复] homeView元素不存在');
+            return false;
+          }
+        } catch (e) {
+          console.error('❌ [页面修复] 强制显示失败:', e);
+          return false;
+        }
+      }
+      
+      // 使用MutationObserver监听DOM变化
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            if (computedStyle.display === 'none' || homeView.style.display === 'none') {
+              console.log('⚠️ [页面修复] MutationObserver检测到homeView被隐藏，强制显示');
+              forceShowHomeView();
+            }
+          }
+        });
+        
+        // 开始观察body
+        if (document.body) {
+          observer.observe(document.body, { 
+            childList: true, 
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+          });
+          // 立即检查一次
+          forceShowHomeView();
+        } else {
+          document.addEventListener('DOMContentLoaded', function() {
+            observer.observe(document.body, { 
+              childList: true, 
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+            forceShowHomeView();
+          });
+        }
+      }
+      
+      // 定时器检查（多重检查确保万无一失）
+      const checkTimes = [0, 50, 100, 200, 500, 1000, 2000, 3000, 5000];
+      checkTimes.forEach(delay => {
+        setTimeout(function() {
+          console.log(`🔧 [页面修复] 延迟${delay}ms检查homeView显示状态`);
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+              console.warn(`⚠️ [页面修复] 延迟${delay}ms检查：homeView被隐藏，强制显示`);
+              forceShowHomeView();
+            } else {
+              console.log(`✅ [页面修复] 延迟${delay}ms检查：homeView正常显示`);
+            }
+          } else {
+            console.warn(`⚠️ [页面修复] 延迟${delay}ms检查：homeView不存在`);
+          }
+        }, delay);
+      });
+      
+      // 移动端特定的立即执行（不等待任何事件）
+      const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobileDevice) {
+        console.log('📱 [页面修复] 检测到移动设备，立即执行强制显示');
+        // 移动端立即执行，不等待DOM
+        setTimeout(function() {
+          forceShowHomeView();
+        }, 0);
+        setTimeout(function() {
+          forceShowHomeView();
+        }, 10);
+        setTimeout(function() {
+          forceShowHomeView();
+        }, 50);
+      }
+      
+      // DOMContentLoaded时执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          console.log('🔧 [页面修复] DOMContentLoaded事件触发，强制显示homeView');
+          forceShowHomeView();
+          // 移动端额外延迟执行
+          if (isMobileDevice) {
+            setTimeout(forceShowHomeView, 100);
+            setTimeout(forceShowHomeView, 300);
+            setTimeout(forceShowHomeView, 500);
+          }
+        });
+      } else {
+        // DOM已加载，立即执行
+        console.log('🔧 [页面修复] DOM已加载，立即强制显示homeView');
+        forceShowHomeView();
+        // 移动端额外延迟执行
+        if (isMobileDevice) {
+          setTimeout(forceShowHomeView, 100);
+          setTimeout(forceShowHomeView, 300);
+          setTimeout(forceShowHomeView, 500);
+        }
+      }
+      
+      // 窗口加载完成后再次检查
+      window.addEventListener('load', function() {
+        console.log('🔧 [页面修复] window.load事件触发，再次强制显示homeView');
+        forceShowHomeView();
+        // 移动端额外延迟执行
+        if (isMobileDevice) {
+          setTimeout(forceShowHomeView, 200);
+          setTimeout(forceShowHomeView, 500);
+          setTimeout(forceShowHomeView, 1000);
+        }
+        
+        // 输出诊断信息
+        setTimeout(function() {
+          console.log('📊 [页面诊断] 开始诊断页面显示问题...');
+          const homeView = document.getElementById('homeView');
+          const mobileContent = document.querySelector('.mobile-content');
+          const body = document.body;
+          
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            console.log('📊 [页面诊断] homeView状态:', {
+              exists: true,
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              height: computedStyle.height,
+              width: computedStyle.width,
+              inlineStyle: homeView.getAttribute('style'),
+              offsetHeight: homeView.offsetHeight,
+              offsetWidth: homeView.offsetWidth
+            });
+          } else {
+            console.error('❌ [页面诊断] homeView元素不存在！');
+          }
+          
+          if (mobileContent) {
+            const computedStyle = window.getComputedStyle(mobileContent);
+            console.log('📊 [页面诊断] mobileContent状态:', {
+              exists: true,
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              height: computedStyle.height,
+              width: computedStyle.width,
+              offsetHeight: mobileContent.offsetHeight,
+              offsetWidth: mobileContent.offsetWidth
+            });
+          } else {
+            console.error('❌ [页面诊断] mobileContent元素不存在！');
+          }
+          
+          if (body) {
+            const computedStyle = window.getComputedStyle(body);
+            console.log('📊 [页面诊断] body状态:', {
+              exists: true,
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              height: computedStyle.height,
+              width: computedStyle.width
+            });
+          }
+          
+          // 检查是否有遮挡元素
+          const allFixedElements = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+          console.log('📊 [页面诊断] 固定定位元素数量:', allFixedElements.length);
+          allFixedElements.forEach((el, index) => {
+            const computedStyle = window.getComputedStyle(el);
+            if (parseInt(computedStyle.zIndex) > 1000) {
+              console.warn(`⚠️ [页面诊断] 高z-index元素 #${index}:`, {
+                tag: el.tagName,
+                id: el.id,
+                class: el.className,
+                zIndex: computedStyle.zIndex,
+                display: computedStyle.display,
+                visibility: computedStyle.visibility
+              });
+            }
+          });
+        }, 2000);
+      });
+      
+      // 暴露诊断函数到全局，方便在控制台调用
+      window.diagnosePage = function() {
+        const homeView = document.getElementById('homeView');
+        const mobileContent = document.querySelector('.mobile-content');
+        
+        console.log('🔍 [诊断] 页面诊断信息:');
+        console.log('homeView:', homeView);
+        console.log('mobileContent:', mobileContent);
+        if (homeView) {
+          console.log('homeView computed style:', window.getComputedStyle(homeView));
+          console.log('homeView inline style:', homeView.getAttribute('style'));
+          console.log('homeView offsetHeight:', homeView.offsetHeight);
+          console.log('homeView offsetWidth:', homeView.offsetWidth);
+        }
+        if (mobileContent) {
+          console.log('mobileContent computed style:', window.getComputedStyle(mobileContent));
+          console.log('mobileContent offsetHeight:', mobileContent.offsetHeight);
+          console.log('mobileContent offsetWidth:', mobileContent.offsetWidth);
+        }
+        
+        forceShowHomeView();
+      };
+      
+      console.log('✅ [页面修复] 页面显示修复脚本已加载，可通过 window.diagnosePage() 进行诊断');
+    })();
+  </script>
   
   <style>
     * {
@@ -98,6 +400,9 @@
       -webkit-font-smoothing: antialiased;
       padding-bottom: 70px; /* 为底部导航栏留出空间 */
       overflow-x: hidden;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     
     /* 顶部导航栏 */
@@ -221,6 +526,9 @@
       padding: 16px;
       max-width: 100%;
       overflow-x: hidden;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     
     /* 优化间距和布局 */
@@ -1082,6 +1390,61 @@
     .mobile-view {
       width: 100%;
       min-height: calc(100vh - 140px);
+      display: none; /* 默认隐藏所有视图 */
+    }
+    
+    /* 首页视图默认显示 */
+    #homeView {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    /* 移动端强制显示规则（确保在所有移动设备上可见） */
+    @media (max-width: 768px), (hover: none), (pointer: coarse) {
+      body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      .mobile-content {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      #homeView {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        height: auto !important;
+        min-height: auto !important;
+      }
+      
+      .mobile-view {
+        display: none !important;
+      }
+      
+      .mobile-view#homeView {
+        display: block !important;
+      }
+    }
+    
+    /* 触摸设备强制显示 */
+    @media (hover: none) and (pointer: coarse) {
+      #homeView {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      .mobile-content {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
     }
     
     /* 按钮样式 */
@@ -1467,7 +1830,7 @@
   <!-- 主内容区 -->
   <div class="mobile-content">
     <!-- 首页视图 -->
-    <div id="homeView" class="mobile-view">
+    <div id="homeView" class="mobile-view" style="display: block;">
     <!-- 日期和天气概览 -->
     <div class="mobile-overview">
       <div class="mobile-overview-top">
@@ -2894,25 +3257,33 @@
       renderEvents();
     }
 
-    // 视图对象
-    const views = {
-      home: document.getElementById('homeView'),
-      pigeons: document.getElementById('listView'),
-      races: document.getElementById('raceView'),
-      stats: document.getElementById('statsView'),
-      pedigree: document.getElementById('pedigreeView'),
-      breeding: document.getElementById('breedingView'),
-      health: document.getElementById('healthView'),
-      training: document.getElementById('trainingView'),
-      analysis: document.getElementById('analysisView'),
-      qualification: document.getElementById('qualificationView'),
-      dashboard: document.getElementById('dashboardView'),
-      more: document.getElementById('moreView')
-    };
+    // 视图对象（函数形式，确保每次都获取最新的DOM元素）
+    function getViews() {
+      return {
+        home: document.getElementById('homeView'),
+        pigeons: document.getElementById('listView'),
+        races: document.getElementById('raceView'),
+        stats: document.getElementById('statsView'),
+        pedigree: document.getElementById('pedigreeView'),
+        breeding: document.getElementById('breedingView'),
+        health: document.getElementById('healthView'),
+        training: document.getElementById('trainingView'),
+        analysis: document.getElementById('analysisView'),
+        qualification: document.getElementById('qualificationView'),
+        dashboard: document.getElementById('dashboardView'),
+        more: document.getElementById('moreView')
+      };
+    }
+    
+    // 视图对象（保持兼容性，但在使用时确保元素存在）
+    let views = getViews();
 
     // 切换视图
     function switchView(viewName) {
       console.log('切换视图:', viewName);
+      
+      // 重新获取views对象，确保元素存在
+      views = getViews();
       
       // 更新底部导航栏状态
       document.querySelectorAll('.mobile-nav-item').forEach(item => {
@@ -2963,6 +3334,9 @@
         console.warn('视图不存在:', viewName);
       }
     }
+    
+    // 暴露switchView到window对象（确保onclick可以调用）
+    window.switchView = switchView;
 
     // 刷新数据
     function refreshData() {
@@ -3190,7 +3564,7 @@
           refreshRaceList();
           renderHealthAlerts();
           renderTrainingRecords();
-          updateStatsView();
+          updateStats();
         } catch (e) {
           console.warn('恢复后刷新视图时出错:', e);
         }
@@ -4491,12 +4865,77 @@
       }, 2000);
     }
     
+    // 强制显示首页的辅助函数
+    function forceShowHomeView() {
+      try {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          // 隐藏所有可能的视图
+          const allViews = document.querySelectorAll('.mobile-view');
+          allViews.forEach(view => {
+            if (view.id !== 'homeView') {
+              view.style.display = 'none';
+            }
+          });
+          // 显示首页
+          homeView.style.display = 'block';
+          console.log('✅ 已强制显示首页视图');
+          return true;
+        } else {
+          console.error('❌ 找不到homeView元素');
+          return false;
+        }
+      } catch (e) {
+        console.error('❌ 强制显示首页失败:', e);
+        return false;
+      }
+    }
+    
     // 初始化视图
     document.addEventListener('DOMContentLoaded', function() {
-      // 默认显示首页
-      if (views.home) {
-        views.home.style.display = 'block';
+      console.log('🔧 开始初始化页面视图...');
+      
+      // 重新初始化views对象，确保DOM元素已加载
+      views = getViews();
+      
+      // 默认显示首页（确保页面可见）
+      try {
+        // 先确保所有视图隐藏
+        const allViews = ['homeView', 'listView', 'raceView', 'statsView', 'pedigreeView', 
+                         'breedingView', 'healthView', 'trainingView', 'analysisView', 
+                         'qualificationView', 'dashboardView', 'moreView', 'detailView'];
+        allViews.forEach(viewId => {
+          const viewEl = document.getElementById(viewId);
+          if (viewEl) {
+            viewEl.style.display = 'none';
+          }
+        });
+        
+        // 显示首页
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          homeView.style.display = 'block';
+          views.home = homeView;
+          console.log('✅ 页面视图已初始化，显示首页');
+        } else {
+          console.error('❌ 找不到homeView元素');
+          // 延迟重试
+          setTimeout(forceShowHomeView, 100);
+        }
+      } catch (e) {
+        console.error('❌ 初始化视图失败:', e);
+        // 即使出错，也尝试显示首页
+        forceShowHomeView();
       }
+      
+      // 延迟再次检查，确保首页显示
+      setTimeout(() => {
+        const homeView = document.getElementById('homeView');
+        if (homeView && homeView.style.display === 'none') {
+          console.warn('⚠️ 首页被隐藏，强制显示');
+          forceShowHomeView();
+        }
+      }, 500);
       // 初始化数据
       // 定时器ID存储（用于清理）
       const mobileTimers = {
@@ -4504,8 +4943,12 @@
         updateUserButton: null
       };
       
-      updateDate();
-      loadData();
+      try {
+        updateDate();
+        loadData();
+      } catch (e) {
+        console.error('❌ 加载数据失败:', e);
+      }
       mobileTimers.updateDate = setInterval(updateDate, 60000);
       
       // 页面加载后，如果本地数据缺失且已登录，则尝试从后台/云端恢复数据
