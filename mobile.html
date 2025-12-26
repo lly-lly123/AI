@@ -5040,18 +5040,69 @@
         }
 
         console.log('✅ 已从后台恢复用户数据');
-        // 恢复后刷新统计/列表视图
+        
+        // 确保首页视图始终可见（在刷新其他视图之前）
+        const homeView = document.getElementById('homeView');
+        const mobileContent = document.querySelector('.mobile-content');
+        if (mobileContent) {
+          mobileContent.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+        }
+        if (homeView) {
+          // 确保homeView可见
+          const currentView = document.querySelector('.mobile-view[style*="display: block"]') || 
+                             document.querySelector('.mobile-view:not([style*="display: none"])');
+          // 如果当前没有视图显示，或者当前显示的不是homeView，则显示homeView
+          if (!currentView || currentView.id !== 'homeView') {
+            document.querySelectorAll('.mobile-view').forEach(v => {
+              if (v !== homeView) {
+                v.style.display = 'none';
+              }
+            });
+            homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1 !important;');
+            console.log('✅ [数据恢复] 已确保首页视图可见');
+          }
+        }
+        
+        // 恢复后刷新统计/列表视图（但不切换视图）
         try {
-          refreshList();
-          refreshRaceList();
-          renderHealthAlerts();
-          renderTrainingRecords();
-          updateStatsView();
+          // 只在当前视图是相应视图时才刷新，避免切换视图
+          const currentViewId = document.querySelector('.mobile-view[style*="display: block"]')?.id || 
+                                document.querySelector('.mobile-view:not([style*="display: none"])')?.id;
+          
+          if (currentViewId === 'listView' || currentViewId === 'homeView') {
+            refreshList();
+          }
+          if (currentViewId === 'raceView' || currentViewId === 'homeView') {
+            refreshRaceList();
+          }
+          if (currentViewId === 'healthView' || currentViewId === 'homeView') {
+            renderHealthAlerts();
+          }
+          if (currentViewId === 'trainingView' || currentViewId === 'homeView') {
+            renderTrainingRecords();
+          }
+          if (currentViewId === 'statsView' || currentViewId === 'homeView') {
+            updateStatsView();
+          }
+          
+          // 如果当前是homeView，刷新首页数据
+          if (currentViewId === 'homeView' && typeof loadData === 'function') {
+            loadData();
+          }
         } catch (e) {
           console.warn('恢复后刷新视图时出错:', e);
         }
       } catch (e) {
         console.warn('尝试从后台恢复用户数据失败:', e);
+        // 即使出错，也确保首页可见
+        const homeView = document.getElementById('homeView');
+        const mobileContent = document.querySelector('.mobile-content');
+        if (mobileContent) {
+          mobileContent.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+        }
+        if (homeView) {
+          homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1 !important;');
+        }
       }
     }
     
@@ -6416,11 +6467,40 @@
           token: token ? '已存在' : '不存在' 
         });
         
+        // 首先确保首页视图可见（在数据恢复之前）
+        const homeView = document.getElementById('homeView');
+        const mobileContent = document.querySelector('.mobile-content');
+        if (mobileContent) {
+          mobileContent.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+        }
+        if (homeView) {
+          document.querySelectorAll('.mobile-view').forEach(v => {
+            if (v !== homeView) {
+              v.style.display = 'none';
+            }
+          });
+          homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1 !important;');
+          console.log('✅ [移动端] 已确保首页视图可见（在数据恢复前）');
+        }
+        
         // 即使没有token，也尝试恢复数据（使用本地数据）
         if (token) {
           // 等待一下确保token已保存
-          setTimeout(() => {
-            restoreUserDataIfMissing();
+          setTimeout(async () => {
+            await restoreUserDataIfMissing();
+            // 数据恢复后再次确保首页可见
+            if (homeView) {
+              const currentView = document.querySelector('.mobile-view[style*="display: block"]');
+              if (!currentView || currentView.id !== 'homeView') {
+                document.querySelectorAll('.mobile-view').forEach(v => {
+                  if (v !== homeView) {
+                    v.style.display = 'none';
+                  }
+                });
+                homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1 !important;');
+                console.log('✅ [移动端] 数据恢复后已确保首页视图可见');
+              }
+            }
           }, 500);
         } else {
           // 没有token，但尝试从本地加载数据并显示页面
@@ -6578,6 +6658,40 @@
           setInterval(ensureHomeViewVisible, 5000);
         }
       }, 1000);
+      
+      // 使用MutationObserver监听homeView的style变化，如果被隐藏立即恢复
+      if (typeof MutationObserver !== 'undefined') {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const target = mutation.target;
+                if (target.id === 'homeView') {
+                  const computedStyle = window.getComputedStyle(target);
+                  if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                    console.warn('⚠️ [MutationObserver] 检测到homeView被隐藏，立即恢复');
+                    target.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 1 !important;');
+                    
+                    // 同时确保mobile-content可见
+                    const mobileContent = document.querySelector('.mobile-content');
+                    if (mobileContent) {
+                      mobileContent.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+                    }
+                  }
+                }
+              }
+            });
+          });
+          
+          observer.observe(homeView, {
+            attributes: true,
+            attributeFilter: ['style']
+          });
+          
+          console.log('✅ [MutationObserver] 已启动homeView样式监听');
+        }
+      }
       
       // 页面可见性变化时也检查
       document.addEventListener('visibilitychange', function() {
