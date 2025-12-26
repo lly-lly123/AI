@@ -198,11 +198,11 @@ app.get('/', (req, res, next) => {
   next();
 });
 
-// 专门处理HTML文件请求（在静态文件服务之前）
+// 专门处理HTML文件请求（在静态文件服务之前，使用use确保所有HTTP方法都匹配）
 // 处理 /admin.html, /mobile.html 等
-app.get(/^\/([^\/]+\.html)$/, (req, res, next) => {
+app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
   const htmlFileName = req.path.substring(1); // 移除开头的 /
-  console.log(`📄 HTML文件请求: ${htmlFileName}`);
+  console.log(`📄 [HTML路由] 请求: ${htmlFileName}, 方法: ${req.method}`);
   
   // 尝试所有可能的路径查找HTML文件
   const possibleHtmlPaths = [
@@ -216,25 +216,29 @@ app.get(/^\/([^\/]+\.html)$/, (req, res, next) => {
     path.resolve(__dirname, htmlFileName)
   ];
   
-  console.log(`  尝试查找 ${htmlFileName}:`);
+  console.log(`  [HTML路由] 尝试查找 ${htmlFileName}:`);
   for (const htmlPath of possibleHtmlPaths) {
     const htmlPathResolved = path.resolve(htmlPath);
     const exists = fs.existsSync(htmlPathResolved);
     console.log(`    ${exists ? '✅' : '❌'} ${htmlPathResolved}`);
     
     if (exists) {
-      console.log(`  ✅ 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
+      console.log(`  ✅ [HTML路由] 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
       logger.info(`HTML文件请求 - 返回${htmlFileName}`, {
         path: req.path,
+        method: req.method,
         htmlPath: htmlPathResolved
       });
+      // 确保设置正确的Content-Type
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.sendFile(htmlPathResolved);
     }
   }
   
-  console.log(`  ⚠️ 未找到 ${htmlFileName}，继续到下一个中间件`);
+  console.log(`  ⚠️ [HTML路由] 未找到 ${htmlFileName}，继续到下一个中间件`);
   logger.warn(`HTML文件请求 - ${htmlFileName}不存在`, {
     path: req.path,
+    method: req.method,
     triedPaths: possibleHtmlPaths
   });
   
@@ -262,16 +266,21 @@ logger.info('配置静态文件服务', {
 });
 
 // 配置静态文件服务
-// 注意：express.static 会自动处理 index.html，但如果找不到会继续到下一个中间件
-app.use(express.static(frontendPath, {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    }
-  },
+// 创建静态文件中间件
+const staticMiddleware = express.static(frontendPath, {
   index: false,  // 禁用自动index，我们手动处理
   fallthrough: true  // 允许继续到下一个中间件（404处理）
-}));
+});
+
+// 包装静态文件服务，排除HTML文件（让专门的路由处理HTML文件）
+app.use((req, res, next) => {
+  // 如果是HTML文件请求，跳过静态文件服务，让专门的路由处理
+  if (req.path.match(/\.html$/)) {
+    return next();
+  }
+  // 对于非HTML文件，使用静态文件服务
+  staticMiddleware(req, res, next);
+});
 
 console.log('✅ 静态文件服务已配置');
 console.log('========================================');
