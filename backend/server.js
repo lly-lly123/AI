@@ -1,3 +1,10 @@
+// 立即输出，确保在 Zeabur 日志中可见
+console.log('========================================');
+console.log('📦 server.js 开始加载...');
+console.log('时间:', new Date().toISOString());
+console.log('工作目录:', process.cwd());
+console.log('========================================');
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -5,6 +12,8 @@ const fs = require('fs');
 const helmet = require('helmet');
 const config = require('./config/config');
 const logger = require('./utils/logger');
+
+console.log('✅ 所有模块加载完成');
 const apiRoutes = require('./routes/api');
 const cron = require('node-cron');
 const dataService = require('./services/dataService');
