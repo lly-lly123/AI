@@ -2907,7 +2907,7 @@
       }
     }
 
-    // 更新用户按钮显示
+    // 更新用户按钮显示（兼容自动登录）
     function updateMobileUserButton() {
       const userBtn = document.querySelector('.mobile-header-actions .btn-icon[onclick*="showUserInfoModal"]');
       if (!userBtn) return;
@@ -2915,12 +2915,19 @@
       try {
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
         const userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-        const token = localStorage.getItem('token');
+        // 兼容自动登录：同时检查 token 和 auth_token
+        const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
         
-        const displayName = userSettings.displayName || userInfo.username || userInfo.name || '账户';
+        // 如果没有userInfo，尝试从自动账户获取
+        let displayName = userSettings.displayName || userInfo.username || userInfo.name;
+        if (!displayName) {
+          const autoAccount = JSON.parse(localStorage.getItem('pigeon_auto_account') || '{}');
+          displayName = autoAccount.username || '账户';
+        }
+        displayName = displayName || '账户';
         const shortName = displayName.length > 6 ? displayName.substring(0, 6) + '...' : displayName;
         
-        if (token && (userInfo.username || userInfo.name)) {
+        if (token && (userInfo.username || userInfo.name || displayName !== '账户')) {
           // 已登录，显示用户名
           userBtn.innerHTML = `
             <span class="btn-icon-emoji">👤</span>
@@ -2962,9 +2969,10 @@
       }
     }
     
-    // 获取认证token
+    // 获取认证token（兼容自动登录）
     function getAuthToken() {
-      return localStorage.getItem('token');
+      // 同时检查 token 和 auth_token，兼容自动登录脚本
+      return localStorage.getItem('token') || localStorage.getItem('auth_token');
     }
 
     // 设备标记（用于后台识别不同设备）
@@ -11183,6 +11191,9 @@
       justify-content: center;
     }
   </style>
+  
+  <!-- 自动账户注册和数据同步脚本 -->
+  <script src="js/auto-account-register.js"></script>
 </body>
 </html>
 
