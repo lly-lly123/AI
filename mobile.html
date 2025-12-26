@@ -8,37 +8,62 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- 🔧 Eruda 移动端调试工具（中文版） -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <!-- 🔧 Eruda 移动端调试工具（中文版） - 延迟加载避免阻塞页面 -->
   <script>
-    // 只在移动设备上初始化Eruda（等待DOM加载完成）
+    // 延迟加载Eruda，确保不影响页面渲染
     (function() {
-      function initEruda() {
-        if (/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-          if (typeof eruda !== 'undefined') {
-            eruda.init({
-              container: document.body,
-              tool: ['console', 'elements', 'network', 'resources', 'info', 'snippets'],
-              autoScale: true,
-              defaults: {
-                displaySize: 50,
-                transparency: 0.9,
-                theme: 'dark'
+      function loadEruda() {
+        // 只在移动设备上加载
+        if (!/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+          return;
+        }
+        
+        // 动态加载Eruda脚本
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+        script.onload = function() {
+          // 确保body存在后再初始化
+          function initEruda() {
+            if (document.body && typeof eruda !== 'undefined') {
+              try {
+                eruda.init({
+                  container: document.body,
+                  tool: ['console', 'elements', 'network', 'resources', 'info', 'snippets'],
+                  autoScale: true,
+                  defaults: {
+                    displaySize: 50,
+                    transparency: 0.9,
+                    theme: 'dark'
+                  }
+                });
+                console.log('✅ Eruda调试工具已初始化（中文版）');
+              } catch (e) {
+                console.warn('⚠️ Eruda初始化失败:', e);
               }
-            });
-            console.log('✅ Eruda调试工具已初始化（中文版）');
+            } else {
+              // body还不存在，延迟重试
+              setTimeout(initEruda, 100);
+            }
+          }
+          
+          // 等待DOM加载完成
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initEruda);
           } else {
-            console.warn('⚠️ Eruda未加载，延迟初始化...');
             setTimeout(initEruda, 100);
           }
-        }
+        };
+        script.onerror = function() {
+          console.warn('⚠️ Eruda脚本加载失败');
+        };
+        document.head.appendChild(script);
       }
       
+      // 延迟加载，确保不影响页面渲染
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initEruda);
+        document.addEventListener('DOMContentLoaded', loadEruda);
       } else {
-        // DOM已加载，但body可能还不存在，延迟一点
-        setTimeout(initEruda, 100);
+        setTimeout(loadEruda, 500);
       }
     })();
   </script>
@@ -2660,17 +2685,31 @@
       renderEvents();
     }
 
-    // 获取API配置
+    // 获取API配置（自动检测部署环境）
     function getApiConfig() {
+      // 自动检测当前环境
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const defaultBaseUrl = isLocalhost ? 'http://localhost:3000/api' : (window.location.origin + '/api');
+      
       const config = localStorage.getItem('pigeon_api_config');
       if (config) {
-        const parsed = JSON.parse(config);
-        if (!parsed.apiUrl) {
-          parsed.apiUrl = 'http://localhost:3000/api';
+        try {
+          const parsed = JSON.parse(config);
+          // 如果配置的URL包含localhost，但在部署环境中，自动更新
+          if (!isLocalhost && parsed.apiUrl && parsed.apiUrl.includes('localhost')) {
+            parsed.apiUrl = defaultBaseUrl;
+            // 更新配置
+            localStorage.setItem('pigeon_api_config', JSON.stringify(parsed));
+          }
+          if (!parsed.apiUrl) {
+            parsed.apiUrl = defaultBaseUrl;
+          }
+          return parsed;
+        } catch (e) {
+          console.warn('解析API配置失败，使用默认值:', e);
         }
-        return parsed;
       }
-      const defaultBaseUrl = 'http://localhost:3000/api';
+      
       return {
         apiUrl: defaultBaseUrl,
         newsApiUrl: defaultBaseUrl + '/news',
