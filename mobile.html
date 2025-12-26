@@ -4636,6 +4636,10 @@
         if (typeof runMobileFullAnalysis === 'function') window.runMobileFullAnalysis = runMobileFullAnalysis;
         if (typeof analyzeQualificationMobile === 'function') window.analyzeQualificationMobile = analyzeQualificationMobile;
         
+        // 数据加载相关（新增）
+        if (typeof loadLocalDataAndDisplay === 'function') window.loadLocalDataAndDisplay = loadLocalDataAndDisplay;
+        if (typeof restoreUserDataIfMissing === 'function') window.restoreUserDataIfMissing = restoreUserDataIfMissing;
+        
         console.log('✅ 关键函数已暴露到window对象');
       }
       
@@ -4759,10 +4763,37 @@
           // 使用setAttribute确保样式不被覆盖
           homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
           console.log('✅ [移动端] 已显示首页视图（使用本地数据）');
+        } else {
+          console.warn('⚠️ [移动端] 未找到homeView元素，延迟重试');
+          // 延迟重试
+          setTimeout(() => {
+            const retryHomeView = document.getElementById('homeView');
+            if (retryHomeView) {
+              document.querySelectorAll('.mobile-view').forEach(view => {
+                view.style.display = 'none';
+              });
+              retryHomeView.style.display = 'block';
+              retryHomeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+              console.log('✅ [移动端] 延迟重试：首页视图已显示');
+            }
+          }, 500);
         }
       } catch (error) {
         console.error('❌ [移动端] 加载本地数据失败:', error);
+        // 即使出错，也尝试显示首页
+        setTimeout(() => {
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+            console.log('✅ [移动端] 错误恢复：已强制显示首页视图');
+          }
+        }, 500);
       }
+    }
+    
+    // 暴露到全局（确保其他脚本可以调用）
+    if (typeof window !== 'undefined') {
+      window.loadLocalDataAndDisplay = loadLocalDataAndDisplay;
     }
     
     // 当本地数据缺失时，从云端/后台恢复
@@ -6378,6 +6409,51 @@
             }
           }
         }, 100);
+      });
+      
+      // 增强兜底机制：定期检查确保首页始终可见（防止页面空白）
+      function ensureHomeViewVisible() {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          const computedStyle = window.getComputedStyle(homeView);
+          const allViews = document.querySelectorAll('.mobile-view');
+          const visibleViews = Array.from(allViews).filter(v => {
+            const style = window.getComputedStyle(v);
+            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          });
+          
+          // 如果没有任何视图可见，或者homeView被隐藏，强制显示
+          if (visibleViews.length === 0 || computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+            console.log('⚠️ [定期检查] 检测到页面空白，强制显示首页视图');
+            allViews.forEach(v => {
+              if (v !== homeView) {
+                v.style.display = 'none';
+                v.style.visibility = 'hidden';
+                v.style.opacity = '0';
+              }
+            });
+            homeView.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
+          }
+        }
+      }
+      
+      // 启动定期检查（每2秒检查一次，持续30秒）
+      let checkCount = 0;
+      const maxChecks = 15; // 30秒 = 15次 * 2秒
+      const checkInterval = setInterval(() => {
+        checkCount++;
+        ensureHomeViewVisible();
+        if (checkCount >= maxChecks) {
+          clearInterval(checkInterval);
+          console.log('✅ [定期检查] 已完成初始检查周期');
+        }
+      }, 2000);
+      
+      // 页面可见性变化时也检查
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+          setTimeout(ensureHomeViewVisible, 100);
+        }
       });
         
         mobileSearchInput.addEventListener('focus', () => {

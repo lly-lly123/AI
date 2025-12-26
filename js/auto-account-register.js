@@ -608,8 +608,10 @@
         
         if (loginResponse.ok) {
           const result = await loginResponse.json();
-          if (result.success && result.token) {
-            token = result.token;
+          // 修复：token在result.data.token中，而不是result.token
+          const responseToken = result.data?.token || result.token;
+          if (result.success && responseToken) {
+            token = responseToken;
             localStorage.setItem('auth_token', token);
             // 同时保存到token键（兼容移动端）
             localStorage.setItem('token', token);
@@ -637,6 +639,12 @@
             }
           } else {
             console.warn('⚠️ [自动调取] 登录响应成功但未返回token:', result);
+            // 即使没有token，也尝试从本地加载数据并显示页面
+            if (typeof window.loadLocalDataAndDisplay === 'function') {
+              setTimeout(() => {
+                window.loadLocalDataAndDisplay();
+              }, 500);
+            }
           }
         } else {
           const errorText = await loginResponse.text();
