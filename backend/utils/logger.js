@@ -31,15 +31,20 @@ const logger = winston.createLogger({
   ]
 });
 
-// 开发环境也输出到控制台
-if (config.server.env !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-}
+// 始终输出到控制台（Zeabur等云平台需要控制台输出）
+// 使用简单格式以便在日志查看器中更容易阅读
+logger.add(new winston.transports.Console({
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      let msg = `${timestamp} [${level.toUpperCase()}] ${message}`;
+      if (Object.keys(meta).length > 0 && meta.service !== 'pigeon-data-service') {
+        msg += ` ${JSON.stringify(meta)}`;
+      }
+      return msg;
+    })
+  )
+}));
 
 module.exports = logger;
 

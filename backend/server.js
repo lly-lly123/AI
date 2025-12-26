@@ -501,6 +501,21 @@ if (!process.env.VERCEL) {
   const HOST = process.env.HOST || '0.0.0.0';
   
   // 在启动前输出关键信息（确保能看到）
+  // 使用 console.log 确保在 Zeabur 日志中可见
+  console.log('========================================');
+  console.log('🚀 服务器启动中...');
+  console.log('========================================');
+  console.log('启动信息:', {
+    workDir: process.cwd(),
+    __dirname: __dirname,
+    frontendPath: frontendPath,
+    indexPath: path.join(frontendPath, 'index.html'),
+    indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
+    port: PORT,
+    host: HOST
+  });
+  console.log('========================================');
+  
   logger.info('========================================');
   logger.info('🚀 服务器启动中...');
   logger.info('========================================');
@@ -515,6 +530,17 @@ if (!process.env.VERCEL) {
   
   // 创建服务器实例
   const server = app.listen(PORT, HOST, () => {
+    // 使用 console.log 确保在 Zeabur 日志中可见
+    console.log('========================================');
+    console.log(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
+    console.log(`环境: ${config.server.env}`);
+    console.log(`进程ID: ${process.pid}`);
+    console.log('服务器启动信息:', {
+      frontendPath: frontendPath,
+      indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+    });
+    console.log('========================================');
+    
     logger.info('========================================');
     logger.info(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
     logger.info(`环境: ${config.server.env}`);
@@ -558,6 +584,8 @@ if (!process.env.VERCEL) {
   // 确保服务器正确监听
   server.on('listening', () => {
     const addr = server.address();
+    // 使用 console.log 确保在 Zeabur 日志中可见
+    console.log(`📡 服务器正在监听: ${addr.address}:${addr.port}`);
     logger.info(`📡 服务器正在监听: ${addr.address}:${addr.port}`);
   });
 
