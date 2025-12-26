@@ -14,22 +14,56 @@
   <!-- Eruda调试工具（移动端查看控制台 - 中文界面） -->
   <script src="https://cdn.jsdelivr.net/npm/eruda@3.0.1/eruda.js"></script>
   <script>
-    // 仅在移动设备上启用Eruda（中文调试工具）
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      eruda.init({
-        container: document.body,
-        tool: ['console', 'elements', 'network', 'resources', 'info', 'snippets'],
-        autoScale: true,
-        defaults: {
-          displaySize: 50,
-          transparency: 0.9,
-          theme: 'dark'
+    // 确保Eruda在所有移动设备上都能显示
+    (function() {
+      // 检测是否为移动设备
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                       (window.innerWidth <= 768 && window.innerHeight <= 1024);
+      
+      if (isMobile) {
+        // 等待DOM加载完成后再初始化
+        function initEruda() {
+          try {
+            if (typeof eruda !== 'undefined') {
+              eruda.init({
+                container: document.body,
+                tool: ['console', 'elements', 'network', 'resources', 'info', 'snippets'],
+                autoScale: true,
+                defaults: {
+                  displaySize: 50,
+                  transparency: 0.9,
+                  theme: 'dark'
+                }
+              });
+              // 确保Eruda按钮在最上层
+              setTimeout(() => {
+                const erudaBtn = document.querySelector('.eruda-dev-tools');
+                if (erudaBtn) {
+                  erudaBtn.style.zIndex = '999999';
+                  erudaBtn.style.position = 'fixed';
+                }
+              }, 500);
+              // 为了兼容性，保留vConsole变量
+              window.vConsole = eruda;
+              console.log('📱 Eruda中文调试工具已启用，可在右下角查看调试信息');
+            } else {
+              console.warn('⚠️ Eruda未加载，请检查网络连接');
+            }
+          } catch (e) {
+            console.error('❌ Eruda初始化失败:', e);
+          }
         }
-      });
-      // 为了兼容性，保留vConsole变量
-      window.vConsole = eruda;
-      console.log('📱 Eruda中文调试工具已启用，可在右下角查看调试信息');
-    }
+        
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initEruda);
+        } else {
+          // 如果DOM已加载，立即初始化
+          setTimeout(initEruda, 100);
+        }
+      } else {
+        console.log('ℹ️ 非移动设备，Eruda调试工具未启用（可在PC端使用浏览器开发者工具）');
+      }
+    })();
   </script>
   
   <!-- FastClick解决移动端300ms点击延迟（暂时禁用，可能冲突） -->
@@ -4124,7 +4158,8 @@
       try {
         const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
         const userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-        const token = localStorage.getItem('token');
+        // 检查两个token键（兼容性）
+        const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
         
         const displayName = userSettings.displayName || userInfo.username || userInfo.name || '账户';
         const shortName = displayName.length > 6 ? displayName.substring(0, 6) + '...' : displayName;
@@ -4588,19 +4623,37 @@
     // 当本地数据缺失时，从云端/后台恢复
     async function restoreUserDataIfMissing() {
       try {
-        const token = getAuthToken();
-        if (!token) return;
+        // 检查两个token键（兼容性）
+        const token = getAuthToken() || localStorage.getItem('auth_token') || localStorage.getItem('token');
+        if (!token) {
+          console.log('ℹ️ [数据恢复] 未找到token，跳过数据恢复');
+          return;
+        }
 
         const hasLocalPigeons = !!localStorage.getItem('pigeon_manager_data_v1');
         const hasLocalRaces = !!localStorage.getItem('pigeon_races_v1');
 
-        // 如果本地已有核心数据，则不强制覆盖
-        if (hasLocalPigeons || hasLocalRaces) {
-          return;
+        // 如果本地已有核心数据，检查是否需要从云端同步更新
+        if (hasLocalPigeons && hasLocalRaces) {
+          console.log('ℹ️ [数据恢复] 本地已有数据，尝试从云端同步更新');
+          // 仍然尝试从云端加载，但不会覆盖本地数据（除非云端数据更新）
         }
 
         const apiUrl = getBackendApiUrl();
-        const resp = await fetch(apiUrl + '/user/data/full', {
+        // 确保API URL格式正确
+        let fullDataUrl = apiUrl;
+        if (!fullDataUrl.endsWith('/user/data/full')) {
+          if (fullDataUrl.endsWith('/api')) {
+            fullDataUrl = fullDataUrl + '/user/data/full';
+          } else if (fullDataUrl.endsWith('/')) {
+            fullDataUrl = fullDataUrl + 'api/user/data/full';
+          } else {
+            fullDataUrl = fullDataUrl + '/api/user/data/full';
+          }
+        }
+        
+        console.log('🔧 [数据恢复] 尝试从云端恢复数据，URL:', fullDataUrl);
+        const resp = await fetch(fullDataUrl, {
           method: 'GET',
           headers: {
             'Authorization': 'Bearer ' + token
@@ -4619,9 +4672,19 @@
 
         if (Array.isArray(data.pigeons) && data.pigeons.length > 0) {
           localStorage.setItem('pigeon_manager_data_v1', JSON.stringify(data.pigeons));
+          // 更新全局变量
+          if (typeof window !== 'undefined' && window.pigeons) {
+            window.pigeons = data.pigeons;
+          }
+          console.log('✅ [数据恢复] 已恢复鸽子数据:', data.pigeons.length, '条');
         }
         if (Array.isArray(data.races) && data.races.length > 0) {
           localStorage.setItem('pigeon_races_v1', JSON.stringify(data.races));
+          // 更新全局变量
+          if (typeof window !== 'undefined' && window.races) {
+            window.races = data.races;
+          }
+          console.log('✅ [数据恢复] 已恢复比赛数据:', data.races.length, '条');
         }
         if (Array.isArray(data.healthRecords) && data.healthRecords.length > 0) {
           localStorage.setItem(HEALTH_RECORDS_KEY, JSON.stringify(data.healthRecords));
