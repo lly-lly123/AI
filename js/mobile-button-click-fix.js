@@ -61,7 +61,7 @@
   
   // ==================== 2. 全局事件委托（最高优先级） ====================
   function setupMobileGlobalClickHandler() {
-    console.log('🔧 [移动端修复] 设置全局点击处理器...');
+    console.log('🔧 [移动端修复] 设置全局点击处理器（支持PC和移动端）...');
     
     if (window._mobileGlobalClickHandlerAttached) {
       console.log('⚠️ [移动端修复] 全局点击处理器已存在，跳过');
@@ -69,10 +69,15 @@
     }
     
     function handleMobileGlobalClick(e) {
-      let target = e.target;
-      let maxDepth = 10;
+      // 阻止默认行为，确保点击事件正常处理
+      if (e.type === 'touchstart' || e.type === 'touchend') {
+        // 触摸事件需要特殊处理
+      }
       
-      while (target && maxDepth-- > 0) {
+      let target = e.target;
+      let maxDepth = 15; // 增加搜索深度，确保能找到按钮元素
+      
+      while (target && maxDepth-- > 0 && target !== document.body) {
         // 检查移动端导航按钮
         if (target.classList && target.classList.contains('mobile-nav-item')) {
           const onclickAttr = target.getAttribute('onclick');
@@ -128,33 +133,38 @@
           }
         }
         
-        // 检查其他按钮
-        if (target.id === 'btnGoCreate' || target.id === 'btnUserAvatar' || target.id === 'btnSettings') {
-          const onclickAttr = target.getAttribute('onclick');
-          if (onclickAttr) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            console.log('🔘 [移动端全局处理器] 点击按钮:', target.id);
-            try {
+        // 检查所有带onclick属性的元素（通用处理）
+        const onclickAttr = target.getAttribute('onclick');
+        if (onclickAttr && (target.tagName === 'BUTTON' || target.classList.contains('btn') || target.classList.contains('btn-icon') || target.classList.contains('mobile-tab') || target.classList.contains('mobile-nav-item') || target.classList.contains('mobile-card'))) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log('🔘 [移动端全局处理器] 点击元素:', target.tagName, target.className, target.id);
+          try {
+            // 提取switchView调用
+            const switchViewMatch = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+            if (switchViewMatch && switchViewMatch[1] && typeof window.switchView === 'function') {
+              window.switchView(switchViewMatch[1]);
+            } else {
+              // 直接执行onclick
               eval(onclickAttr);
-            } catch (err) {
-              console.error('❌ [移动端] 执行onclick失败:', err);
             }
-            return false;
+          } catch (err) {
+            console.error('❌ [移动端] 执行onclick失败:', err, 'onclick:', onclickAttr);
           }
+          return false;
         }
         
-        // 检查标签页按钮
-        if (target.classList && target.classList.contains('mobile-tab')) {
-          const onclickAttr = target.getAttribute('onclick');
-          if (onclickAttr) {
+        // 检查其他按钮（通过ID或类名）
+        if (target.id === 'btnGoCreate' || target.id === 'btnUserAvatar' || target.id === 'btnSettings' || target.classList.contains('mobile-tab')) {
+          const onclickAttr2 = target.getAttribute('onclick');
+          if (onclickAttr2) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            console.log('🔘 [移动端全局处理器] 点击标签页');
+            console.log('🔘 [移动端全局处理器] 点击按钮:', target.id || target.className);
             try {
-              eval(onclickAttr);
+              eval(onclickAttr2);
             } catch (err) {
               console.error('❌ [移动端] 执行onclick失败:', err);
             }
@@ -166,14 +176,24 @@
       }
     }
     
-    // 绑定多种事件类型
-    const events = ['click', 'touchstart', 'touchend', 'mousedown', 'mouseup'];
+    // 绑定多种事件类型（PC和移动端都支持）
+    const events = ['click', 'touchstart', 'touchend', 'mousedown', 'mouseup', 'pointerdown', 'pointerup'];
     events.forEach(eventType => {
       document.addEventListener(eventType, handleMobileGlobalClick, {
         capture: true,
         passive: false
       });
     });
+    
+    // 额外绑定到body，确保捕获所有点击
+    if (document.body) {
+      events.forEach(eventType => {
+        document.body.addEventListener(eventType, handleMobileGlobalClick, {
+          capture: true,
+          passive: false
+        });
+      });
+    }
     
     window._mobileGlobalClickHandlerAttached = true;
     console.log('✅ [移动端修复] 全局点击处理器已设置');
@@ -267,27 +287,42 @@
       }
     });
     
-    // 修复其他按钮
-    document.querySelectorAll('button, .btn, .btn-icon, .mobile-tab').forEach(btn => {
-      btn.style.cssText += 'pointer-events: auto !important; cursor: pointer !important; touch-action: manipulation !important;';
+    // 修复其他按钮（包括所有可能的按钮类型）
+    const buttonSelectors = 'button, .btn, .btn-icon, .btn-primary, .mobile-tab, .mobile-nav-item, [onclick], [data-action], [role="button"]';
+    document.querySelectorAll(buttonSelectors).forEach(btn => {
+      // 强制设置样式，确保可点击
+      btn.style.setProperty('pointer-events', 'auto', 'important');
+      btn.style.setProperty('cursor', 'pointer', 'important');
+      btn.style.setProperty('touch-action', 'manipulation', 'important');
+      btn.style.setProperty('user-select', 'none', 'important');
+      btn.style.setProperty('-webkit-user-select', 'none', 'important');
+      btn.style.setProperty('z-index', '10', 'important');
       btn.removeAttribute('disabled');
+      btn.removeAttribute('aria-disabled');
       
       const onclickAttr = btn.getAttribute('onclick');
       if (onclickAttr && !btn.dataset.fixed) {
         btn.dataset.fixed = 'true';
         const originalOnclick = onclickAttr;
-        btn.onclick = function(e) {
+        
+        // 绑定多种事件类型
+        const handleClick = function(e) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          console.log('🔘 [移动端直接绑定] 执行按钮onclick');
+          console.log('🔘 [移动端直接绑定] 执行按钮onclick:', btn.tagName, btn.className);
           try {
             eval(originalOnclick);
           } catch (err) {
-            console.error('❌ [移动端] 执行onclick失败:', err);
+            console.error('❌ [移动端] 执行onclick失败:', err, 'onclick:', originalOnclick);
           }
           return false;
         };
+        
+        // 绑定click和touch事件
+        btn.addEventListener('click', handleClick, { capture: true, passive: false });
+        btn.addEventListener('touchend', handleClick, { capture: true, passive: false });
+        btn.onclick = handleClick;
       }
     });
     
@@ -296,59 +331,85 @@
   
   // ==================== 4. 初始化 ====================
   function init() {
-    console.log('🔧 [移动端修复] 开始初始化...');
+    console.log('🔧 [移动端修复] 开始初始化（支持PC和移动端）...');
     
-    // 立即设置全局点击处理器
+    // 立即设置全局点击处理器（不等待DOM）
     setupMobileGlobalClickHandler();
+    
+    // 立即修复按钮（如果DOM已存在）
+    if (document.body) {
+      forceFixMobileButtons();
+    }
     
     // 等待DOM加载完成后修复按钮
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔧 [移动端修复] DOMContentLoaded，修复按钮');
         forceFixMobileButtons();
+        // 延迟再次修复，确保所有动态内容都已加载
+        setTimeout(forceFixMobileButtons, 500);
+        setTimeout(forceFixMobileButtons, 1000);
+        setTimeout(forceFixMobileButtons, 2000);
       });
     } else {
       forceFixMobileButtons();
+      // 延迟再次修复
+      setTimeout(forceFixMobileButtons, 500);
+      setTimeout(forceFixMobileButtons, 1000);
+      setTimeout(forceFixMobileButtons, 2000);
     }
     
-    // 使用MutationObserver监听DOM变化
-    const observer = new MutationObserver(function(mutations) {
-      let shouldRefix = false;
-      mutations.forEach(function(mutation) {
-        if (mutation.addedNodes.length > 0) {
-          mutation.addedNodes.forEach(function(node) {
-            if (node.nodeType === 1) {
-              if (node.classList && (
-                node.classList.contains('mobile-nav-item') ||
-                node.classList.contains('mobile-card') ||
-                node.classList.contains('mobile-tab') ||
-                node.classList.contains('btn') ||
-                node.classList.contains('btn-icon')
-              )) {
-                shouldRefix = true;
-              } else if (node.querySelector && (
-                node.querySelector('.mobile-nav-item') ||
-                node.querySelector('.mobile-card') ||
-                node.querySelector('.mobile-tab') ||
-                node.querySelector('.btn') ||
-                node.querySelector('.btn-icon')
-              )) {
-                shouldRefix = true;
+    // 使用MutationObserver监听DOM变化（更全面的监听）
+    if (document.body) {
+      const observer = new MutationObserver(function(mutations) {
+        let shouldRefix = false;
+        mutations.forEach(function(mutation) {
+          if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) {
+                // 检查节点本身
+                if (node.classList && (
+                  node.classList.contains('mobile-nav-item') ||
+                  node.classList.contains('mobile-card') ||
+                  node.classList.contains('mobile-tab') ||
+                  node.classList.contains('btn') ||
+                  node.classList.contains('btn-icon') ||
+                  node.classList.contains('btn-primary') ||
+                  node.tagName === 'BUTTON' ||
+                  node.hasAttribute('onclick')
+                )) {
+                  shouldRefix = true;
+                } 
+                // 检查子节点
+                else if (node.querySelector) {
+                  const hasButton = node.querySelector('.mobile-nav-item, .mobile-card, .mobile-tab, .btn, .btn-icon, button, [onclick]');
+                  if (hasButton) {
+                    shouldRefix = true;
+                  }
+                }
               }
-            }
-          });
+            });
+          }
+          // 检查属性变化（如onclick被添加）
+          if (mutation.type === 'attributes' && (mutation.attributeName === 'onclick' || mutation.attributeName === 'class')) {
+            shouldRefix = true;
+          }
+        });
+        
+        if (shouldRefix) {
+          console.log('🔧 [移动端修复] 检测到新按钮或属性变化，重新修复...');
+          setTimeout(forceFixMobileButtons, 50);
+          setTimeout(forceFixMobileButtons, 200);
         }
       });
       
-      if (shouldRefix) {
-        console.log('🔧 [移动端修复] 检测到新按钮，重新修复...');
-        setTimeout(forceFixMobileButtons, 100);
-      }
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['onclick', 'class', 'style']
+      });
+    }
     
     console.log('✅ [移动端修复] 初始化完成');
   }

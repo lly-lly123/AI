@@ -70,34 +70,61 @@
   
   <!-- 🔧 移动端立即显示脚本（最高优先级 - 必须在所有脚本之前） -->
   <script>
-    // 移动端立即显示脚本 - 在页面加载前就执行
+    // 移动端立即显示脚本 - 在页面加载前就执行（支持PC和移动端）
     (function() {
       'use strict';
       const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile) {
-        console.log('📱 [移动端修复] 检测到移动设备，启用移动端立即显示模式');
-        
-        // 立即添加内联样式到head，确保CSS优先级最高
-        const style = document.createElement('style');
-        style.id = 'mobile-immediate-fix';
-        style.textContent = `
-          body { display: block !important; visibility: visible !important; opacity: 1 !important; }
-          .mobile-content { display: block !important; visibility: visible !important; opacity: 1 !important; }
-          #homeView { display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; }
-        `;
-        if (document.head) {
-          document.head.appendChild(style);
-        } else {
-          document.addEventListener('DOMContentLoaded', function() {
-            document.head.appendChild(style);
-          });
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // PC端打开移动端页面时也启用显示修复
+      console.log('📱 [移动端修复] 检测设备类型 - 移动设备:', isMobile, '触摸设备:', isTouchDevice);
+      
+      // 立即添加内联样式到head，确保CSS优先级最高（PC和移动端都适用）
+      const style = document.createElement('style');
+      style.id = 'mobile-immediate-fix';
+      style.textContent = `
+        body { 
+          display: block !important; 
+          visibility: visible !important; 
+          opacity: 1 !important; 
+          pointer-events: auto !important;
         }
+        .mobile-content { 
+          display: block !important; 
+          visibility: visible !important; 
+          opacity: 1 !important; 
+          pointer-events: auto !important;
+        }
+        #homeView { 
+          display: block !important; 
+          visibility: visible !important; 
+          opacity: 1 !important; 
+          position: relative !important;
+          pointer-events: auto !important;
+        }
+        /* 确保所有按钮可点击 */
+        button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          touch-action: manipulation !important;
+          -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important;
+        }
+      `;
+      if (document.head) {
+        document.head.appendChild(style);
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.head.appendChild(style);
+        });
       }
     })();
   </script>
   
   <!-- 🔧 自动账号注册和数据管理脚本（最高优先级 - 必须在其他脚本之前） -->
   <script src="js/auto-account-register.js"></script>
+  
+  <!-- 🔧 移动端按钮点击终极修复脚本（最高优先级 - 必须在页面显示修复之前） -->
+  <script src="js/mobile-button-click-fix.js"></script>
   
   <!-- 🔧 页面显示修复脚本（最高优先级 - 确保页面内容可见） -->
   <script>
@@ -224,56 +251,51 @@
         }, delay);
       });
       
-      // 移动端特定的立即执行（不等待任何事件）
+      // PC和移动端都立即执行（不等待任何事件）
       const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobileDevice) {
-        console.log('📱 [页面修复] 检测到移动设备，立即执行强制显示');
-        // 移动端立即执行，不等待DOM
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      console.log('📱 [页面修复] 设备检测 - 移动设备:', isMobileDevice, '触摸设备:', isTouchDevice);
+      
+      // 无论PC还是移动端都立即执行，确保页面可见
+      const immediateTimes = [0, 10, 50, 100, 200];
+      immediateTimes.forEach(delay => {
         setTimeout(function() {
           forceShowHomeView();
-        }, 0);
-        setTimeout(function() {
-          forceShowHomeView();
-        }, 10);
-        setTimeout(function() {
-          forceShowHomeView();
-        }, 50);
-      }
+        }, delay);
+      });
       
       // DOMContentLoaded时执行
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
           console.log('🔧 [页面修复] DOMContentLoaded事件触发，强制显示homeView');
           forceShowHomeView();
-          // 移动端额外延迟执行
-          if (isMobileDevice) {
-            setTimeout(forceShowHomeView, 100);
-            setTimeout(forceShowHomeView, 300);
-            setTimeout(forceShowHomeView, 500);
-          }
+          // PC和移动端都额外延迟执行，确保页面可见
+          setTimeout(forceShowHomeView, 100);
+          setTimeout(forceShowHomeView, 300);
+          setTimeout(forceShowHomeView, 500);
+          setTimeout(forceShowHomeView, 1000);
         });
       } else {
         // DOM已加载，立即执行
         console.log('🔧 [页面修复] DOM已加载，立即强制显示homeView');
         forceShowHomeView();
-        // 移动端额外延迟执行
-        if (isMobileDevice) {
-          setTimeout(forceShowHomeView, 100);
-          setTimeout(forceShowHomeView, 300);
-          setTimeout(forceShowHomeView, 500);
-        }
+        // PC和移动端都额外延迟执行，确保页面可见
+        setTimeout(forceShowHomeView, 100);
+        setTimeout(forceShowHomeView, 300);
+        setTimeout(forceShowHomeView, 500);
+        setTimeout(forceShowHomeView, 1000);
       }
       
       // 窗口加载完成后再次检查
       window.addEventListener('load', function() {
         console.log('🔧 [页面修复] window.load事件触发，再次强制显示homeView');
         forceShowHomeView();
-        // 移动端额外延迟执行
-        if (isMobileDevice) {
-          setTimeout(forceShowHomeView, 200);
-          setTimeout(forceShowHomeView, 500);
-          setTimeout(forceShowHomeView, 1000);
-        }
+        // PC和移动端都额外延迟执行，确保页面可见
+        setTimeout(forceShowHomeView, 200);
+        setTimeout(forceShowHomeView, 500);
+        setTimeout(forceShowHomeView, 1000);
+        setTimeout(forceShowHomeView, 2000);
         
         // 输出诊断信息
         setTimeout(function() {
@@ -1406,12 +1428,14 @@
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
+        pointer-events: auto !important;
       }
       
       .mobile-content {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
+        pointer-events: auto !important;
       }
       
       #homeView {
@@ -1421,6 +1445,7 @@
         position: relative !important;
         height: auto !important;
         min-height: auto !important;
+        pointer-events: auto !important;
       }
       
       .mobile-view {
@@ -1429,6 +1454,48 @@
       
       .mobile-view#homeView {
         display: block !important;
+      }
+      
+      /* 确保所有按钮可点击 */
+      button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+      }
+    }
+    
+    /* PC端打开移动端页面时也强制显示（确保兼容性） */
+    @media (min-width: 769px) {
+      body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+      
+      .mobile-content {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+      
+      #homeView {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        pointer-events: auto !important;
+      }
+      
+      /* PC端按钮也要可点击 */
+      button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        user-select: none !important;
       }
     }
     
@@ -2955,8 +3022,15 @@
         
         clearTimeout(timeoutId);
         
+        // 处理404和其他错误，不抛出异常，使用默认值
         if (!response.ok) {
-          throw new Error('获取公告失败');
+          if (response.status === 404) {
+            console.log('📢 [公告] API接口不存在，使用默认公告');
+            announcementTextEl.textContent = '暂无公告';
+            announcementEl.style.display = 'flex';
+            return;
+          }
+          throw new Error(`获取公告失败: ${response.status}`);
         }
         
         const result = await response.json();
