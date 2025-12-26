@@ -4632,6 +4632,63 @@
       });
     });
 
+    // 从本地加载数据并显示页面（全局函数，供其他函数调用）
+    function loadLocalDataAndDisplay() {
+      try {
+        // 从本地加载数据
+        const localPigeons = localStorage.getItem('pigeon_manager_data_v1');
+        const localRaces = localStorage.getItem('pigeon_races_v1');
+        
+        if (localPigeons) {
+          try {
+            const pigeons = JSON.parse(localPigeons);
+            if (Array.isArray(pigeons) && pigeons.length > 0) {
+              if (typeof window !== 'undefined' && window.pigeons) {
+                window.pigeons = pigeons;
+              }
+              console.log('✅ [移动端] 已从本地加载鸽子数据:', pigeons.length, '条');
+            }
+          } catch (e) {
+            console.warn('⚠️ [移动端] 解析本地鸽子数据失败:', e);
+          }
+        }
+        
+        if (localRaces) {
+          try {
+            const races = JSON.parse(localRaces);
+            if (Array.isArray(races) && races.length > 0) {
+              if (typeof window !== 'undefined' && window.races) {
+                window.races = races;
+              }
+              console.log('✅ [移动端] 已从本地加载比赛数据:', races.length, '条');
+            }
+          } catch (e) {
+            console.warn('⚠️ [移动端] 解析本地比赛数据失败:', e);
+          }
+        }
+        
+        // 刷新页面视图
+        if (typeof loadData === 'function') {
+          loadData();
+        }
+        if (typeof refreshList === 'function') {
+          refreshList();
+        }
+        
+        // 确保首页视图显示
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          document.querySelectorAll('.mobile-view').forEach(view => {
+            view.style.display = 'none';
+          });
+          homeView.style.display = 'block';
+          console.log('✅ [移动端] 已显示首页视图（使用本地数据）');
+        }
+      } catch (error) {
+        console.error('❌ [移动端] 加载本地数据失败:', error);
+      }
+    }
+    
     // 当本地数据缺失时，从云端/后台恢复
     async function restoreUserDataIfMissing() {
       try {
@@ -4645,13 +4702,17 @@
         // 检查两个token键（兼容性）
         const token = getAuthToken() || localStorage.getItem('auth_token') || localStorage.getItem('token');
         if (!token) {
-          console.log('ℹ️ [数据恢复] 未找到token，跳过数据恢复');
+          console.log('ℹ️ [数据恢复] 未找到token，跳过云端数据恢复');
           console.log('ℹ️ [数据恢复] 提示：系统正在自动注册账户，请稍候...');
+          
+          // 即使没有token，也尝试从本地加载数据并显示页面
+          loadLocalDataAndDisplay();
+          
           // 如果自动注册还在进行，再等待一下
           setTimeout(async () => {
             const retryToken = getAuthToken() || localStorage.getItem('auth_token') || localStorage.getItem('token');
             if (retryToken) {
-              console.log('✅ [数据恢复] 检测到token，重新尝试数据恢复');
+              console.log('✅ [数据恢复] 检测到token，重新尝试云端数据恢复');
               await restoreUserDataIfMissing();
             }
           }, 2000);
@@ -6128,18 +6189,33 @@
       window.addEventListener('dataAutoLoaded', async (event) => {
         console.log('✅ [移动端] 收到自动注册完成事件，开始数据恢复');
         const { account, token } = event.detail;
+        console.log('🔍 [移动端] 事件详情:', { 
+          account: account ? account.username : 'null', 
+          token: token ? '已存在' : '不存在' 
+        });
+        
+        // 即使没有token，也尝试恢复数据（使用本地数据）
         if (token) {
           // 等待一下确保token已保存
           setTimeout(() => {
             restoreUserDataIfMissing();
           }, 500);
+        } else {
+          // 没有token，但尝试从本地加载数据并显示页面
+          console.log('ℹ️ [移动端] 未找到token，尝试从本地加载数据');
+          setTimeout(() => {
+            loadLocalDataAndDisplay();
+          }, 500);
         }
       });
       
-      // 页面加载后，如果本地数据缺失且已登录，则尝试从后台/云端恢复数据
+      // 页面加载后，尝试恢复数据（优先本地，然后云端）
       setTimeout(() => {
+        // 先尝试从本地加载并显示
+        loadLocalDataAndDisplay();
+        // 然后尝试从云端恢复（如果有token）
         restoreUserDataIfMissing();
-      }, 3000); // 增加等待时间，确保自动注册完成
+      }, 2000); // 等待自动注册完成
       
       // 更新用户按钮显示
       setTimeout(() => {

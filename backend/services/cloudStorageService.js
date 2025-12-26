@@ -22,29 +22,44 @@ class CloudStorageService {
 
   async init() {
     try {
+      logger.info('🔧 开始初始化云存储服务...');
+      logger.info('📋 检查环境变量配置...');
+      
       if (!SUPABASE_URL || SUPABASE_URL.includes('your-project') || 
           !SUPABASE_KEY || SUPABASE_KEY.includes('your-anon-key')) {
         logger.warn('⚠️ Supabase未配置，将使用本地存储模式');
+        logger.warn('   需要配置环境变量: SUPABASE_URL, SUPABASE_ANON_KEY');
         return;
       }
 
+      logger.info('✅ 环境变量已配置');
+      logger.info(`   SUPABASE_URL: ${SUPABASE_URL.substring(0, 30)}...`);
+      logger.info(`   SUPABASE_KEY: ${SUPABASE_KEY.substring(0, 20)}...`);
+
       this.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+      logger.info('🔗 正在测试Supabase连接...');
       
       // 测试连接 - 尝试查询一个表
       const { error } = await this.supabase.from('users').select('id').limit(1);
       
       if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
-        logger.warn('⚠️ Supabase连接失败，将使用本地存储模式:', error.message);
+        logger.warn('⚠️ Supabase连接失败，将使用本地存储模式');
+        logger.warn(`   错误代码: ${error.code}, 错误信息: ${error.message}`);
+        logger.warn('   提示: 请检查SUPABASE_URL和SUPABASE_ANON_KEY是否正确');
         return;
       }
 
       this.isInitialized = true;
-      logger.info('✅ 云存储服务初始化成功');
+      logger.info('✅ 云存储服务初始化成功（使用Supabase）');
+      logger.info('📦 数据将自动同步到云端');
       
       // 启动自动同步
       this.startAutoSync();
+      logger.info('🔄 自动同步已启动（每30秒同步队列，每5分钟全量同步）');
     } catch (error) {
-      logger.warn('⚠️ 云存储初始化失败，将使用本地存储模式:', error.message);
+      logger.warn('⚠️ 云存储初始化失败，将使用本地存储模式');
+      logger.warn(`   错误: ${error.message}`);
+      logger.warn('   提示: 请检查环境变量配置和网络连接');
     }
   }
 

@@ -17,29 +17,41 @@ class FileStorageService {
   }
 
   async init() {
+    logger.info('🔧 开始初始化文件存储服务...');
+    logger.info('📋 检查云存储配置...');
+    
     // 初始化MinIO（推荐，完全免费开源）
     if (this.initMinIO()) {
       this.storageProviders.push('minio');
+      logger.info('✅ MinIO配置已加载');
+    } else {
+      logger.info('ℹ️ MinIO未配置（需要: MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY）');
     }
 
     // 初始化Cloudflare R2（永久免费10GB）
     if (this.initCloudflareR2()) {
       this.storageProviders.push('cloudflare-r2');
+      logger.info('✅ Cloudflare R2配置已加载');
     }
 
     // 初始化Supabase Storage（永久免费1GB）
     if (this.initSupabaseStorage()) {
       this.storageProviders.push('supabase');
+      logger.info('✅ Supabase Storage配置已加载');
+    } else {
+      logger.info('ℹ️ Supabase Storage未配置（需要: SUPABASE_URL, SUPABASE_ANON_KEY）');
     }
 
     // 初始化七牛云存储（免费10GB，非永久）
     if (this.initQiniuStorage()) {
       this.storageProviders.push('qiniu');
+      logger.info('✅ 七牛云存储配置已加载');
     }
 
     // 初始化阿里云OSS（可选）
     if (this.initAliyunOSS()) {
       this.storageProviders.push('aliyun');
+      logger.info('✅ 阿里云OSS配置已加载');
     }
 
     // 选择第一个可用的存储提供商（优先使用永久免费的开源方案）
@@ -49,6 +61,7 @@ class FileStorageService {
       logger.info(`📦 可用存储提供商: ${this.storageProviders.join(', ')}`);
     } else {
       logger.warn('⚠️ 未配置任何云存储服务，文件将存储在本地');
+      logger.warn('   提示: 请在Zeabur环境变量中配置云存储服务');
     }
   }
 
@@ -77,6 +90,8 @@ class FileStorageService {
         secretKey: MINIO_SECRET_KEY,
         bucket: MINIO_BUCKET
       };
+      
+      logger.info(`📦 MinIO配置详情: Endpoint=${this.minioConfig.endPoint}:${this.minioConfig.port}, Bucket=${MINIO_BUCKET}, SSL=${MINIO_USE_SSL}`);
       return true;
     } catch (error) {
       logger.warn('MinIO初始化失败:', error.message);
@@ -124,6 +139,7 @@ class FileStorageService {
     try {
       const SUPABASE_URL = process.env.SUPABASE_URL;
       const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+      const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'files';
 
       if (!SUPABASE_URL || SUPABASE_URL.includes('your-project') ||
           !SUPABASE_KEY || SUPABASE_KEY.includes('your-anon-key')) {
@@ -132,6 +148,9 @@ class FileStorageService {
 
       this.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
       this.supabaseStorage = this.supabase.storage;
+      this.supabaseBucket = SUPABASE_BUCKET;
+      
+      logger.info(`📦 Supabase Storage配置: ${SUPABASE_URL.substring(0, 30)}..., Bucket: ${SUPABASE_BUCKET}`);
       return true;
     } catch (error) {
       logger.warn('Supabase Storage初始化失败:', error.message);

@@ -613,7 +613,7 @@
             localStorage.setItem('auth_token', token);
             // 同时保存到token键（兼容移动端）
             localStorage.setItem('token', token);
-            console.log('✅ [自动调取] 已自动登录');
+            console.log('✅ [自动调取] 已自动登录，token已保存');
             
             // 如果返回了用户信息，保存它
             if (result.data && result.data.user) {
@@ -635,7 +635,12 @@
                 console.log('✅ [自动调取] 已更新移动端用户按钮');
               }, 100);
             }
+          } else {
+            console.warn('⚠️ [自动调取] 登录响应成功但未返回token:', result);
           }
+        } else {
+          const errorText = await loginResponse.text();
+          console.warn('⚠️ [自动调取] 登录失败，状态码:', loginResponse.status, '响应:', errorText);
         }
       } catch (error) {
         console.warn('⚠️ [自动调取] 自动登录失败:', error);
