@@ -199,10 +199,50 @@ app.get('/', (req, res, next) => {
 });
 
 // 处理简化路由（在HTML文件路由之前）
-// /admin -> /admin.html
-app.get('/admin', (req, res) => {
-  console.log('🔄 [路由重定向] /admin -> /admin.html');
-  res.redirect('/admin.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
+// /admin -> 直接返回 admin.html（不重定向，避免路由问题）
+app.all('/admin', (req, res, next) => {
+  console.log('🔄 [路由处理] /admin -> 直接返回 admin.html');
+  console.log(`  请求方法: ${req.method}, 路径: ${req.path}, URL: ${req.url}`);
+  
+  // 尝试所有可能的路径查找admin.html
+  const possibleAdminPaths = [
+    path.resolve(frontendPath, 'admin.html'),
+    path.resolve(__dirname, '..', 'admin.html'),
+    path.resolve(process.cwd(), 'admin.html'),
+    path.join(frontendPath, 'admin.html'),
+    path.join(__dirname, '..', 'admin.html'),
+    path.join(process.cwd(), 'admin.html'),
+    path.join(__dirname, 'admin.html'),
+    path.resolve(__dirname, 'admin.html')
+  ];
+  
+  console.log(`  [Admin路由] 尝试查找 admin.html:`);
+  for (const adminPath of possibleAdminPaths) {
+    const adminPathResolved = path.resolve(adminPath);
+    const exists = fs.existsSync(adminPathResolved);
+    console.log(`    ${exists ? '✅' : '❌'} ${adminPathResolved}`);
+    
+    if (exists) {
+      console.log(`  ✅ [Admin路由] 找到 admin.html，返回: ${adminPathResolved}`);
+      logger.info('Admin路由 - 返回admin.html', {
+        method: req.method,
+        path: req.path,
+        adminPath: adminPathResolved
+      });
+      // 确保设置正确的Content-Type
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.sendFile(adminPathResolved);
+    }
+  }
+  
+  console.log(`  ⚠️ [Admin路由] 未找到 admin.html，继续到下一个中间件`);
+  logger.warn('Admin路由 - admin.html不存在', {
+    method: req.method,
+    path: req.path,
+    triedPaths: possibleAdminPaths
+  });
+  
+  next();
 });
 
 // 专门处理HTML文件请求（在静态文件服务之前，使用use确保所有HTTP方法都匹配）
