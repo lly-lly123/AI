@@ -198,6 +198,49 @@ app.get('/', (req, res, next) => {
   next();
 });
 
+// 专门处理HTML文件请求（在静态文件服务之前）
+// 处理 /admin.html, /mobile.html 等
+app.get(/^\/([^\/]+\.html)$/, (req, res, next) => {
+  const htmlFileName = req.path.substring(1); // 移除开头的 /
+  console.log(`📄 HTML文件请求: ${htmlFileName}`);
+  
+  // 尝试所有可能的路径查找HTML文件
+  const possibleHtmlPaths = [
+    path.resolve(frontendPath, htmlFileName),
+    path.resolve(__dirname, '..', htmlFileName),
+    path.resolve(process.cwd(), htmlFileName),
+    path.join(frontendPath, htmlFileName),
+    path.join(__dirname, '..', htmlFileName),
+    path.join(process.cwd(), htmlFileName),
+    path.join(__dirname, htmlFileName),
+    path.resolve(__dirname, htmlFileName)
+  ];
+  
+  console.log(`  尝试查找 ${htmlFileName}:`);
+  for (const htmlPath of possibleHtmlPaths) {
+    const htmlPathResolved = path.resolve(htmlPath);
+    const exists = fs.existsSync(htmlPathResolved);
+    console.log(`    ${exists ? '✅' : '❌'} ${htmlPathResolved}`);
+    
+    if (exists) {
+      console.log(`  ✅ 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
+      logger.info(`HTML文件请求 - 返回${htmlFileName}`, {
+        path: req.path,
+        htmlPath: htmlPathResolved
+      });
+      return res.sendFile(htmlPathResolved);
+    }
+  }
+  
+  console.log(`  ⚠️ 未找到 ${htmlFileName}，继续到下一个中间件`);
+  logger.warn(`HTML文件请求 - ${htmlFileName}不存在`, {
+    path: req.path,
+    triedPaths: possibleHtmlPaths
+  });
+  
+  next();
+});
+
 // 静态文件服务 - 提供前端页面
 console.log('========================================');
 console.log('📂 配置静态文件服务');
@@ -272,6 +315,44 @@ app.use((req, res) => {
       success: false,
       error: '接口不存在'
     });
+  }
+  
+  // 检查是否是HTML文件请求（如 /admin.html, /mobile.html 等）
+  const htmlFileMatch = req.path.match(/^\/([^\/]+\.html)$/);
+  if (htmlFileMatch) {
+    const htmlFileName = htmlFileMatch[1];
+    console.log(`  → HTML文件请求: ${htmlFileName}`);
+    
+    // 尝试所有可能的路径查找HTML文件
+    const possibleHtmlPaths = [
+      path.resolve(frontendPath, htmlFileName),
+      path.resolve(__dirname, '..', htmlFileName),
+      path.resolve(process.cwd(), htmlFileName),
+      path.join(frontendPath, htmlFileName),
+      path.join(__dirname, '..', htmlFileName),
+      path.join(process.cwd(), htmlFileName),
+      path.join(__dirname, htmlFileName),
+      path.resolve(__dirname, htmlFileName)
+    ];
+    
+    console.log(`  尝试查找 ${htmlFileName}:`);
+    for (const htmlPath of possibleHtmlPaths) {
+      const htmlPathResolved = path.resolve(htmlPath);
+      const exists = fs.existsSync(htmlPathResolved);
+      console.log(`    ${exists ? '✅' : '❌'} ${htmlPathResolved}`);
+      
+      if (exists) {
+        console.log(`  ✅ 找到 ${htmlFileName}，返回: ${htmlPathResolved}`);
+        logger.info(`404处理 - 返回${htmlFileName}`, {
+          method: req.method,
+          path: req.path,
+          htmlPath: htmlPathResolved
+        });
+        return res.sendFile(htmlPathResolved);
+      }
+    }
+    
+    console.log(`  ❌ 所有路径都找不到 ${htmlFileName}`);
   }
   
   // 对于非API请求，尝试返回index.html（SPA路由支持）
