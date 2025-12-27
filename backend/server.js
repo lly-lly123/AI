@@ -14,12 +14,32 @@ const config = require('./config/config');
 const logger = require('./utils/logger');
 
 console.log('✅ 所有模块加载完成');
-const apiRoutes = require('./routes/api');
-const cron = require('node-cron');
-const dataService = require('./services/dataService');
-const authService = require('./services/authService');
-const storageService = require('./services/storageService');
-const { apiLimiter, strictLimiter, aiLimiter } = require('./middleware/rateLimiter');
+
+// 使用try-catch包装所有require，确保错误能被捕获
+let apiRoutes, cron, dataService, authService, storageService, apiLimiter, strictLimiter, aiLimiter;
+
+try {
+  apiRoutes = require('./routes/api');
+  console.log('✅ API路由加载成功');
+} catch (error) {
+  console.error('❌ API路由加载失败:', error);
+  throw error;
+}
+
+try {
+  cron = require('node-cron');
+  dataService = require('./services/dataService');
+  authService = require('./services/authService');
+  storageService = require('./services/storageService');
+  const rateLimiterModule = require('./middleware/rateLimiter');
+  apiLimiter = rateLimiterModule.apiLimiter;
+  strictLimiter = rateLimiterModule.strictLimiter;
+  aiLimiter = rateLimiterModule.aiLimiter;
+  console.log('✅ 所有服务模块加载成功');
+} catch (error) {
+  console.error('❌ 服务模块加载失败:', error);
+  throw error;
+}
 
 const app = express();
 
@@ -624,16 +644,25 @@ if (!process.env.VERCEL) {
     logger.info(`📡 服务器正在监听: ${addr.address}:${addr.port}`);
   });
 
-  // 全局错误处理
+  // 全局错误处理 - 增强版本，确保所有错误都被记录
   process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ [未处理的Promise拒绝]', reason);
+    console.error('❌ [Promise对象]', promise);
+    if (reason instanceof Error) {
+      console.error('❌ [错误堆栈]', reason.stack);
+    }
     logger.error('未处理的Promise拒绝', { reason, promise });
-    // 不退出进程，只记录错误
+    // 不退出进程，只记录错误（避免服务器崩溃）
   });
 
   process.on('uncaughtException', (error) => {
+    console.error('❌ [未捕获的异常]', error);
+    console.error('❌ [错误堆栈]', error.stack);
     logger.error('未捕获的异常', error);
     // 记录错误后优雅退出
-    process.exit(1);
+    setTimeout(() => {
+      process.exit(1);
+    }, 1000);
   });
 
   process.on('SIGTERM', () => {
@@ -647,9 +676,23 @@ if (!process.env.VERCEL) {
   });
   } catch (error) {
     // 捕获启动过程中的任何错误
-    console.error('❌ 服务器启动失败:', error);
+    console.error('========================================');
+    console.error('❌ 服务器启动失败');
+    console.error('========================================');
+    console.error('错误信息:', error.message);
+    console.error('错误类型:', error.name);
     console.error('错误堆栈:', error.stack);
-    logger.error('❌ 服务器启动失败', error);
+    if (error.code) {
+      console.error('错误代码:', error.code);
+    }
+    console.error('========================================');
+    
+    try {
+      logger.error('❌ 服务器启动失败', error);
+    } catch (logError) {
+      console.error('❌ 日志记录也失败了:', logError);
+    }
+    
     process.exit(1);
   }
 } else {
