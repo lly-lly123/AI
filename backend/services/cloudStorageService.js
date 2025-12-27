@@ -42,7 +42,21 @@ class CloudStorageService {
       // 测试连接 - 尝试查询一个表
       const { error } = await this.supabase.from('users').select('id').limit(1);
       
-      if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
+      // 处理表不存在的错误（这是正常的，如果表还没创建）
+      if (error) {
+        // PGRST205: 表不存在
+        // PGRST116: 表不存在（另一种错误码）
+        // 42P01: PostgreSQL表不存在
+        if (error.code === 'PGRST205' || error.code === 'PGRST116' || error.code === '42P01') {
+          logger.warn('⚠️ Supabase表不存在，将使用本地存储模式');
+          logger.warn(`   错误代码: ${error.code}`);
+          logger.warn('   提示: 请在Supabase SQL Editor中执行 supabase-init.sql 创建数据表');
+          logger.warn('   详细步骤: 访问Supabase控制台 -> SQL Editor -> 执行初始化脚本');
+          logger.warn('   文件位置: 项目根目录/supabase-init.sql');
+          return;
+        }
+        
+        // 其他错误（认证失败、网络问题等）
         logger.warn('⚠️ Supabase连接失败，将使用本地存储模式');
         logger.warn(`   错误代码: ${error.code}, 错误信息: ${error.message}`);
         logger.warn('   提示: 请检查SUPABASE_URL和SUPABASE_ANON_KEY是否正确');

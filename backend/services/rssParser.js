@@ -28,24 +28,102 @@ class RSSParser {
       
       // 获取RSS内容
       const response = await axios.get(url, {
-        timeout: 10000,
+        timeout: 15000, // 增加超时时间
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; PigeonDataService/1.0)'
-        }
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        },
+        maxRedirects: 5,
+        validateStatus: (status) => status >= 200 && status < 400
       });
       
-      // 解析RSS
-      const feed = await this.parser.parseString(response.data);
+      // 清理XML内容，修复常见的格式问题
+      let xmlContent = response.data;
+      if (typeof xmlContent === 'string') {
+        // 修复未引用的属性值（Unquoted attribute value）
+        xmlContent = xmlContent.replace(/(\w+)=([^"'\s>]+)(?=\s|>)/g, '$1="$2"');
+        // 修复其他常见的XML格式问题
+        xmlContent = xmlContent.replace(/&(?![a-zA-Z]+;)/g, '&amp;');
+        // 移除控制字符
+        xmlContent = xmlContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      }
+      
+      // 解析RSS - 使用更宽松的解析选项
+      let feed;
+      try {
+        feed = await this.parser.parseString(xmlContent);
+      } catch (parseError) {
+        // 如果解析失败，尝试使用更宽松的解析器
+        logger.warn(`标准解析失败，尝试宽松模式: ${parseError.message}`);
+        const lenientParser = new Parser({
+          xml: {
+            normalize: true,
+            normalizeTags: true,
+            trim: true
+          },
+          customFields: {
+            item: [
+              ['pubDate', 'pubDate'],
+              ['description', 'description']
+            ]
+          }
+        });
+        feed = await lenientParser.parseString(xmlContent);
+      }
+      
+      // 验证feed是否有效
+      if (!feed || !feed.items || !Array.isArray(feed.items)) {
+        logger.warn(`RSS feed格式无效: ${url}`);
+        return [];
+      }
       
       // 转换数据格式
-      const items = feed.items.map(item => this.transformItem(item, sourceConfig));
+      const items = feed.items
+        .filter(item => item && (item.title || item.link)) // 过滤无效项
+        .map(item => {
+          try {
+            return this.transformItem(item, sourceConfig);
+          } catch (transformError) {
+            logger.warn(`转换RSS项失败: ${item.title || '未知'}`, transformError.message);
+            return null;
+          }
+        })
+        .filter(item => item !== null); // 移除转换失败的项
+      
+      if (items.length === 0) {
+        logger.warn(`RSS解析成功但无有效数据: ${url}`);
+        return [];
+      }
       
       logger.info(`RSS解析成功: ${url}, 获取 ${items.length} 条数据`);
       return items;
       
     } catch (error) {
-      logger.error(`RSS解析失败: ${url}`, error);
-      throw error;
+      // 改进错误处理，提供更详细的错误信息
+      const errorMessage = error.message || String(error);
+      const errorDetails = {
+        url,
+        error: errorMessage,
+        code: error.code,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText
+        } : null
+      };
+      
+      // 根据错误类型提供不同的日志级别
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        logger.warn(`RSS请求超时: ${url}`, errorDetails);
+      } else if (error.response && error.response.status >= 400) {
+        logger.warn(`RSS请求失败 (HTTP ${error.response.status}): ${url}`, errorDetails);
+      } else if (errorMessage.includes('Unquoted attribute') || errorMessage.includes('XML')) {
+        logger.warn(`RSS XML格式错误: ${url}`, errorDetails);
+      } else {
+        logger.error(`RSS解析失败: ${url}`, errorDetails);
+      }
+      
+      // 不抛出错误，返回空数组，让调用者继续处理
+      return [];
     }
   }
 
