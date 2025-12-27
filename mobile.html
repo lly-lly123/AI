@@ -103,7 +103,7 @@
           opacity: 1 !important; 
           position: relative !important;
           pointer-events: auto !important;
-          min-height: auto !important;
+          min-height: 600px !important;
           height: auto !important;
         }
         /* 强制覆盖所有可能隐藏homeView的规则 */
@@ -114,7 +114,7 @@
           visibility: visible !important;
           opacity: 1 !important;
           position: relative !important;
-          min-height: auto !important;
+          min-height: 600px !important;
           height: auto !important;
         }
         /* 确保所有按钮可点击 */
@@ -166,8 +166,9 @@
             mobileContent.style.setProperty('display', 'block', 'important');
             mobileContent.style.setProperty('visibility', 'visible', 'important');
             mobileContent.style.setProperty('opacity', '1', 'important');
+            // 修复height: 0px问题 - 确保mobile-content有最小高度
+            mobileContent.style.setProperty('min-height', '100vh', 'important');
             mobileContent.style.setProperty('height', 'auto', 'important');
-            mobileContent.style.setProperty('min-height', 'auto', 'important');
           }
           
           if (homeView) {
@@ -176,9 +177,10 @@
             homeView.style.setProperty('visibility', 'visible', 'important');
             homeView.style.setProperty('opacity', '1', 'important');
             homeView.style.setProperty('position', 'relative', 'important');
-            homeView.style.setProperty('height', 'auto', 'important');
-            homeView.style.setProperty('min-height', 'auto', 'important');
             homeView.style.setProperty('width', '100%', 'important');
+            // 修复height: 0px问题 - 先设置一个最小高度确保可见，然后设置为auto
+            homeView.style.setProperty('min-height', '600px', 'important');
+            homeView.style.setProperty('height', 'auto', 'important');
             
             // 移除可能隐藏元素的类
             homeView.classList.remove('hidden', 'd-none');
@@ -1435,6 +1437,8 @@
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
+      min-height: 600px !important;
+      height: auto !important;
     }
     
     /* 移动端强制显示规则（确保在所有移动设备上可见） */
@@ -1459,7 +1463,7 @@
         opacity: 1 !important;
         position: relative !important;
         height: auto !important;
-        min-height: auto !important;
+        min-height: 600px !important;
         pointer-events: auto !important;
       }
       
@@ -5004,9 +5008,10 @@
           homeView.style.setProperty('visibility', 'visible', 'important');
           homeView.style.setProperty('opacity', '1', 'important');
           homeView.style.setProperty('position', 'relative', 'important');
-          homeView.style.setProperty('height', 'auto', 'important');
-          homeView.style.setProperty('min-height', 'auto', 'important');
           homeView.style.setProperty('width', '100%', 'important');
+          // 修复height: 0px问题
+          homeView.style.setProperty('min-height', '600px', 'important');
+          homeView.style.setProperty('height', 'auto', 'important');
           
           // 移除可能隐藏元素的类
           homeView.classList.remove('hidden', 'd-none');
@@ -5039,6 +5044,9 @@
           homeView.style.setProperty('display', 'block', 'important');
           homeView.style.setProperty('visibility', 'visible', 'important');
           homeView.style.setProperty('opacity', '1', 'important');
+          // 修复height: 0px问题
+          homeView.style.setProperty('min-height', '600px', 'important');
+          homeView.style.setProperty('height', 'auto', 'important');
           views.home = homeView;
           console.log('✅ 页面视图已初始化，显示首页');
         } else {
