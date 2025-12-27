@@ -1419,9 +1419,19 @@
       cursor: pointer;
     }
     
+    /* PC端提示 - 只在真正的PC设备上显示，移动设备即使横屏也不显示 */
     @media (min-width: 769px) {
-      .pc-warning {
-        display: flex;
+      /* 使用媒体查询检测触摸设备，如果是触摸设备（移动设备），不显示警告 */
+      @media (hover: none) and (pointer: coarse) {
+        .pc-warning {
+          display: none !important;
+        }
+      }
+      /* 非触摸设备（PC）才显示警告 */
+      @media (hover: hover) and (pointer: fine) {
+        .pc-warning {
+          display: flex;
+        }
       }
     }
     
@@ -1892,6 +1902,54 @@
       <button class="pc-warning-btn" onclick="document.getElementById('pcWarning').style.display='none'" style="background: var(--text-secondary); margin-top: 8px;">继续使用移动版</button>
     </div>
   </div>
+  
+  <!-- 🔧 移动设备自动隐藏PC警告脚本 -->
+  <script>
+    (function() {
+      'use strict';
+      // 检测是否是移动设备
+      const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // 如果是移动设备，立即隐藏PC警告
+      if (isMobileDevice || isTouchDevice) {
+        const pcWarning = document.getElementById('pcWarning');
+        if (pcWarning) {
+          pcWarning.style.display = 'none';
+          // 使用setProperty确保优先级
+          pcWarning.style.setProperty('display', 'none', 'important');
+        }
+      }
+      
+      // 监听窗口大小变化，确保移动设备横屏时也不显示警告
+      function hidePcWarningIfMobile() {
+        const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        
+        // 如果是移动设备或触摸设备，或者视口宽度小于769px，隐藏警告
+        if (isMobile || isTouch || viewportWidth < 769) {
+          const pcWarning = document.getElementById('pcWarning');
+          if (pcWarning) {
+            pcWarning.style.setProperty('display', 'none', 'important');
+          }
+        }
+      }
+      
+      // 页面加载时执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hidePcWarningIfMobile);
+      } else {
+        hidePcWarningIfMobile();
+      }
+      
+      // 监听窗口大小变化
+      window.addEventListener('resize', hidePcWarningIfMobile);
+      window.addEventListener('orientationchange', function() {
+        setTimeout(hidePcWarningIfMobile, 100);
+      });
+    })();
+  </script>
 
   <!-- 顶部导航栏 -->
   <div class="mobile-header">
@@ -9374,11 +9432,16 @@
       if (!summaryEl || !todoEl) return;
       
       try {
-        const pigeons = loadPigeons();
-        const races = loadRaces();
+        const pigeons = loadPigeons() || [];
+        const races = loadRaces() || [];
         const today = new Date();
         const in7Days = new Date();
         in7Days.setDate(today.getDate() + 7);
+
+        // 确保pigeons和races是数组
+        if (!Array.isArray(pigeons) || !Array.isArray(races)) {
+          throw new Error('数据格式错误：pigeons或races不是数组');
+        }
 
         const alive = pigeons.filter(p => p.status !== 'dead' && p.status !== '已死亡').length;
         const breeders = pigeons.filter(p => p.type === '种鸽' || (p.tags && p.tags.includes('核心种鸽'))).length;
