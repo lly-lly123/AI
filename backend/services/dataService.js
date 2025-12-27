@@ -36,14 +36,8 @@ class DataService {
       // 备用RSS源列表（如果主源失败，使用备用源）
       const fallbackSources = [
         {
-          name: '中国信鸽信息网',
-          url: 'https://www.chinaxinge.com/rss',
-          type: 'media',
-          region: 'national'
-        },
-        {
-          name: '赛鸽天地',
-          url: 'https://www.chinaxinge.com/rss',
+          name: '赛鸽资讯',
+          url: 'https://www.chinaxinge.com/rss.xml',
           type: 'media',
           region: 'national'
         }
@@ -80,14 +74,31 @@ class DataService {
           }
           
         } catch (error) {
-          logger.error(`获取RSS源失败: ${source.name}`, error.message);
+          // 根据错误类型使用不同的日志级别
+          const errorMessage = error.message || String(error);
+          if (error.response && error.response.status === 404) {
+            // 404错误只记录一次，避免重复日志
+            if (!this._rss404Logged) {
+              logger.warn(`RSS源不存在(404): ${source.name} - ${source.url}`);
+              logger.warn('   提示: 该RSS源可能已失效，将跳过此源');
+              this._rss404Logged = true;
+            }
+          } else {
+            // 其他错误正常记录
+            logger.warn(`获取RSS源失败: ${source.name}`, errorMessage);
+          }
           // 继续尝试下一个源
         }
       }
       
       // 如果所有源都失败，返回空数组（而不是抛出错误）
       if (allNews.length === 0) {
-        logger.warn('所有RSS源都失败，返回空数组');
+        // 只在首次失败时记录警告，避免重复日志
+        if (!this._allRssFailedLogged) {
+          logger.warn('所有RSS源都失败，返回空数组');
+          logger.warn('   提示: 将尝试使用缓存数据，如果缓存也没有则返回空数组');
+          this._allRssFailedLogged = true;
+        }
         // 尝试从缓存获取旧数据（即使过期）
         const oldCached = cacheService.get(cacheKey, true); // 忽略过期时间
         if (oldCached && oldCached.length > 0) {
@@ -95,6 +106,12 @@ class DataService {
           return oldCached;
         }
         return [];
+      }
+      
+      // 如果成功获取数据，重置失败标志
+      if (this._allRssFailedLogged) {
+        this._allRssFailedLogged = false;
+        this._rss404Logged = false;
       }
       
       // 去重（基于ID）

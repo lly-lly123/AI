@@ -43,6 +43,10 @@ try {
 
 const app = express();
 
+// 设置信任代理（Zeabur等云平台需要）
+// 这允许Express正确读取X-Forwarded-For等代理头
+app.set('trust proxy', true);
+
 // 安全头设置 - 禁用CSP以允许内联事件处理器（应用中有大量onclick等内联事件）
 app.use(helmet({
   contentSecurityPolicy: false,  // 完全禁用CSP，因为应用使用大量内联事件处理器

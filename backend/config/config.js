@@ -5,11 +5,11 @@ function parseRssSources() {
   const rssSourcesEnv = process.env.RSS_SOURCES;
   
   if (!rssSourcesEnv) {
-    // 默认配置
+    // 默认配置 - 使用可用的RSS源
     return [
       {
-        name: '中国信鸽信息网',
-        url: 'https://www.chinaxinge.com/rss',
+        name: '赛鸽资讯',
+        url: 'https://www.chinaxinge.com/rss.xml',
         type: 'media',
         region: 'national'
       }
@@ -34,8 +34,8 @@ function parseRssSources() {
   
   return sources.length > 0 ? sources : [
     {
-      name: '中国信鸽信息网',
-      url: 'https://www.chinaxinge.com/rss',
+      name: '赛鸽资讯',
+      url: 'https://www.chinaxinge.com/rss.xml',
       type: 'media',
       region: 'national'
     }
