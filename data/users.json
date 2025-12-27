@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "191ee6ac91907b3f6b8016b39925c6968926e04d0f9c61d40da7f568dd6ae6e7",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2025-12-21T00:19:54.302Z",
+    "lastLogin": null,
+    "passwordChangedAt": "2025-12-21T00:19:54.303Z",
+    "passwordResetToken": null,
+    "passwordResetExpires": null,
+    "id": "id_1766276394310_cdjvrzax9",
+    "updatedAt": "2025-12-21T00:19:54.311Z"
+  }
+]

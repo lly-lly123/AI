@@ -1,0 +1,57 @@
+[
+  {
+    "userId": "id_1766276394310_cdjvrzax9",
+    "username": "admin",
+    "data": {
+      "pigeons": [],
+      "training": [],
+      "races": [],
+      "healthRecords": [
+        {
+          "id": "mock_1766491205695_zlemtinyz",
+          "pigeon_id": "mock_1766491205694_tn5b9sflo",
+          "date": "2024-11-10",
+          "type": "体检",
+          "condition": "健康",
+          "notes": "虚拟健康记录 - __MOCK_DATA__"
+        },
+        {
+          "id": "mock_1766491205695_0u9071e4v",
+          "pigeon_id": "mock_1766491205695_w67ww8s7k",
+          "date": "2024-12-01",
+          "type": "疫苗接种",
+          "condition": "良好",
+          "notes": "虚拟健康记录 - __MOCK_DATA__"
+        },
+        {
+          "id": "mock_1766491205695_lr926eq7j",
+          "pigeon_id": "mock_1766491205695_52fyao4oi",
+          "date": "2024-10-05",
+          "type": "治疗",
+          "condition": "康复中",
+          "notes": "虚拟健康记录 - __MOCK_DATA__"
+        }
+      ],
+      "pairings": [
+        {
+          "id": "mock_1766491205695_wfma0ofdj",
+          "male_id": "mock_1766491205694_tn5b9sflo",
+          "female_id": "mock_1766491205695_w67ww8s7k",
+          "pairing_date": "2024-11-05",
+          "status": "已孵化",
+          "notes": "虚拟配对记录 - __MOCK_DATA__"
+        },
+        {
+          "id": "mock_1766491205695_bxa080w4d",
+          "male_id": "mock_1766491205695_52fyao4oi",
+          "female_id": "mock_1766491205695_3tvjic577",
+          "pairing_date": "2024-10-22",
+          "status": "配对中",
+          "notes": "虚拟配对记录 - __MOCK_DATA__"
+        }
+      ]
+    },
+    "createdAt": "2025-12-22T04:57:25.332Z",
+    "updatedAt": "2025-12-23T12:00:05.700Z"
+  }
+]
