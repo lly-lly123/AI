@@ -1419,19 +1419,15 @@
       cursor: pointer;
     }
     
-    /* PC端提示 - 只在真正的PC设备上显示，移动设备即使横屏也不显示 */
-    @media (min-width: 769px) {
-      /* 使用媒体查询检测触摸设备，如果是触摸设备（移动设备），不显示警告 */
-      @media (hover: none) and (pointer: coarse) {
-        .pc-warning {
-          display: none !important;
-        }
-      }
-      /* 非触摸设备（PC）才显示警告 */
-      @media (hover: hover) and (pointer: fine) {
-        .pc-warning {
-          display: flex;
-        }
+    /* PC端提示 - 默认隐藏，只在真正的PC设备上显示 */
+    .pc-warning {
+      display: none !important;
+    }
+    
+    /* 只在真正的PC设备（非触摸设备，宽度大于769px）上显示 */
+    @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+      .pc-warning {
+        display: flex !important;
       }
     }
     
@@ -1903,51 +1899,82 @@
     </div>
   </div>
   
-  <!-- 🔧 移动设备自动隐藏PC警告脚本 -->
+  <!-- 🔧 移动设备自动隐藏PC警告脚本（最高优先级 - 在页面加载前执行） -->
   <script>
     (function() {
       'use strict';
-      // 检测是否是移动设备
-      const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      // 如果是移动设备，立即隐藏PC警告
-      if (isMobileDevice || isTouchDevice) {
-        const pcWarning = document.getElementById('pcWarning');
-        if (pcWarning) {
-          pcWarning.style.display = 'none';
-          // 使用setProperty确保优先级
-          pcWarning.style.setProperty('display', 'none', 'important');
-        }
-      }
-      
-      // 监听窗口大小变化，确保移动设备横屏时也不显示警告
-      function hidePcWarningIfMobile() {
-        const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      // 立即检测并隐藏PC警告（在DOM加载前就执行）
+      function hidePcWarningImmediately() {
+        // 检测是否是移动设备
+        const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
         
-        // 如果是移动设备或触摸设备，或者视口宽度小于769px，隐藏警告
-        if (isMobile || isTouch || viewportWidth < 769) {
+        // 如果是移动设备、触摸设备，或视口宽度小于769px，隐藏警告
+        if (isMobileDevice || isTouchDevice || viewportWidth < 769) {
+          // 使用多种方法确保隐藏
           const pcWarning = document.getElementById('pcWarning');
           if (pcWarning) {
             pcWarning.style.setProperty('display', 'none', 'important');
+            pcWarning.style.setProperty('visibility', 'hidden', 'important');
+            pcWarning.style.setProperty('opacity', '0', 'important');
+            pcWarning.style.setProperty('pointer-events', 'none', 'important');
           }
         }
       }
       
-      // 页面加载时执行
+      // 立即执行一次（如果元素已存在）
+      hidePcWarningImmediately();
+      
+      // DOM加载后再次执行
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', hidePcWarningIfMobile);
+        document.addEventListener('DOMContentLoaded', function() {
+          hidePcWarningImmediately();
+          // 延迟再次执行，确保覆盖所有可能的显示
+          setTimeout(hidePcWarningImmediately, 10);
+          setTimeout(hidePcWarningImmediately, 100);
+        });
       } else {
-        hidePcWarningIfMobile();
+        hidePcWarningImmediately();
+        setTimeout(hidePcWarningImmediately, 10);
+        setTimeout(hidePcWarningImmediately, 100);
       }
       
-      // 监听窗口大小变化
-      window.addEventListener('resize', hidePcWarningIfMobile);
+      // 监听窗口大小变化和屏幕旋转
+      window.addEventListener('resize', hidePcWarningImmediately);
       window.addEventListener('orientationchange', function() {
-        setTimeout(hidePcWarningIfMobile, 100);
+        setTimeout(hidePcWarningImmediately, 50);
+        setTimeout(hidePcWarningImmediately, 200);
       });
+      
+      // 使用MutationObserver监听pcWarning元素的变化
+      if (document.body) {
+        const observer = new MutationObserver(function(mutations) {
+          hidePcWarningImmediately();
+        });
+        
+        // 等待pcWarning元素出现
+        function startObserving() {
+          const pcWarning = document.getElementById('pcWarning');
+          if (pcWarning) {
+            observer.observe(pcWarning, {
+              attributes: true,
+              attributeFilter: ['style', 'class'],
+              childList: false,
+              subtree: false
+            });
+            hidePcWarningImmediately();
+          } else {
+            setTimeout(startObserving, 100);
+          }
+        }
+        
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', startObserving);
+        } else {
+          startObserving();
+        }
+      }
     })();
   </script>
 
