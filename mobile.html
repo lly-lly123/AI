@@ -8,6 +8,239 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <!-- 🔥🔥🔥 终极保护脚本 - 必须在所有脚本之前，拦截所有隐藏操作 🔥🔥🔥 -->
+  <script>
+    (function() {
+      'use strict';
+      console.log('🛡️ [终极保护] 启动页面保护机制...');
+      
+      // 保护的关键元素
+      const PROTECTED_ELEMENTS = {
+        body: null,
+        mobileContent: null,
+        homeView: null
+      };
+      
+      // 强制显示函数（最高优先级）
+      function ultimateForceShow() {
+        try {
+          // 强制显示body
+          if (document.body) {
+            PROTECTED_ELEMENTS.body = document.body;
+            document.body.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100vh !important; position: relative !important;';
+            // 阻止任何脚本修改body样式
+            Object.defineProperty(document.body.style, 'display', {
+              set: function(value) {
+                if (value === 'none' || value === '') {
+                  console.warn('🛡️ [终极保护] 阻止隐藏body，强制显示');
+                  Object.defineProperty(this, 'display', {value: 'block !important', writable: false});
+                } else {
+                  Object.defineProperty(this, 'display', {value: value, writable: true});
+                }
+              },
+              get: function() { return 'block'; },
+              configurable: true
+            });
+          }
+          
+          // 强制显示mobile-content
+          const mobileContent = document.querySelector('.mobile-content');
+          if (mobileContent) {
+            PROTECTED_ELEMENTS.mobileContent = mobileContent;
+            mobileContent.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100vh !important; position: relative !important; z-index: 1 !important;';
+          }
+          
+          // 强制显示homeView
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            PROTECTED_ELEMENTS.homeView = homeView;
+            homeView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 600px !important; height: auto !important; position: relative !important; width: 100% !important; z-index: 1 !important;';
+            homeView.classList.remove('hidden', 'd-none');
+            
+            // 拦截所有试图隐藏homeView的操作
+            const originalSetProperty = homeView.style.setProperty;
+            homeView.style.setProperty = function(property, value, priority) {
+              if (property === 'display' && (value === 'none' || value === '')) {
+                console.warn('🛡️ [终极保护] 阻止隐藏homeView，强制显示');
+                return originalSetProperty.call(this, 'display', 'block', 'important');
+              }
+              return originalSetProperty.call(this, property, value, priority);
+            };
+            
+            // 拦截直接设置display属性
+            Object.defineProperty(homeView.style, 'display', {
+              set: function(value) {
+                if (value === 'none' || value === '') {
+                  console.warn('🛡️ [终极保护] 阻止隐藏homeView，强制显示');
+                  this.setProperty('display', 'block', 'important');
+                } else {
+                  this.setProperty('display', value, 'important');
+                }
+              },
+              get: function() { return 'block'; },
+              configurable: true
+            });
+          }
+        } catch (e) {
+          console.error('❌ [终极保护] 强制显示失败:', e);
+        }
+      }
+      
+      // 立即执行
+      ultimateForceShow();
+      
+      // 使用MutationObserver监控所有DOM变化
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+              const target = mutation.target;
+              
+              // 检查是否是受保护的元素
+              if (target === PROTECTED_ELEMENTS.body || 
+                  target === PROTECTED_ELEMENTS.mobileContent || 
+                  target === PROTECTED_ELEMENTS.homeView ||
+                  target.id === 'homeView' ||
+                  target.classList.contains('mobile-content')) {
+                
+                const computedStyle = window.getComputedStyle(target);
+                if (computedStyle.display === 'none' || 
+                    computedStyle.visibility === 'hidden' || 
+                    computedStyle.opacity === '0') {
+                  console.warn('🛡️ [终极保护] 检测到受保护元素被隐藏，立即恢复！', target);
+                  ultimateForceShow();
+                }
+              }
+            }
+            
+            // 检查新增的节点
+            if (mutation.addedNodes) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                  if (node.id === 'homeView' || node.classList.contains('mobile-content')) {
+                    PROTECTED_ELEMENTS.homeView = node.id === 'homeView' ? node : null;
+                    PROTECTED_ELEMENTS.mobileContent = node.classList.contains('mobile-content') ? node : null;
+                    ultimateForceShow();
+                  }
+                }
+              });
+            }
+          });
+        });
+        
+        // 等待DOM加载后开始监控
+        function startProtection() {
+          if (document.body) {
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+            console.log('🛡️ [终极保护] MutationObserver已启动');
+          } else {
+            setTimeout(startProtection, 100);
+          }
+        }
+        
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', startProtection);
+        } else {
+          startProtection();
+        }
+      }
+      
+      // 持续强制显示（每100ms执行一次，持续10秒）
+      let forceShowCount = 0;
+      const forceShowInterval = setInterval(function() {
+        ultimateForceShow();
+        forceShowCount++;
+        if (forceShowCount >= 100) { // 10秒后停止
+          clearInterval(forceShowInterval);
+          console.log('🛡️ [终极保护] 持续保护已停止，页面应该已稳定');
+        }
+      }, 100);
+      
+      // 在多个时机执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          ultimateForceShow();
+          setTimeout(ultimateForceShow, 0);
+          setTimeout(ultimateForceShow, 10);
+          setTimeout(ultimateForceShow, 50);
+          setTimeout(ultimateForceShow, 100);
+          setTimeout(ultimateForceShow, 500);
+        });
+      } else {
+        ultimateForceShow();
+        setTimeout(ultimateForceShow, 0);
+        setTimeout(ultimateForceShow, 10);
+        setTimeout(ultimateForceShow, 50);
+        setTimeout(ultimateForceShow, 100);
+        setTimeout(ultimateForceShow, 500);
+      }
+      
+      window.addEventListener('load', function() {
+        ultimateForceShow();
+        setTimeout(ultimateForceShow, 0);
+        setTimeout(ultimateForceShow, 100);
+        setTimeout(ultimateForceShow, 500);
+        setTimeout(ultimateForceShow, 1000);
+      });
+      
+      console.log('🛡️ [终极保护] 页面保护机制已启动');
+    })();
+  </script>
+  
+  <!-- 🔥🔥🔥 终极CSS保护 - 确保页面始终可见 🔥🔥🔥 -->
+  <style>
+    /* 最高优先级CSS规则 - 确保页面始终可见 */
+    html, body {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: 100vh !important;
+      position: relative !important;
+      overflow-x: hidden !important;
+    }
+    
+    .mobile-content {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: 100vh !important;
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    
+    #homeView,
+    div#homeView,
+    .mobile-view#homeView,
+    div#homeView.mobile-view,
+    #homeView.mobile-view {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      min-height: 600px !important;
+      height: auto !important;
+      position: relative !important;
+      width: 100% !important;
+      z-index: 1 !important;
+    }
+    
+    /* 阻止任何隐藏操作 */
+    body[style*="display: none"],
+    body[style*="display:none"],
+    .mobile-content[style*="display: none"],
+    .mobile-content[style*="display:none"],
+    #homeView[style*="display: none"],
+    #homeView[style*="display:none"] {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  </style>
+  
   <!-- 🔧 Eruda 移动端调试工具（中文版） - 延迟加载避免阻塞页面 -->
   <script>
     // 延迟加载Eruda，确保不影响页面渲染
@@ -79,6 +312,105 @@
       // PC端打开移动端页面时也启用显示修复
       console.log('📱 [移动端修复] 检测设备类型 - 移动设备:', isMobile, '触摸设备:', isTouchDevice);
       
+      // 🔥 最激进的强制显示函数 - 立即执行，不等待任何事件
+      function ultraForceShow() {
+        try {
+          // 强制显示body
+          if (document.body) {
+            document.body.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100vh !important;';
+          }
+          
+          // 强制显示mobile-content
+          const mobileContent = document.querySelector('.mobile-content');
+          if (mobileContent) {
+            mobileContent.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100vh !important; position: relative !important; z-index: 1 !important;';
+          }
+          
+          // 强制显示homeView（最高优先级）
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            homeView.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 600px !important; height: auto !important; position: relative !important; width: 100% !important; z-index: 1 !important;';
+            // 移除可能隐藏的类
+            homeView.classList.remove('hidden', 'd-none');
+            console.log('✅ [超强制显示] homeView已强制显示，高度:', homeView.offsetHeight);
+          } else {
+            console.warn('⚠️ [超强制显示] homeView元素不存在，等待DOM加载...');
+          }
+          
+          // 强制隐藏PC警告弹窗（移动设备）
+          if (isMobile || isTouchDevice || (window.innerWidth && window.innerWidth < 769)) {
+            const pcWarning = document.getElementById('pcWarning');
+            if (pcWarning) {
+              pcWarning.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; z-index: -1 !important; pointer-events: none !important; position: fixed !important;';
+            }
+          }
+        } catch (e) {
+          console.error('❌ [超强制显示] 执行失败:', e);
+        }
+      }
+      
+      // 立即执行（不等待任何事件）
+      ultraForceShow();
+      
+      // DOM加载后立即执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          ultraForceShow();
+          setTimeout(ultraForceShow, 0);
+          setTimeout(ultraForceShow, 10);
+          setTimeout(ultraForceShow, 50);
+          setTimeout(ultraForceShow, 100);
+        });
+      } else {
+        ultraForceShow();
+        setTimeout(ultraForceShow, 0);
+        setTimeout(ultraForceShow, 10);
+        setTimeout(ultraForceShow, 50);
+        setTimeout(ultraForceShow, 100);
+      }
+      
+      // 页面完全加载后再次执行
+      window.addEventListener('load', function() {
+        ultraForceShow();
+        setTimeout(ultraForceShow, 0);
+        setTimeout(ultraForceShow, 100);
+        setTimeout(ultraForceShow, 500);
+      });
+      
+      // 使用MutationObserver持续监控，确保内容始终显示
+      if (typeof MutationObserver !== 'undefined' && document.body) {
+        const observer = new MutationObserver(function() {
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+              console.warn('⚠️ [超强制显示] 检测到homeView被隐藏，立即强制显示');
+              ultraForceShow();
+            }
+          }
+        });
+        
+        function startObserving() {
+          if (document.body) {
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+            console.log('✅ [超强制显示] MutationObserver已启动，持续监控页面显示状态');
+          } else {
+            setTimeout(startObserving, 100);
+          }
+        }
+        
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', startObserving);
+        } else {
+          startObserving();
+        }
+      }
+      
       // 立即添加内联样式到head，确保CSS优先级最高（PC和移动端都适用）
       const style = document.createElement('style');
       style.id = 'mobile-immediate-fix';
@@ -116,6 +448,17 @@
           position: relative !important;
           min-height: 600px !important;
           height: auto !important;
+        }
+        /* 移动设备上强制隐藏PC警告弹窗（最高优先级） */
+        @media (max-width: 768px), (hover: none), (pointer: coarse) {
+          .pc-warning,
+          #pcWarning {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            z-index: -1 !important;
+            pointer-events: none !important;
+          }
         }
         /* 确保所有按钮可点击 */
         button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
@@ -304,15 +647,44 @@
         setTimeout(forceShowHomeView, 1000);
       }
       
-      // 窗口加载完成后再次检查
+      // 窗口加载完成后再次检查（最高优先级）
       window.addEventListener('load', function() {
-        console.log('🔧 [页面修复] window.load事件触发，再次强制显示homeView');
+        console.log('🔧 [页面修复] window.load事件触发，强制显示homeView');
+        
+        // 立即强制显示（不等待）
         forceShowHomeView();
-        // PC和移动端都额外延迟执行，确保页面可见
+        
+        // 多次延迟执行，确保覆盖所有可能的隐藏操作
+        setTimeout(forceShowHomeView, 0);
+        setTimeout(forceShowHomeView, 10);
+        setTimeout(forceShowHomeView, 50);
+        setTimeout(forceShowHomeView, 100);
         setTimeout(forceShowHomeView, 200);
         setTimeout(forceShowHomeView, 500);
         setTimeout(forceShowHomeView, 1000);
         setTimeout(forceShowHomeView, 2000);
+        
+        // 🔥 添加持续监控，防止homeView被其他脚本隐藏
+        const protectHomeView = setInterval(function() {
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            // 如果homeView被隐藏，立即恢复
+            if (computedStyle.display === 'none' || 
+                computedStyle.visibility === 'hidden' || 
+                computedStyle.opacity === '0' ||
+                homeView.style.display === 'none') {
+              console.warn('⚠️ [页面保护] 检测到homeView被隐藏，立即恢复！');
+              forceShowHomeView();
+            }
+          }
+        }, 500); // 每500ms检查一次
+        
+        // 10秒后停止监控（页面应该已经稳定）
+        setTimeout(function() {
+          clearInterval(protectHomeView);
+          console.log('✅ [页面保护] 停止监控，页面应该已稳定');
+        }, 10000);
         
         // 输出诊断信息
         setTimeout(function() {
@@ -1323,7 +1695,7 @@
       border-color: var(--primary);
     }
     
-    /* 底部导航栏 */
+    /* 底部导航栏 - 确保在所有元素之上，包括PC警告弹窗 */
     .mobile-bottom-nav {
       position: fixed !important;
       bottom: 0 !important;
@@ -1334,9 +1706,16 @@
       display: flex !important;
       justify-content: space-around !important;
       padding: 8px 0 !important;
-      z-index: 999999 !important; /* 确保在所有元素之上 */
+      z-index: 999999 !important; /* 确保在所有元素之上，包括PC警告弹窗 */
       box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
       pointer-events: auto !important;
+    }
+    
+    /* 确保底部菜单即使在PC警告弹窗显示时也能点击 */
+    @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+      .mobile-bottom-nav {
+        z-index: 100000 !important; /* PC上确保在PC警告弹窗之上 */
+      }
     }
     
     .mobile-nav-item {
@@ -1382,19 +1761,44 @@
       color: var(--text-secondary);
     }
     
-    /* PC端提示 */
+    /* PC端提示 - 默认完全隐藏，避免在移动设备上遮挡内容 */
     .pc-warning {
-      display: none;
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
       background: rgba(0, 0, 0, 0.8);
-      z-index: 10000;
+      z-index: -1 !important; /* 移动设备上设置为-1，避免遮挡 */
       align-items: center;
       justify-content: center;
       padding: 20px;
+      pointer-events: none !important; /* 移动设备上禁用交互 */
+    }
+    
+    /* 只在真正的PC设备（非触摸设备，宽度大于769px）上显示 */
+    @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+      .pc-warning {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 10000 !important; /* PC上正常显示，但低于底部菜单 */
+        pointer-events: auto !important; /* PC上启用交互 */
+      }
+    }
+    
+    /* 移动设备上强制隐藏（多重保障） */
+    @media (max-width: 768px), (hover: none), (pointer: coarse) {
+      .pc-warning {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        z-index: -1 !important;
+        pointer-events: none !important;
+      }
     }
     
     .pc-warning-content {
@@ -1403,6 +1807,9 @@
       padding: 24px;
       max-width: 400px;
       text-align: center;
+      position: relative !important;
+      z-index: 10001 !important; /* 确保内容在遮罩层之上 */
+      pointer-events: auto !important; /* 确保内容可以点击 */
     }
     
     .pc-warning-title {
@@ -1425,18 +1832,21 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+      position: relative !important;
+      z-index: 10002 !important; /* 确保按钮在最上层 */
+      pointer-events: auto !important; /* 确保按钮可以点击 */
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
     }
     
-    /* PC端提示 - 默认隐藏，只在真正的PC设备上显示 */
-    .pc-warning {
-      display: none !important;
+    .pc-warning-btn:hover {
+      opacity: 0.9;
     }
     
-    /* 只在真正的PC设备（非触摸设备，宽度大于769px）上显示 */
-    @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-      .pc-warning {
-        display: flex !important;
-      }
+    .pc-warning-btn:active {
+      transform: scale(0.98);
     }
     
     /* 视图容器 */
@@ -1446,13 +1856,18 @@
       display: none; /* 默认隐藏所有视图 */
     }
     
-    /* 首页视图默认显示 */
-    #homeView {
+    /* 首页视图默认显示（最高优先级） */
+    #homeView,
+    div#homeView,
+    .mobile-view#homeView,
+    div#homeView.mobile-view {
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
       min-height: 600px !important;
       height: auto !important;
+      position: relative !important;
+      width: 100% !important;
     }
     
     /* 移动端强制显示规则（确保在所有移动设备上可见） */
@@ -1481,12 +1896,25 @@
         pointer-events: auto !important;
       }
       
-      .mobile-view {
+      /* 移动设备上：隐藏其他视图，但强制显示homeView */
+      .mobile-view:not(#homeView) {
         display: none !important;
       }
       
-      .mobile-view#homeView {
+      /* 强制显示homeView（最高优先级，覆盖所有规则） */
+      #homeView,
+      div#homeView,
+      .mobile-view#homeView,
+      div#homeView.mobile-view,
+      #homeView.mobile-view {
         display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        min-height: 600px !important;
+        height: auto !important;
+        width: 100% !important;
+        z-index: 1 !important;
       }
       
       /* 确保所有按钮可点击 */
@@ -1902,8 +2330,8 @@
     <div class="pc-warning-content">
       <div class="pc-warning-title">📱 移动端页面</div>
       <div class="pc-warning-text">这是专为移动设备优化的页面。如果您在PC上访问，建议使用桌面版页面。</div>
-      <button class="pc-warning-btn" onclick="window.location.href='index.html'">前往桌面版</button>
-      <button class="pc-warning-btn" onclick="document.getElementById('pcWarning').style.display='none'" style="background: var(--text-secondary); margin-top: 8px;">继续使用移动版</button>
+      <button class="pc-warning-btn" id="pcWarningBtnDesktop" style="margin-bottom: 8px;">前往桌面版</button>
+      <button class="pc-warning-btn" id="pcWarningBtnMobile" style="background: var(--text-secondary);">继续使用移动版</button>
     </div>
   </div>
   
@@ -1917,16 +2345,47 @@
         const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const hasHover = window.matchMedia('(hover: hover)').matches;
+        const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
         
-        // 如果是移动设备、触摸设备，或视口宽度小于769px，隐藏警告
-        if (isMobileDevice || isTouchDevice || viewportWidth < 769) {
-          // 使用多种方法确保隐藏
+        // 判断是否是真正的PC设备（需要同时满足：宽度>769px + 有hover + 精确指针）
+        const isRealPC = viewportWidth >= 769 && hasHover && hasFinePointer;
+        
+        // 如果是移动设备、触摸设备，或视口宽度小于769px，强制隐藏警告
+        if (isMobileDevice || isTouchDevice || viewportWidth < 769 || !isRealPC) {
+          // 使用多种方法确保隐藏（最强力）
           const pcWarning = document.getElementById('pcWarning');
           if (pcWarning) {
+            // 使用setProperty设置!important优先级
             pcWarning.style.setProperty('display', 'none', 'important');
             pcWarning.style.setProperty('visibility', 'hidden', 'important');
             pcWarning.style.setProperty('opacity', '0', 'important');
             pcWarning.style.setProperty('pointer-events', 'none', 'important');
+            pcWarning.style.setProperty('z-index', '-1', 'important'); // 设置为-1避免遮挡
+            pcWarning.style.setProperty('position', 'fixed', 'important');
+            
+            // 同时设置内联样式（双重保障）
+            pcWarning.setAttribute('style', 
+              'display: none !important; ' +
+              'visibility: hidden !important; ' +
+              'opacity: 0 !important; ' +
+              'pointer-events: none !important; ' +
+              'z-index: -1 !important; ' +
+              'position: fixed !important;'
+            );
+            
+            console.log('✅ [PC警告隐藏] 已强制隐藏PC警告弹窗（移动设备）');
+          }
+        } else {
+          // PC设备上正常显示
+          const pcWarning = document.getElementById('pcWarning');
+          if (pcWarning) {
+            pcWarning.style.setProperty('display', 'flex', 'important');
+            pcWarning.style.setProperty('visibility', 'visible', 'important');
+            pcWarning.style.setProperty('opacity', '1', 'important');
+            pcWarning.style.setProperty('pointer-events', 'auto', 'important');
+            pcWarning.style.setProperty('z-index', '10000', 'important');
+            console.log('✅ [PC警告显示] PC设备上正常显示警告弹窗');
           }
         }
       }
@@ -1934,31 +2393,58 @@
       // 立即执行一次（如果元素已存在）
       hidePcWarningImmediately();
       
-      // DOM加载后再次执行
+      // DOM加载后立即执行多次，确保覆盖所有可能的显示
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
           hidePcWarningImmediately();
-          // 延迟再次执行，确保覆盖所有可能的显示
+          // 延迟多次执行，确保覆盖所有可能的显示
+          setTimeout(hidePcWarningImmediately, 0);
           setTimeout(hidePcWarningImmediately, 10);
+          setTimeout(hidePcWarningImmediately, 50);
           setTimeout(hidePcWarningImmediately, 100);
+          setTimeout(hidePcWarningImmediately, 200);
+          setTimeout(hidePcWarningImmediately, 500);
         });
       } else {
         hidePcWarningImmediately();
+        setTimeout(hidePcWarningImmediately, 0);
         setTimeout(hidePcWarningImmediately, 10);
+        setTimeout(hidePcWarningImmediately, 50);
         setTimeout(hidePcWarningImmediately, 100);
+        setTimeout(hidePcWarningImmediately, 200);
+        setTimeout(hidePcWarningImmediately, 500);
       }
       
       // 监听窗口大小变化和屏幕旋转
-      window.addEventListener('resize', hidePcWarningImmediately);
+      window.addEventListener('resize', function() {
+        setTimeout(hidePcWarningImmediately, 0);
+        setTimeout(hidePcWarningImmediately, 100);
+      });
       window.addEventListener('orientationchange', function() {
+        setTimeout(hidePcWarningImmediately, 0);
         setTimeout(hidePcWarningImmediately, 50);
         setTimeout(hidePcWarningImmediately, 200);
+        setTimeout(hidePcWarningImmediately, 500);
       });
       
-      // 使用MutationObserver监听pcWarning元素的变化
+      // 使用MutationObserver监听pcWarning元素的变化（如果被其他脚本显示，立即隐藏）
       if (document.body) {
         const observer = new MutationObserver(function(mutations) {
-          hidePcWarningImmediately();
+          // 检查是否有变化导致弹窗显示
+          const pcWarning = document.getElementById('pcWarning');
+          if (pcWarning) {
+            const computedStyle = window.getComputedStyle(pcWarning);
+            const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            
+            // 如果是移动设备且弹窗被显示，立即隐藏
+            if ((isMobileDevice || isTouchDevice || viewportWidth < 769) && 
+                (computedStyle.display !== 'none' || computedStyle.visibility !== 'hidden')) {
+              console.warn('⚠️ [PC警告隐藏] 检测到弹窗被显示，立即强制隐藏');
+              hidePcWarningImmediately();
+            }
+          }
         });
         
         // 等待pcWarning元素出现
@@ -1972,6 +2458,7 @@
               subtree: false
             });
             hidePcWarningImmediately();
+            console.log('✅ [PC警告隐藏] MutationObserver已启动，监听弹窗变化');
           } else {
             setTimeout(startObserving, 100);
           }
@@ -1983,6 +2470,102 @@
           startObserving();
         }
       }
+      
+      // 页面完全加载后再次检查
+      window.addEventListener('load', function() {
+        setTimeout(hidePcWarningImmediately, 0);
+        setTimeout(hidePcWarningImmediately, 100);
+        setTimeout(hidePcWarningImmediately, 500);
+      });
+      
+      // 🔥 添加PC警告弹窗按钮点击事件处理（确保按钮可以点击）
+      function setupPcWarningButtons() {
+        const btnDesktop = document.getElementById('pcWarningBtnDesktop');
+        const btnMobile = document.getElementById('pcWarningBtnMobile');
+        const pcWarning = document.getElementById('pcWarning');
+        
+        // 前往桌面版按钮
+        if (btnDesktop) {
+          // 移除旧的onclick，使用addEventListener（更可靠）
+          btnDesktop.onclick = null;
+          btnDesktop.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ [PC警告] 点击了"前往桌面版"按钮');
+            window.location.href = 'index.html';
+          }, true); // 使用捕获阶段，确保优先执行
+          
+          // 同时设置onclick作为备用
+          btnDesktop.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = 'index.html';
+          };
+        }
+        
+        // 继续使用移动版按钮
+        if (btnMobile && pcWarning) {
+          // 移除旧的onclick，使用addEventListener（更可靠）
+          btnMobile.onclick = null;
+          btnMobile.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ [PC警告] 点击了"继续使用移动版"按钮');
+            
+            // 使用最强力的方法隐藏弹窗
+            pcWarning.style.setProperty('display', 'none', 'important');
+            pcWarning.style.setProperty('visibility', 'hidden', 'important');
+            pcWarning.style.setProperty('opacity', '0', 'important');
+            pcWarning.style.setProperty('pointer-events', 'none', 'important');
+            pcWarning.style.setProperty('z-index', '-1', 'important');
+            
+            // 同时设置内联样式（双重保障）
+            pcWarning.setAttribute('style', 
+              'display: none !important; ' +
+              'visibility: hidden !important; ' +
+              'opacity: 0 !important; ' +
+              'pointer-events: none !important; ' +
+              'z-index: -1 !important; ' +
+              'position: fixed !important;'
+            );
+            
+            console.log('✅ [PC警告] 弹窗已关闭');
+          }, true); // 使用捕获阶段，确保优先执行
+          
+          // 同时设置onclick作为备用
+          btnMobile.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pcWarning.style.setProperty('display', 'none', 'important');
+            pcWarning.style.setProperty('visibility', 'hidden', 'important');
+            pcWarning.style.setProperty('opacity', '0', 'important');
+            pcWarning.style.setProperty('pointer-events', 'none', 'important');
+            pcWarning.style.setProperty('z-index', '-1', 'important');
+          };
+        }
+        
+        console.log('✅ [PC警告] 按钮点击事件已设置');
+      }
+      
+      // DOM加载后设置按钮
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setupPcWarningButtons();
+          setTimeout(setupPcWarningButtons, 100);
+          setTimeout(setupPcWarningButtons, 500);
+        });
+      } else {
+        setupPcWarningButtons();
+        setTimeout(setupPcWarningButtons, 100);
+        setTimeout(setupPcWarningButtons, 500);
+      }
+      
+      // 页面完全加载后再次设置
+      window.addEventListener('load', function() {
+        setupPcWarningButtons();
+        setTimeout(setupPcWarningButtons, 100);
+        setTimeout(setupPcWarningButtons, 500);
+      });
     })();
   </script>
 
@@ -2007,9 +2590,9 @@
   </div>
 
   <!-- 主内容区 -->
-  <div class="mobile-content">
+  <div class="mobile-content" style="display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100vh !important; position: relative !important; z-index: 1 !important;">
     <!-- 首页视图 -->
-    <div id="homeView" class="mobile-view" style="display: block;">
+    <div id="homeView" class="mobile-view" style="display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 600px !important; height: auto !important; position: relative !important; z-index: 1 !important;">
     <!-- 日期和天气概览 -->
     <div class="mobile-overview">
       <div class="mobile-overview-top">
@@ -3484,16 +4067,27 @@
         }
       });
       
-      // 隐藏所有视图
+      // 隐藏所有视图（但保护homeView，确保它始终可见）
       Object.keys(views).forEach(key => {
-        if (views[key]) {
+        if (views[key] && key !== 'home') { // 不隐藏homeView
           views[key].style.display = 'none';
         }
       });
       
-      // 显示目标视图
+      // 显示目标视图（使用最强力的方法）
       if (views[viewName]) {
-        views[viewName].style.display = 'block';
+        // 使用setProperty确保优先级最高
+        views[viewName].style.setProperty('display', 'block', 'important');
+        views[viewName].style.setProperty('visibility', 'visible', 'important');
+        views[viewName].style.setProperty('opacity', '1', 'important');
+        
+        // 如果是homeView，额外设置高度和位置
+        if (viewName === 'home') {
+          views[viewName].style.setProperty('min-height', '600px', 'important');
+          views[viewName].style.setProperty('height', 'auto', 'important');
+          views[viewName].style.setProperty('position', 'relative', 'important');
+          views[viewName].style.setProperty('width', '100%', 'important');
+        }
         
         // 触发自定义事件，通知修复脚本
         window.dispatchEvent(new CustomEvent('mobileViewSwitched', { detail: { view: viewName } }));
@@ -3531,13 +4125,60 @@
             window.forceFixMobileButtons();
           }, 200);
         }
+        
+        // 🔥 如果切换到home视图，确保强制显示（防止被其他脚本隐藏）
+        if (viewName === 'home') {
+          setTimeout(() => {
+            const homeView = document.getElementById('homeView');
+            if (homeView) {
+              homeView.style.setProperty('display', 'block', 'important');
+              homeView.style.setProperty('visibility', 'visible', 'important');
+              homeView.style.setProperty('opacity', '1', 'important');
+              homeView.style.setProperty('min-height', '600px', 'important');
+              homeView.style.setProperty('height', 'auto', 'important');
+              console.log('✅ [switchView] 已强制显示homeView');
+            }
+          }, 0);
+          setTimeout(() => {
+            const homeView = document.getElementById('homeView');
+            if (homeView) {
+              homeView.style.setProperty('display', 'block', 'important');
+              homeView.style.setProperty('visibility', 'visible', 'important');
+              homeView.style.setProperty('opacity', '1', 'important');
+            }
+          }, 100);
+        }
       } else {
         console.warn('视图不存在:', viewName);
       }
     }
     
-    // 暴露switchView到window对象（确保onclick可以调用）
-    window.switchView = switchView;
+    // 🔥 包装switchView函数，添加保护机制
+    const originalSwitchView = switchView;
+    window.switchView = function(viewName) {
+      console.log('🔧 [switchView包装] 调用switchView:', viewName);
+      originalSwitchView(viewName);
+      
+      // 如果切换到home，确保homeView始终可见
+      if (viewName === 'home') {
+        setTimeout(() => {
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            const computedStyle = window.getComputedStyle(homeView);
+            if (computedStyle.display === 'none' || 
+                computedStyle.visibility === 'hidden' || 
+                computedStyle.opacity === '0') {
+              console.warn('⚠️ [switchView包装] homeView被隐藏，立即恢复！');
+              homeView.style.setProperty('display', 'block', 'important');
+              homeView.style.setProperty('visibility', 'visible', 'important');
+              homeView.style.setProperty('opacity', '1', 'important');
+              homeView.style.setProperty('min-height', '600px', 'important');
+              homeView.style.setProperty('height', 'auto', 'important');
+            }
+          }
+        }, 50);
+      }
+    };
 
     // 刷新数据
     function refreshData() {
@@ -5175,14 +5816,46 @@
         forceShowHomeView();
       }
       
-      // 延迟再次检查，确保首页显示
+      // 延迟多次检查，确保首页显示（防止被其他脚本隐藏）
       setTimeout(() => {
         const homeView = document.getElementById('homeView');
-        if (homeView && homeView.style.display === 'none') {
-          console.warn('⚠️ 首页被隐藏，强制显示');
-          forceShowHomeView();
+        if (homeView) {
+          const computedStyle = window.getComputedStyle(homeView);
+          if (computedStyle.display === 'none' || 
+              computedStyle.visibility === 'hidden' || 
+              computedStyle.opacity === '0' ||
+              homeView.style.display === 'none') {
+            console.warn('⚠️ [初始化检查] 首页被隐藏，强制显示');
+            forceShowHomeView();
+          }
+        }
+      }, 100);
+      setTimeout(() => {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          const computedStyle = window.getComputedStyle(homeView);
+          if (computedStyle.display === 'none' || 
+              computedStyle.visibility === 'hidden' || 
+              computedStyle.opacity === '0' ||
+              homeView.style.display === 'none') {
+            console.warn('⚠️ [初始化检查] 首页被隐藏，强制显示');
+            forceShowHomeView();
+          }
         }
       }, 500);
+      setTimeout(() => {
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          const computedStyle = window.getComputedStyle(homeView);
+          if (computedStyle.display === 'none' || 
+              computedStyle.visibility === 'hidden' || 
+              computedStyle.opacity === '0' ||
+              homeView.style.display === 'none') {
+            console.warn('⚠️ [初始化检查] 首页被隐藏，强制显示');
+            forceShowHomeView();
+          }
+        }
+      }, 1000);
       // 初始化数据
       // 定时器ID存储（用于清理）
       const mobileTimers = {
