@@ -414,12 +414,133 @@
     console.log('✅ [移动端修复] 初始化完成');
   }
   
+  // ==================== 5. 视图切换后自动修复 ====================
+  // 监听视图切换，确保新显示的视图中的按钮也被修复
+  function setupViewSwitchListener() {
+    // 监听自定义事件
+    window.addEventListener('mobileViewSwitched', function(e) {
+      const viewName = e.detail?.view;
+      console.log('🔧 [移动端修复] 检测到视图切换:', viewName, '，重新修复按钮');
+      // 延迟修复，确保DOM已更新
+      setTimeout(forceFixMobileButtons, 100);
+      setTimeout(forceFixMobileButtons, 300);
+    });
+    
+    // 重写switchView函数（如果存在），在视图切换后自动修复
+    if (typeof window.switchView === 'function') {
+      const originalSwitchView = window.switchView;
+      window.switchView = function(viewName) {
+        const result = originalSwitchView.apply(this, arguments);
+        // 视图切换后，延迟修复按钮
+        setTimeout(() => {
+          console.log('🔧 [移动端修复] switchView调用后，修复按钮');
+          forceFixMobileButtons();
+        }, 100);
+        setTimeout(() => {
+          forceFixMobileButtons();
+        }, 500);
+        return result;
+      };
+      console.log('✅ [移动端修复] 已增强switchView函数，视图切换后自动修复按钮');
+    }
+  }
+  
+  // ==================== 6. 专门修复moreView中的卡片 ====================
+  function fixMoreViewCards() {
+    const moreView = document.getElementById('moreView');
+    if (!moreView) {
+      return;
+    }
+    
+    const cards = moreView.querySelectorAll('.mobile-card');
+    if (cards.length === 0) {
+      return;
+    }
+    
+    console.log(`🔧 [移动端修复] 专门修复moreView中的${cards.length}个卡片`);
+    
+    cards.forEach((card, index) => {
+      const title = card.querySelector('.mobile-card-title')?.textContent?.trim() || `卡片${index + 1}`;
+      
+      // 强制设置样式
+      card.style.cssText = `
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+        z-index: 100 !important;
+        position: relative !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -webkit-tap-highlight-color: rgba(37, 99, 235, 0.5) !important;
+      `;
+      
+      // 获取onclick属性
+      const onclickAttr = card.getAttribute('onclick');
+      
+      if (onclickAttr) {
+        // 移除旧的事件监听器（通过标记避免重复绑定）
+        if (card.dataset.fixed) {
+          return; // 已经修复过，跳过
+        }
+        card.dataset.fixed = 'true';
+        
+        // 创建点击处理函数
+        const handleCardClick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          console.log(`🔘 [移动端修复] 卡片被点击: ${title}`);
+          
+          try {
+            // 提取switchView调用
+            const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+            if (match && match[1] && typeof window.switchView === 'function') {
+              const viewName = match[1];
+              console.log(`🔄 [移动端修复] 切换到视图: ${viewName}`);
+              window.switchView(viewName);
+            } else {
+              // 直接执行onclick
+              eval(onclickAttr);
+            }
+          } catch (err) {
+            console.error(`❌ [移动端修复] 执行卡片onclick失败: ${title}`, err);
+          }
+          
+          return false;
+        };
+        
+        // 绑定多种事件类型
+        card.addEventListener('click', handleCardClick, { capture: true, passive: false });
+        card.addEventListener('touchend', handleCardClick, { capture: true, passive: false });
+        card.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+        }, { capture: true, passive: false });
+        
+        // 也绑定到onclick属性
+        card.onclick = handleCardClick;
+        
+        console.log(`✅ [移动端修复] 卡片已修复: ${title}`);
+      }
+    });
+  }
+  
+  // 增强forceFixMobileButtons函数，包含moreView专门修复
+  const originalForceFix = forceFixMobileButtons;
+  forceFixMobileButtons = function() {
+    originalForceFix();
+    fixMoreViewCards();
+  };
+  
   // 立即执行初始化
   init();
+  
+  // 设置视图切换监听
+  setTimeout(setupViewSwitchListener, 500);
   
   // 暴露到window对象
   window.forceFixMobileButtons = forceFixMobileButtons;
   window.setupMobileGlobalClickHandler = setupMobileGlobalClickHandler;
+  window.fixMoreViewCards = fixMoreViewCards;
   
   console.log('✅ [移动端修复] 按钮点击修复脚本已加载完成');
 })();

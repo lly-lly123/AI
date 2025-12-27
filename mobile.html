@@ -3383,6 +3383,9 @@
       if (views[viewName]) {
         views[viewName].style.display = 'block';
         
+        // 触发自定义事件，通知修复脚本
+        window.dispatchEvent(new CustomEvent('mobileViewSwitched', { detail: { view: viewName } }));
+        
         // 根据视图执行特定操作
         switch(viewName) {
           case 'home':
@@ -3403,6 +3406,18 @@
           case 'pedigree':
             refreshPedigreeSelect();
             break;
+        }
+        
+        // 视图切换后，确保按钮被修复（特别是moreView中的卡片）
+        if (typeof window.fixMoreViewCards === 'function') {
+          setTimeout(() => {
+            window.fixMoreViewCards();
+          }, 100);
+        }
+        if (typeof window.forceFixMobileButtons === 'function') {
+          setTimeout(() => {
+            window.forceFixMobileButtons();
+          }, 200);
         }
       } else {
         console.warn('视图不存在:', viewName);
