@@ -223,36 +223,75 @@
       document.body.style.cursor = 'default';
     }
     
-    // 修复导航按钮
-    document.querySelectorAll('.mobile-nav-item').forEach(item => {
-      item.style.cssText = `
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        touch-action: manipulation !important;
-        z-index: 99999 !important;
-        position: relative !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-      `;
+    // 修复导航按钮（优先处理，确保底部导航栏可点击）
+    document.querySelectorAll('.mobile-nav-item').forEach((item, index) => {
+      // 强制设置样式，确保可点击
+      item.style.setProperty('pointer-events', 'auto', 'important');
+      item.style.setProperty('cursor', 'pointer', 'important');
+      item.style.setProperty('touch-action', 'manipulation', 'important');
+      item.style.setProperty('z-index', '999999', 'important');
+      item.style.setProperty('position', 'relative', 'important');
+      item.style.setProperty('user-select', 'none', 'important');
+      item.style.setProperty('-webkit-user-select', 'none', 'important');
+      item.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.3)', 'important');
       item.removeAttribute('disabled');
+      item.removeAttribute('aria-disabled');
       
-      // 直接绑定onclick
+      // 获取onclick属性值
       const onclickAttr = item.getAttribute('onclick');
       if (onclickAttr) {
-        item.onclick = function(e) {
+        // 移除旧的事件监听器（如果存在）
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        const btn = item.parentNode.children[index]; // 重新获取元素
+        
+        // 创建点击处理函数
+        const handleClick = function(e) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          console.log('🔘 [移动端直接绑定] 点击导航按钮');
-          try {
-            eval(onclickAttr);
-          } catch (err) {
-            console.error('❌ [移动端] 执行onclick失败:', err);
+          console.log('🔘 [移动端导航] 点击按钮:', onclickAttr);
+          
+          // 直接调用switchView函数
+          const match = onclickAttr.match(/switchView\(['"]([^'"]+)['"]\)/);
+          if (match && typeof window.switchView === 'function') {
+            const viewName = match[1];
+            console.log('🔘 [移动端导航] 切换到视图:', viewName);
+            window.switchView(viewName);
+          } else {
+            // 备用方案：使用eval
+            try {
+              eval(onclickAttr);
+            } catch (err) {
+              console.error('❌ [移动端导航] 执行onclick失败:', err, 'onclick:', onclickAttr);
+            }
           }
           return false;
         };
+        
+        // 绑定多种事件类型，确保能响应
+        btn.addEventListener('click', handleClick, { capture: true, passive: false });
+        btn.addEventListener('touchend', handleClick, { capture: true, passive: false });
+        btn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          btn.style.opacity = '0.7';
+          setTimeout(() => {
+            btn.style.opacity = '';
+          }, 150);
+        }, { capture: true, passive: false });
+        btn.onclick = handleClick;
+        
+        console.log('✅ [移动端导航] 已修复按钮:', onclickAttr);
       }
     });
+    
+    // 确保底部导航栏本身也是可点击的
+    const bottomNav = document.querySelector('.mobile-bottom-nav');
+    if (bottomNav) {
+      bottomNav.style.setProperty('pointer-events', 'auto', 'important');
+      bottomNav.style.setProperty('z-index', '999999', 'important');
+      bottomNav.style.setProperty('position', 'fixed', 'important');
+    }
     
     // 修复卡片
     document.querySelectorAll('.mobile-card').forEach(card => {

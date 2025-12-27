@@ -1325,32 +1325,40 @@
     
     /* 底部导航栏 */
     .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #fff;
-      border-top: 1px solid var(--border-light);
-      display: flex;
-      justify-content: space-around;
-      padding: 8px 0;
-      z-index: 1000;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      background: #fff !important;
+      border-top: 1px solid var(--border-light) !important;
+      display: flex !important;
+      justify-content: space-around !important;
+      padding: 8px 0 !important;
+      z-index: 999999 !important; /* 确保在所有元素之上 */
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+      pointer-events: auto !important;
     }
     
     .mobile-nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 16px;
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      flex: 1;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 4px !important;
+      padding: 8px 16px !important;
+      background: transparent !important;
+      border: none !important;
+      color: var(--text-secondary) !important;
+      font-size: 12px !important;
+      cursor: pointer !important;
+      transition: all 0.2s !important;
+      flex: 1 !important;
+      pointer-events: auto !important;
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      position: relative !important;
+      z-index: 999999 !important;
     }
     
     .mobile-nav-item.active {
