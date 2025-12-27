@@ -484,6 +484,165 @@
   <!-- 🔧 移动端按钮点击终极修复脚本（最高优先级 - 必须在页面显示修复之前） -->
   <script src="js/mobile-button-click-fix.js"></script>
   
+  <!-- 🔥🔥🔥 立即修复所有按钮无法点击问题 - 最高优先级 🔥🔥🔥 -->
+  <script>
+    (function() {
+      'use strict';
+      console.log('🔧 [按钮点击修复] 开始立即修复所有按钮点击问题...');
+      
+      function forceFixAllButtons() {
+        try {
+          // 1. 确保body和html可点击（最高优先级）
+          if (document.body) {
+            document.body.style.setProperty('pointer-events', 'auto', 'important');
+            document.body.style.setProperty('cursor', 'default', 'important');
+          }
+          if (document.documentElement) {
+            document.documentElement.style.setProperty('pointer-events', 'auto', 'important');
+          }
+          
+          // 2. 确保mobile-content和homeView可点击
+          const mobileContent = document.querySelector('.mobile-content');
+          if (mobileContent) {
+            mobileContent.style.setProperty('pointer-events', 'auto', 'important');
+          }
+          const homeView = document.getElementById('homeView');
+          if (homeView) {
+            homeView.style.setProperty('pointer-events', 'auto', 'important');
+          }
+          
+          // 3. 移除所有可能遮挡的覆盖层
+          const overlays = document.querySelectorAll('.mobile-modal-overlay:not(.active), .loading-overlay, .overlay, .modal-backdrop:not(.active)');
+          overlays.forEach(overlay => {
+            overlay.style.setProperty('display', 'none', 'important');
+            overlay.style.setProperty('pointer-events', 'none', 'important');
+            overlay.style.setProperty('z-index', '-1', 'important');
+          });
+          
+          // 4. 强制所有按钮可点击
+          const buttonSelectors = [
+            'button', '.btn', '.btn-icon', '.btn-primary', 
+            '.mobile-nav-item', '.mobile-card', '.mobile-tab',
+            '[onclick]', '[data-action]', '[role="button"]',
+            '.mobile-view-switch-btn', 'a[onclick]'
+          ];
+          
+          buttonSelectors.forEach(selector => {
+            try {
+              const buttons = document.querySelectorAll(selector);
+              buttons.forEach(btn => {
+                // 强制设置样式
+                btn.style.setProperty('pointer-events', 'auto', 'important');
+                btn.style.setProperty('cursor', 'pointer', 'important');
+                btn.style.setProperty('touch-action', 'manipulation', 'important');
+                btn.style.setProperty('user-select', 'none', 'important');
+                btn.style.setProperty('-webkit-user-select', 'none', 'important');
+                btn.style.setProperty('z-index', '10', 'important');
+                
+                // 移除disabled属性
+                btn.removeAttribute('disabled');
+                btn.removeAttribute('aria-disabled');
+                
+                // 确保onclick事件存在
+                const onclickAttr = btn.getAttribute('onclick');
+                if (onclickAttr && !btn.dataset.clickFixed) {
+                  btn.dataset.clickFixed = 'true';
+                  
+                  // 绑定多种事件类型
+                  const handleClick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔘 [按钮修复] 执行点击:', btn.tagName, btn.className, onclickAttr);
+                    try {
+                      // 使用Function构造器执行onclick
+                      const func = new Function('event', onclickAttr.replace(/^onclick\s*=\s*['"]?|['"]?$/g, ''));
+                      func.call(btn, e);
+                    } catch (err) {
+                      // 如果Function构造器失败，尝试eval
+                      try {
+                        eval(onclickAttr);
+                      } catch (err2) {
+                        console.error('❌ [按钮修复] 执行onclick失败:', err2);
+                      }
+                    }
+                    return false;
+                  };
+                  
+                  // 绑定事件
+                  ['click', 'touchend', 'touchstart'].forEach(eventType => {
+                    btn.addEventListener(eventType, handleClick, { 
+                      capture: true, 
+                      passive: false 
+                    });
+                  });
+                }
+              });
+            } catch (e) {
+              console.warn('⚠️ [按钮修复] 选择器失败:', selector, e);
+            }
+          });
+          
+          console.log('✅ [按钮修复] 所有按钮已强制修复');
+        } catch (e) {
+          console.error('❌ [按钮修复] 修复失败:', e);
+        }
+      }
+      
+      // 立即执行
+      forceFixAllButtons();
+      
+      // 在多个时机执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          forceFixAllButtons();
+          setTimeout(forceFixAllButtons, 100);
+          setTimeout(forceFixAllButtons, 500);
+        });
+      } else {
+        forceFixAllButtons();
+        setTimeout(forceFixAllButtons, 100);
+        setTimeout(forceFixAllButtons, 500);
+      }
+      
+      window.addEventListener('load', function() {
+        forceFixAllButtons();
+        setTimeout(forceFixAllButtons, 1000);
+      });
+      
+      // 使用MutationObserver持续修复
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function() {
+          forceFixAllButtons();
+        });
+        
+        function startObserving() {
+          if (document.body) {
+            observer.observe(document.body, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class', 'disabled']
+            });
+            console.log('✅ [按钮修复] MutationObserver已启动');
+          } else {
+            setTimeout(startObserving, 100);
+          }
+        }
+        
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', startObserving);
+        } else {
+          startObserving();
+        }
+      }
+      
+      // 暴露到window
+      window.forceFixAllButtons = forceFixAllButtons;
+      
+      console.log('✅ [按钮修复] 按钮点击修复脚本已加载');
+    })();
+  </script>
+  
   <!-- 🔧 页面显示修复脚本（最高优先级 - 确保页面内容可见） -->
   <script>
     // 立即执行，确保页面内容可见（不等待DOM加载）
@@ -1917,14 +2076,34 @@
         z-index: 1 !important;
       }
       
-      /* 确保所有按钮可点击 */
-      button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
+      /* 确保所有按钮可点击 - 最高优先级 */
+      button, .btn, .btn-icon, .btn-primary, .mobile-nav-item, .mobile-card, .mobile-tab, 
+      .mobile-view-switch-btn, [onclick], [data-action], [role="button"], a[onclick] {
         pointer-events: auto !important;
         cursor: pointer !important;
         touch-action: manipulation !important;
         -webkit-tap-highlight-color: rgba(37, 99, 235, 0.3) !important;
         user-select: none !important;
         -webkit-user-select: none !important;
+        z-index: 10 !important;
+        position: relative !important;
+      }
+      
+      /* 确保body和html可点击 */
+      body, html {
+        pointer-events: auto !important;
+      }
+      
+      /* 确保mobile-content和homeView可点击 */
+      .mobile-content, #homeView, .mobile-view {
+        pointer-events: auto !important;
+      }
+      
+      /* 移除可能遮挡的覆盖层 */
+      .mobile-modal-overlay:not(.active), .loading-overlay, .overlay:not(.active) {
+        display: none !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
       }
     }
     
@@ -1952,11 +2131,25 @@
         pointer-events: auto !important;
       }
       
-      /* PC端按钮也要可点击 */
-      button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
+      /* PC端按钮也要可点击 - 最高优先级 */
+      button, .btn, .btn-icon, .btn-primary, .mobile-nav-item, .mobile-card, .mobile-tab,
+      .mobile-view-switch-btn, [onclick], [data-action], [role="button"], a[onclick] {
         pointer-events: auto !important;
         cursor: pointer !important;
         user-select: none !important;
+        touch-action: manipulation !important;
+        z-index: 10 !important;
+        position: relative !important;
+      }
+      
+      /* PC端确保body和html可点击 */
+      body, html {
+        pointer-events: auto !important;
+      }
+      
+      /* PC端确保mobile-content和homeView可点击 */
+      .mobile-content, #homeView, .mobile-view {
+        pointer-events: auto !important;
       }
     }
     
