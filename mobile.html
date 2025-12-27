@@ -88,12 +88,14 @@
           visibility: visible !important; 
           opacity: 1 !important; 
           pointer-events: auto !important;
+          min-height: 100vh !important;
         }
         .mobile-content { 
           display: block !important; 
           visibility: visible !important; 
           opacity: 1 !important; 
           pointer-events: auto !important;
+          min-height: 100vh !important;
         }
         #homeView { 
           display: block !important; 
@@ -101,6 +103,19 @@
           opacity: 1 !important; 
           position: relative !important;
           pointer-events: auto !important;
+          min-height: auto !important;
+          height: auto !important;
+        }
+        /* 强制覆盖所有可能隐藏homeView的规则 */
+        .mobile-view#homeView,
+        div#homeView.mobile-view,
+        #homeView.mobile-view {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: relative !important;
+          min-height: auto !important;
+          height: auto !important;
         }
         /* 确保所有按钮可点击 */
         button, .btn, .btn-icon, .mobile-nav-item, .mobile-card, .mobile-tab {
@@ -4954,20 +4969,48 @@
       }, 2000);
     }
     
-    // 强制显示首页的辅助函数
+    // 强制显示首页的辅助函数（使用最强力的方法）
     function forceShowHomeView() {
       try {
         const homeView = document.getElementById('homeView');
+        const mobileContent = document.querySelector('.mobile-content');
+        const body = document.body;
+        
+        // 确保body可见
+        if (body) {
+          body.style.setProperty('display', 'block', 'important');
+          body.style.setProperty('visibility', 'visible', 'important');
+          body.style.setProperty('opacity', '1', 'important');
+        }
+        
+        // 确保mobile-content可见
+        if (mobileContent) {
+          mobileContent.style.setProperty('display', 'block', 'important');
+          mobileContent.style.setProperty('visibility', 'visible', 'important');
+          mobileContent.style.setProperty('opacity', '1', 'important');
+        }
+        
         if (homeView) {
-          // 隐藏所有可能的视图
+          // 隐藏其他视图
           const allViews = document.querySelectorAll('.mobile-view');
           allViews.forEach(view => {
-            if (view.id !== 'homeView') {
-              view.style.display = 'none';
+            if (view.id && view.id !== 'homeView') {
+              view.style.setProperty('display', 'none', 'important');
             }
           });
-          // 显示首页
-          homeView.style.display = 'block';
+          
+          // 使用setProperty设置!important优先级（最强力）
+          homeView.style.setProperty('display', 'block', 'important');
+          homeView.style.setProperty('visibility', 'visible', 'important');
+          homeView.style.setProperty('opacity', '1', 'important');
+          homeView.style.setProperty('position', 'relative', 'important');
+          homeView.style.setProperty('height', 'auto', 'important');
+          homeView.style.setProperty('min-height', 'auto', 'important');
+          homeView.style.setProperty('width', '100%', 'important');
+          
+          // 移除可能隐藏元素的类
+          homeView.classList.remove('hidden', 'd-none');
+          
           console.log('✅ 已强制显示首页视图');
           return true;
         } else {
@@ -4989,21 +5032,13 @@
       
       // 默认显示首页（确保页面可见）
       try {
-        // 先确保所有视图隐藏
-        const allViews = ['homeView', 'listView', 'raceView', 'statsView', 'pedigreeView', 
-                         'breedingView', 'healthView', 'trainingView', 'analysisView', 
-                         'qualificationView', 'dashboardView', 'moreView', 'detailView'];
-        allViews.forEach(viewId => {
-          const viewEl = document.getElementById(viewId);
-          if (viewEl) {
-            viewEl.style.display = 'none';
-          }
-        });
-        
-        // 显示首页
+        // 先显示首页（确保页面可见）
         const homeView = document.getElementById('homeView');
         if (homeView) {
-          homeView.style.display = 'block';
+          // 使用setProperty确保优先级最高
+          homeView.style.setProperty('display', 'block', 'important');
+          homeView.style.setProperty('visibility', 'visible', 'important');
+          homeView.style.setProperty('opacity', '1', 'important');
           views.home = homeView;
           console.log('✅ 页面视图已初始化，显示首页');
         } else {
@@ -5011,6 +5046,17 @@
           // 延迟重试
           setTimeout(forceShowHomeView, 100);
         }
+        
+        // 然后隐藏其他视图（但不要隐藏homeView）
+        const otherViews = ['listView', 'raceView', 'statsView', 'pedigreeView', 
+                         'breedingView', 'healthView', 'trainingView', 'analysisView', 
+                         'qualificationView', 'dashboardView', 'moreView', 'detailView'];
+        otherViews.forEach(viewId => {
+          const viewEl = document.getElementById(viewId);
+          if (viewEl) {
+            viewEl.style.display = 'none';
+          }
+        });
       } catch (e) {
         console.error('❌ 初始化视图失败:', e);
         // 即使出错，也尝试显示首页
