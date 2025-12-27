@@ -224,7 +224,7 @@
     }
     
     // 修复导航按钮（优先处理，确保底部导航栏可点击）
-    document.querySelectorAll('.mobile-nav-item').forEach((item, index) => {
+    document.querySelectorAll('.mobile-nav-item').forEach((item) => {
       // 强制设置样式，确保可点击
       item.style.setProperty('pointer-events', 'auto', 'important');
       item.style.setProperty('cursor', 'pointer', 'important');
@@ -240,11 +240,6 @@
       // 获取onclick属性值
       const onclickAttr = item.getAttribute('onclick');
       if (onclickAttr) {
-        // 移除旧的事件监听器（如果存在）
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
-        const btn = item.parentNode.children[index]; // 重新获取元素
-        
         // 创建点击处理函数
         const handleClick = function(e) {
           e.preventDefault();
@@ -269,19 +264,38 @@
           return false;
         };
         
-        // 绑定多种事件类型，确保能响应
-        btn.addEventListener('click', handleClick, { capture: true, passive: false });
-        btn.addEventListener('touchend', handleClick, { capture: true, passive: false });
-        btn.addEventListener('touchstart', function(e) {
-          e.preventDefault();
-          btn.style.opacity = '0.7';
-          setTimeout(() => {
-            btn.style.opacity = '';
-          }, 150);
-        }, { capture: true, passive: false });
-        btn.onclick = handleClick;
-        
-        console.log('✅ [移动端导航] 已修复按钮:', onclickAttr);
+        // 移除旧的事件监听器（通过克隆节点）
+        const newItem = item.cloneNode(true);
+        if (item.parentNode) {
+          item.parentNode.replaceChild(newItem, item);
+          const btn = newItem; // 使用克隆后的新元素
+          
+          // 重新设置样式（因为克隆节点可能丢失样式）
+          btn.style.setProperty('pointer-events', 'auto', 'important');
+          btn.style.setProperty('cursor', 'pointer', 'important');
+          btn.style.setProperty('touch-action', 'manipulation', 'important');
+          btn.style.setProperty('z-index', '999999', 'important');
+          btn.style.setProperty('position', 'relative', 'important');
+          btn.style.setProperty('user-select', 'none', 'important');
+          btn.style.setProperty('-webkit-user-select', 'none', 'important');
+          btn.style.setProperty('-webkit-tap-highlight-color', 'rgba(37, 99, 235, 0.3)', 'important');
+          btn.removeAttribute('disabled');
+          btn.removeAttribute('aria-disabled');
+          
+          // 绑定多种事件类型，确保能响应
+          btn.addEventListener('click', handleClick, { capture: true, passive: false });
+          btn.addEventListener('touchend', handleClick, { capture: true, passive: false });
+          btn.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            btn.style.opacity = '0.7';
+            setTimeout(() => {
+              btn.style.opacity = '';
+            }, 150);
+          }, { capture: true, passive: false });
+          btn.onclick = handleClick;
+          
+          console.log('✅ [移动端导航] 已修复按钮:', onclickAttr);
+        }
       }
     });
     
