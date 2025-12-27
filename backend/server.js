@@ -357,30 +357,40 @@ app.use(/^\/([^\/]+\.html)$/, (req, res, next) => {
 });
 
 // 静态文件服务 - 提供前端页面
+console.log('📂 [静态文件] 配置静态文件服务');
+console.log('📂 [静态文件] 前端路径:', frontendPath);
+console.log('📂 [静态文件] 路径存在:', fs.existsSync(frontendPath));
+console.log('📂 [静态文件] index.html存在:', fs.existsSync(path.join(frontendPath, 'index.html')));
+
+if (fs.existsSync(frontendPath)) {
+  try {
+    const files = fs.readdirSync(frontendPath).slice(0, 10);
+    console.log('📂 [静态文件] 目录中的文件:', files);
+  } catch (e) {
+    console.error('📂 [静态文件] 读取目录失败:', e.message);
+  }
+}
+
 logger.info('📂 配置静态文件服务', {
   frontendPath: frontendPath,
   exists: fs.existsSync(frontendPath),
-  indexExists: fs.existsSync(path.join(frontendPath, 'index.html')),
-  files: fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath).slice(0, 10) : []
+  indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
 });
 
-// 配置静态文件服务
-// 创建静态文件中间件
-const staticMiddleware = express.static(frontendPath, {
-  index: false,  // 禁用自动index，我们手动处理
-  fallthrough: true  // 允许继续到下一个中间件（404处理）
-});
-
-// 包装静态文件服务，排除HTML文件（让专门的路由处理HTML文件）
-app.use((req, res, next) => {
-  // 如果是HTML文件请求，跳过静态文件服务，让专门的路由处理
-  if (req.path.match(/\.html$/)) {
-    return next();
+// 配置静态文件服务 - 简化版本，直接使用express.static
+// 设置index为index.html，这样访问根路径时会自动返回index.html
+app.use(express.static(frontendPath, {
+  index: 'index.html',
+  fallthrough: false,
+  setHeaders: (res, filePath) => {
+    // 确保HTML文件设置正确的Content-Type
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
   }
-  // 对于非HTML文件，使用静态文件服务
-  staticMiddleware(req, res, next);
-});
+}));
 
+console.log('✅ [静态文件] 静态文件服务已配置');
 logger.info('✅ 静态文件服务已配置');
 
 // 请求日志（在静态文件服务之后，只记录非静态文件请求）
