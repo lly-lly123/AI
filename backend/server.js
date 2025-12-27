@@ -170,9 +170,13 @@ logger.info('📁 前端文件路径配置完成', {
   exists: finalIndexExists
 });
 
-// 移动端设备检测和自动跳转（在静态文件服务之前）
-app.get('/', (req, res, next) => {
-  logger.debug('🌐 根路径请求', { path: req.path, url: req.url });
+// 根路径处理 - 必须在所有其他路由之前
+app.get('/', (req, res) => {
+  console.log('🌐 [根路径] 收到请求:', req.method, req.path, req.url);
+  console.log('🌐 [根路径] User-Agent:', req.get('user-agent'));
+  console.log('🌐 [根路径] 前端路径:', frontendPath);
+  console.log('🌐 [根路径] __dirname:', __dirname);
+  console.log('🌐 [根路径] process.cwd():', process.cwd());
   
   const userAgent = req.get('user-agent') || '';
   const ua = userAgent.toLowerCase();
@@ -189,13 +193,13 @@ app.get('/', (req, res, next) => {
   
   const isMobile = mobileKeywords.some(keyword => ua.includes(keyword));
   
-  // 如果是移动设备且不是访问 mobile.html，重定向到 mobile.html
-  if (isMobile && !req.path.includes('mobile.html')) {
-    logger.info('📱 移动设备，重定向到 mobile.html');
+  // 如果是移动设备，重定向到 mobile.html
+  if (isMobile) {
+    console.log('📱 [根路径] 移动设备，重定向到 mobile.html');
     return res.redirect('/mobile.html' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''));
   }
   
-  // 对于PC端，明确返回index.html
+  // 对于PC端，返回index.html
   // 尝试多个可能的路径
   const possibleIndexPaths = [
     path.resolve(frontendPath, 'index.html'),
@@ -206,27 +210,61 @@ app.get('/', (req, res, next) => {
     path.join(process.cwd(), 'index.html')
   ];
   
+  console.log('🔍 [根路径] 尝试查找index.html，路径列表:', possibleIndexPaths);
+  
   for (const indexPath of possibleIndexPaths) {
     const indexPathResolved = path.resolve(indexPath);
     const exists = fs.existsSync(indexPathResolved);
     
+    console.log(`🔍 [根路径] 检查路径: ${indexPathResolved}, 存在: ${exists}`);
+    
     if (exists) {
+      console.log('✅ [根路径] 找到index.html，准备返回:', indexPathResolved);
       logger.info('✅ 根路径请求 - 返回index.html', {
         path: req.path,
         indexPath: indexPathResolved,
         exists: true
       });
+      // 确保设置正确的Content-Type
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.sendFile(indexPathResolved);
     }
   }
   
-  // 如果都找不到，记录警告但继续（让静态文件服务或404处理）
-  logger.warn('⚠️ 根路径请求 - index.html不存在', {
+  // 如果都找不到，返回错误信息
+  console.error('❌ [根路径] 所有路径都找不到index.html');
+  logger.error('❌ 根路径请求 - index.html不存在', {
     path: req.path,
-    triedPaths: possibleIndexPaths
+    triedPaths: possibleIndexPaths,
+    frontendPath: frontendPath,
+    __dirname: __dirname,
+    processCwd: process.cwd()
   });
   
-  next();
+  // 返回详细的错误信息
+  res.status(500).send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>错误 - 找不到index.html</title>
+      <meta charset="utf-8">
+    </head>
+    <body>
+      <h1>服务器配置错误</h1>
+      <p>无法找到 index.html 文件</p>
+      <h2>尝试的路径：</h2>
+      <ul>
+        ${possibleIndexPaths.map(p => `<li>${p}</li>`).join('')}
+      </ul>
+      <h2>调试信息：</h2>
+      <ul>
+        <li>前端路径: ${frontendPath}</li>
+        <li>__dirname: ${__dirname}</li>
+        <li>process.cwd(): ${process.cwd()}</li>
+      </ul>
+    </body>
+    </html>
+  `);
 });
 
 // 处理简化路由（在HTML文件路由之前）
