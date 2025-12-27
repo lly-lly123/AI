@@ -5009,14 +5009,25 @@
           homeView.style.setProperty('opacity', '1', 'important');
           homeView.style.setProperty('position', 'relative', 'important');
           homeView.style.setProperty('width', '100%', 'important');
-          // 修复height: 0px问题
+          // 修复height: 0px问题 - 先设置最小高度，再设置为auto
           homeView.style.setProperty('min-height', '600px', 'important');
           homeView.style.setProperty('height', 'auto', 'important');
+          // 确保overflow正常
+          homeView.style.setProperty('overflow', 'visible', 'important');
           
           // 移除可能隐藏元素的类
           homeView.classList.remove('hidden', 'd-none');
           
-          console.log('✅ 已强制显示首页视图');
+          // 确保homeView内的内容也是可见的
+          const homeViewChildren = homeView.querySelectorAll('*');
+          homeViewChildren.forEach(child => {
+            const computedStyle = window.getComputedStyle(child);
+            if (computedStyle.display === 'none' && child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+              child.style.setProperty('display', '', 'important');
+            }
+          });
+          
+          console.log('✅ 已强制显示首页视图，高度:', homeView.offsetHeight);
           return true;
         } else {
           console.error('❌ 找不到homeView元素');

@@ -9,9 +9,11 @@
   console.log('🔧 [移动端修复] 开始加载按钮点击修复脚本...');
   
   // ==================== 1. 确保switchView函数存在 ====================
+  // 重要：不要覆盖已有的switchView函数，只作为备用
+  // 实际的switchView应该在mobile.html中定义，这里只做兼容性处理
   if (typeof window.switchView !== 'function') {
     window.switchView = function(viewName) {
-      console.log('🔄 [移动端switchView] 切换视图:', viewName);
+      console.log('🔄 [移动端switchView-备用] 切换视图:', viewName);
       
       // 所有可能的移动端视图
       const allViewIds = [
@@ -21,18 +23,25 @@
         'dashboardView', 'moreView'
       ];
       
-      // 隐藏所有视图
+      // 隐藏所有视图（使用setProperty确保优先级）
       allViewIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
-          el.style.display = 'none';
+        if (el && id !== 'homeView') { // 注意：初始化时不应该隐藏homeView
+          el.style.setProperty('display', 'none', 'important');
         }
       });
       
-      // 显示目标视图
+      // 显示目标视图（使用setProperty确保优先级）
       const targetView = document.getElementById(viewName + 'View') || document.getElementById(viewName);
       if (targetView) {
-        targetView.style.display = 'block';
+        targetView.style.setProperty('display', 'block', 'important');
+        targetView.style.setProperty('visibility', 'visible', 'important');
+        targetView.style.setProperty('opacity', '1', 'important');
+        // 修复height: 0px问题
+        if (targetView.id === 'homeView') {
+          targetView.style.setProperty('min-height', '600px', 'important');
+        }
+        targetView.style.setProperty('height', 'auto', 'important');
         
         // 更新底部导航栏状态
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
@@ -43,20 +52,20 @@
           }
         });
         
-        console.log('✅ [移动端switchView] 视图切换成功:', viewName);
+        console.log('✅ [移动端switchView-备用] 视图切换成功:', viewName);
         
         // 触发自定义事件
         window.dispatchEvent(new CustomEvent('mobileViewSwitched', { detail: { view: viewName } }));
         
         return true;
       } else {
-        console.warn('⚠️ [移动端switchView] 视图不存在:', viewName);
+        console.warn('⚠️ [移动端switchView-备用] 视图不存在:', viewName);
         return false;
       }
     };
-    console.log('✅ [移动端修复] switchView函数已创建');
+    console.log('✅ [移动端修复] switchView函数已创建（备用版本）');
   } else {
-    console.log('✅ [移动端修复] switchView函数已存在');
+    console.log('✅ [移动端修复] switchView函数已存在，使用已有版本');
   }
   
   // ==================== 2. 全局事件委托（最高优先级） ====================
