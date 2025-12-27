@@ -584,46 +584,50 @@ if (!process.env.VERCEL) {
     
     // 创建服务器实例
     console.log(`准备启动服务器: ${HOST}:${PORT}`);
+    console.log(`PORT环境变量: ${process.env.PORT || '未设置'}`);
+    console.log(`最终使用端口: ${PORT}`);
+    console.log(`监听地址: ${HOST}`);
+    
     const server = app.listen(PORT, HOST, () => {
-    // 使用 console.log 确保在 Zeabur 日志中可见
-    console.log('========================================');
-    console.log(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
-    console.log(`环境: ${config.server.env}`);
-    console.log(`进程ID: ${process.pid}`);
-    console.log('服务器启动信息:', {
-      frontendPath: frontendPath,
-      indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
-    });
-    console.log('========================================');
-    
-    logger.info('========================================');
-    logger.info(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
-    logger.info(`环境: ${config.server.env}`);
-    logger.info(`进程ID: ${process.pid}`);
-    logger.info('服务器启动信息', {
-      frontendPath: frontendPath,
-      indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
-    });
-    logger.info('========================================');
-    
-    // 异步初始化（不阻塞服务器启动）
-    (async () => {
-      try {
-        await initDefaultAdmin();
-      } catch (error) {
-        logger.error('初始化默认管理员账户失败（非致命错误）', error);
-      }
+      // 使用 console.log 确保在 Zeabur 日志中可见
+      console.log('========================================');
+      console.log(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
+      console.log(`环境: ${config.server.env}`);
+      console.log(`进程ID: ${process.pid}`);
+      console.log('服务器启动信息:', {
+        frontendPath: frontendPath,
+        indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+      });
+      console.log('========================================');
       
-      try {
-        logger.info('预加载数据...');
-        await dataService.fetchNews();
-        await dataService.fetchEvents();
-        logger.info('数据预加载完成');
-      } catch (error) {
-        logger.error('数据预加载失败（非致命错误）', error);
-      }
-    })();
-  });
+      logger.info('========================================');
+      logger.info(`✅ 服务器启动成功: http://${HOST}:${PORT}`);
+      logger.info(`环境: ${config.server.env}`);
+      logger.info(`进程ID: ${process.pid}`);
+      logger.info('服务器启动信息', {
+        frontendPath: frontendPath,
+        indexExists: fs.existsSync(path.join(frontendPath, 'index.html'))
+      });
+      logger.info('========================================');
+      
+      // 异步初始化（不阻塞服务器启动）
+      (async () => {
+        try {
+          await initDefaultAdmin();
+        } catch (error) {
+          logger.error('初始化默认管理员账户失败（非致命错误）', error);
+        }
+        
+        try {
+          logger.info('预加载数据...');
+          await dataService.fetchNews();
+          await dataService.fetchEvents();
+          logger.info('数据预加载完成');
+        } catch (error) {
+          logger.error('数据预加载失败（非致命错误）', error);
+        }
+      })();
+    });
 
   // 处理服务器错误
   server.on('error', (error) => {
