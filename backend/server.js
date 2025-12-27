@@ -231,9 +231,9 @@ app.get('/', (req, res) => {
     }
   }
   
-  // 如果都找不到，返回错误信息
-  console.error('❌ [根路径] 所有路径都找不到index.html');
-  logger.error('❌ 根路径请求 - index.html不存在', {
+  // 如果都找不到，让静态文件服务处理（作为fallback）
+  console.warn('⚠️ [根路径] 所有路径都找不到index.html，让静态文件服务处理');
+  logger.warn('⚠️ 根路径请求 - index.html不存在，尝试静态文件服务', {
     path: req.path,
     triedPaths: possibleIndexPaths,
     frontendPath: frontendPath,
@@ -241,30 +241,9 @@ app.get('/', (req, res) => {
     processCwd: process.cwd()
   });
   
-  // 返回详细的错误信息
-  res.status(500).send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>错误 - 找不到index.html</title>
-      <meta charset="utf-8">
-    </head>
-    <body>
-      <h1>服务器配置错误</h1>
-      <p>无法找到 index.html 文件</p>
-      <h2>尝试的路径：</h2>
-      <ul>
-        ${possibleIndexPaths.map(p => `<li>${p}</li>`).join('')}
-      </ul>
-      <h2>调试信息：</h2>
-      <ul>
-        <li>前端路径: ${frontendPath}</li>
-        <li>__dirname: ${__dirname}</li>
-        <li>process.cwd(): ${process.cwd()}</li>
-      </ul>
-    </body>
-    </html>
-  `);
+  // 不返回错误，让静态文件服务或404处理来处理
+  // 这样如果静态文件服务配置了index.html，它仍然可以工作
+  next();
 });
 
 // 处理简化路由（在HTML文件路由之前）
@@ -379,9 +358,10 @@ logger.info('📂 配置静态文件服务', {
 
 // 配置静态文件服务 - 简化版本，直接使用express.static
 // 设置index为index.html，这样访问根路径时会自动返回index.html
+// 使用fallthrough: true，允许继续到下一个中间件（404处理）
 app.use(express.static(frontendPath, {
   index: 'index.html',
-  fallthrough: false,
+  fallthrough: true,  // 允许继续到下一个中间件
   setHeaders: (res, filePath) => {
     // 确保HTML文件设置正确的Content-Type
     if (filePath.endsWith('.html')) {
