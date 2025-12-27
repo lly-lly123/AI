@@ -171,7 +171,7 @@ logger.info('📁 前端文件路径配置完成', {
 });
 
 // 根路径处理 - 必须在所有其他路由之前
-app.get('/', (req, res) => {
+app.get('/', (req, res, next) => {
   console.log('🌐 [根路径] 收到请求:', req.method, req.path, req.url);
   console.log('🌐 [根路径] User-Agent:', req.get('user-agent'));
   console.log('🌐 [根路径] 前端路径:', frontendPath);
