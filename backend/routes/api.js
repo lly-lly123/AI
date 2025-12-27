@@ -1915,6 +1915,102 @@ router.post('/user/data/full', authenticate, async (req, res) => {
 });
 
 /**
+ * 获取用户训练记录数据
+ * GET /api/user/data/trainingRecords
+ */
+router.get('/user/data/trainingRecords', authenticate, async (req, res) => {
+  try {
+    const userDataList = await storageService.read('user_data') || [];
+    const userData = userDataList.find(d => d.userId === req.user.id);
+
+    if (!userData || !userData.data || !userData.data.trainingRecords) {
+      res.json({
+        success: true,
+        data: [],
+        message: '暂无数据'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: userData.data.trainingRecords,
+      updatedAt: userData.updatedAt
+    });
+  } catch (error) {
+    logger.error('获取训练记录失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取数据失败'
+    });
+  }
+});
+
+/**
+ * 获取用户配对数据
+ * GET /api/user/data/pairings
+ */
+router.get('/user/data/pairings', authenticate, async (req, res) => {
+  try {
+    const userDataList = await storageService.read('user_data') || [];
+    const userData = userDataList.find(d => d.userId === req.user.id);
+
+    if (!userData || !userData.data || !userData.data.pairings) {
+      res.json({
+        success: true,
+        data: [],
+        message: '暂无数据'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: userData.data.pairings,
+      updatedAt: userData.updatedAt
+    });
+  } catch (error) {
+    logger.error('获取配对数据失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取数据失败'
+    });
+  }
+});
+
+/**
+ * 获取用户资格记录数据
+ * GET /api/user/data/qualificationRecords
+ */
+router.get('/user/data/qualificationRecords', authenticate, async (req, res) => {
+  try {
+    const userDataList = await storageService.read('user_data') || [];
+    const userData = userDataList.find(d => d.userId === req.user.id);
+
+    if (!userData || !userData.data || !userData.data.qualificationRecords) {
+      res.json({
+        success: true,
+        data: [],
+        message: '暂无数据'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: userData.data.qualificationRecords,
+      updatedAt: userData.updatedAt
+    });
+  } catch (error) {
+    logger.error('获取资格记录失败', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取数据失败'
+    });
+  }
+});
+
+/**
  * 获取用户完整数据
  * GET /api/user/data/full
  */
