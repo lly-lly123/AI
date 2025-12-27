@@ -23,7 +23,7 @@ class EventParser {
       const feed = await parser.parseString(response.data);
       return this.parseEventsFromRSS(feed.items, sourceConfig);
     } catch (error) {
-      logger.error(`解析RSS feed失败: ${feedUrl}`, error);
+      // 静默处理RSS解析失败，不记录错误日志
       return { ongoing: [], upcoming: [], results: [] };
     }
   }

@@ -40,35 +40,95 @@ class RSSParser {
       // 清理XML内容，修复常见的格式问题
       let xmlContent = response.data;
       if (typeof xmlContent === 'string') {
+        // 移除BOM和特殊字符
+        xmlContent = xmlContent.replace(/^\uFEFF/, '');
         // 修复未引用的属性值（Unquoted attribute value）
         xmlContent = xmlContent.replace(/(\w+)=([^"'\s>]+)(?=\s|>)/g, '$1="$2"');
+        // 修复未闭合的标签（Unexpected close tag）
+        xmlContent = xmlContent.replace(/<(\w+)([^>]*?)(?<!\/)>/g, (match, tag, attrs) => {
+          // 检查是否是自闭合标签
+          if (attrs.trim().endsWith('/')) return match;
+          // 检查是否有对应的闭合标签
+          const closeTag = `</${tag}>`;
+          if (!xmlContent.includes(closeTag)) {
+            // 如果是已知的自闭合标签，添加/
+            const selfClosingTags = ['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'];
+            if (selfClosingTags.includes(tag.toLowerCase())) {
+              return match.replace('>', '/>');
+            }
+          }
+          return match;
+        });
         // 修复其他常见的XML格式问题
-        xmlContent = xmlContent.replace(/&(?![a-zA-Z]+;)/g, '&amp;');
-        // 移除控制字符
+        xmlContent = xmlContent.replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
+        // 移除控制字符（保留换行和制表符）
         xmlContent = xmlContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        // 修复CDATA中的问题
+        xmlContent = xmlContent.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (match, content) => {
+          return `<![CDATA[${content.replace(/]]>/g, ']]&gt;')}]]>`;
+        });
       }
       
       // 解析RSS - 使用更宽松的解析选项
       let feed;
-      try {
-        feed = await this.parser.parseString(xmlContent);
-      } catch (parseError) {
-        // 如果解析失败，尝试使用更宽松的解析器
-        logger.warn(`标准解析失败，尝试宽松模式: ${parseError.message}`);
-        const lenientParser = new Parser({
-          xml: {
-            normalize: true,
-            normalizeTags: true,
-            trim: true
-          },
-          customFields: {
-            item: [
-              ['pubDate', 'pubDate'],
-              ['description', 'description']
-            ]
+      let parseAttempts = 0;
+      const maxAttempts = 3;
+      
+      while (parseAttempts < maxAttempts) {
+        try {
+          if (parseAttempts === 0) {
+            // 第一次尝试：标准解析
+            feed = await this.parser.parseString(xmlContent);
+          } else if (parseAttempts === 1) {
+            // 第二次尝试：宽松模式
+            const lenientParser = new Parser({
+              xml: {
+                normalize: true,
+                normalizeTags: true,
+                trim: true,
+                ignoreAttributes: false
+              },
+              customFields: {
+                item: [
+                  ['pubDate', 'pubDate'],
+                  ['description', 'description']
+                ]
+              }
+            });
+            feed = await lenientParser.parseString(xmlContent);
+          } else {
+            // 第三次尝试：最宽松模式，忽略所有错误
+            const veryLenientParser = new Parser({
+              xml: {
+                normalize: true,
+                normalizeTags: true,
+                trim: true,
+                ignoreAttributes: false,
+                parseTrueNumberOnly: false
+              },
+              customFields: {
+                item: [
+                  ['pubDate', 'pubDate'],
+                  ['description', 'description']
+                ]
+              }
+            });
+            feed = await veryLenientParser.parseString(xmlContent);
           }
-        });
-        feed = await lenientParser.parseString(xmlContent);
+          break; // 解析成功，退出循环
+        } catch (parseError) {
+          parseAttempts++;
+          if (parseAttempts >= maxAttempts) {
+            // 所有尝试都失败，静默返回空数组
+            if (!this._rssParseFailedLogged) {
+              logger.warn(`RSS解析失败（已尝试${maxAttempts}种方法）: ${url}`);
+              logger.warn(`   最后错误: ${parseError.message}`);
+              logger.warn('   将返回空数组，不影响服务运行');
+              this._rssParseFailedLogged = true;
+            }
+            return [];
+          }
+        }
       }
       
       // 验证feed是否有效
@@ -99,27 +159,32 @@ class RSSParser {
       return items;
       
     } catch (error) {
-      // 改进错误处理，提供更详细的错误信息
-      const errorMessage = error.message || String(error);
-      const errorDetails = {
-        url,
-        error: errorMessage,
-        code: error.code,
-        response: error.response ? {
-          status: error.response.status,
-          statusText: error.response.statusText
-        } : null
-      };
-      
-      // 根据错误类型提供不同的日志级别
-      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-        logger.warn(`RSS请求超时: ${url}`, errorDetails);
-      } else if (error.response && error.response.status >= 400) {
-        logger.warn(`RSS请求失败 (HTTP ${error.response.status}): ${url}`, errorDetails);
-      } else if (errorMessage.includes('Unquoted attribute') || errorMessage.includes('XML')) {
-        logger.warn(`RSS XML格式错误: ${url}`, errorDetails);
-      } else {
-        logger.error(`RSS解析失败: ${url}`, errorDetails);
+      // 静默处理所有错误，避免产生过多日志
+      // 只在首次失败时记录一次警告
+      if (!this._rssErrorLogged) {
+        const errorMessage = error.message || String(error);
+        const errorDetails = {
+          url,
+          error: errorMessage,
+          code: error.code,
+          response: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText
+          } : null
+        };
+        
+        // 根据错误类型提供不同的日志级别（都使用warn，不使用error）
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+          logger.warn(`RSS请求超时: ${url}`);
+        } else if (error.response && error.response.status >= 400) {
+          logger.warn(`RSS请求失败 (HTTP ${error.response.status}): ${url}`);
+        } else if (errorMessage.includes('Unquoted attribute') || errorMessage.includes('XML')) {
+          logger.warn(`RSS XML格式错误: ${url}`);
+        } else {
+          logger.warn(`RSS解析失败: ${url}`);
+        }
+        logger.warn('   此错误只记录一次，后续将静默处理');
+        this._rssErrorLogged = true;
       }
       
       // 不抛出错误，返回空数组，让调用者继续处理

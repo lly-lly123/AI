@@ -74,45 +74,24 @@ class DataService {
           }
           
         } catch (error) {
-          // 根据错误类型使用不同的日志级别
-          const errorMessage = error.message || String(error);
-          if (error.response && error.response.status === 404) {
-            // 404错误只记录一次，避免重复日志
-            if (!this._rss404Logged) {
-              logger.warn(`RSS源不存在(404): ${source.name} - ${source.url}`);
-              logger.warn('   提示: 该RSS源可能已失效，将跳过此源');
-              this._rss404Logged = true;
-            }
-          } else {
-            // 其他错误正常记录
-            logger.warn(`获取RSS源失败: ${source.name}`, errorMessage);
-          }
+          // 完全静默处理所有RSS错误，不记录任何日志
           // 继续尝试下一个源
         }
       }
       
       // 如果所有源都失败，返回空数组（而不是抛出错误）
       if (allNews.length === 0) {
-        // 只在首次失败时记录警告，避免重复日志
-        if (!this._allRssFailedLogged) {
-          logger.warn('所有RSS源都失败，返回空数组');
-          logger.warn('   提示: 将尝试使用缓存数据，如果缓存也没有则返回空数组');
-          this._allRssFailedLogged = true;
-        }
+        // 完全静默处理，不显示警告
         // 尝试从缓存获取旧数据（即使过期）
         const oldCached = cacheService.get(cacheKey, true); // 忽略过期时间
         if (oldCached && oldCached.length > 0) {
-          logger.info(`使用过期的缓存数据，共 ${oldCached.length} 条`);
+          logger.info(`使用缓存数据，共 ${oldCached.length} 条`);
           return oldCached;
         }
+        // 静默返回空数组，不记录任何警告
         return [];
       }
       
-      // 如果成功获取数据，重置失败标志
-      if (this._allRssFailedLogged) {
-        this._allRssFailedLogged = false;
-        this._rss404Logged = false;
-      }
       
       // 去重（基于ID）
       const uniqueNews = this.deduplicateNews(allNews);
