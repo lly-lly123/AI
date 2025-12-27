@@ -9849,7 +9849,7 @@
               display: block !important;
               visibility: visible !important;
               opacity: 1 !important;
-              pointer-events: auto !important;
+              pointer-events: none !important;
             `;
             assistantEl = assistant;
           }
@@ -10056,7 +10056,7 @@
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
-            pointer-events: auto !important;
+            pointer-events: none !important;
           `;
         }
         
@@ -11472,6 +11472,19 @@
       right: 16px;
       z-index: 99999;
       font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      /* 确保不会遮挡底部导航栏 */
+      pointer-events: none !important;
+    }
+    
+    /* Evo图标按钮应该可点击 */
+    .mobile-evo-assistant .mobile-evo-icon-button,
+    .mobile-evo-icon-button {
+      pointer-events: auto !important;
+    }
+    
+    /* Evo对话框应该可点击 */
+    .mobile-evo-dialog {
+      pointer-events: auto !important;
     }
     
     .mobile-evo-icon-button {
@@ -11716,7 +11729,16 @@
       z-index: 99998;
       max-width: 240px;
       animation: mobile-evo-bubble-appear 0.3s ease-out;
-      pointer-events: auto;
+      pointer-events: auto !important;
+      /* 确保不会遮挡底部导航栏（虽然z-index较低，但明确设置） */
+    }
+    
+    /* 确保欢迎气泡不会影响底部导航栏的点击 */
+    @media (max-width: 768px) {
+      .mobile-evo-welcome-bubble {
+        /* 如果底部导航栏可见，确保气泡不会遮挡 */
+        bottom: calc(30vh + 80px) !important;
+      }
     }
     
     .mobile-evo-welcome-bubble-content {
